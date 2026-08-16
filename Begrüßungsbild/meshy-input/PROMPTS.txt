@@ -1,0 +1,64 @@
+================================================================
+MESHY PROMPTS v2  -  Begrüßungsbild
+Korrigiert nach offizieller Meshy-API-Doku (docs.meshy.ai)
+
+REGELN, die v1 verletzt hatte:
+  * Prompt-Limit ist 600 Zeichen (v1 hatte bis 765 -> 400 Bad Request)
+  * Negativ-Formulierungen ("no rust", "no background") werden von
+    Meshy 5/6 NICHT unterstützt. Nur positiv formulieren.
+  * Image-to-3D hat KEIN Geometrie-Prompt-Feld, nur "texture_prompt".
+  * symmetry_mode ist seit Mai 2026 deprecated, ohne Wirkung.
+
+EINSTELLUNGEN (Image-to-3D):
+  Model Type   = Smart Topology     <- richtig, NICHT Standard
+  AI Model     = Meshy T2           <- nur T2 respektiert Poly Count
+  Poly Count   = 12000              (T2-Maximum ist 15000)
+  Pose         = AUS
+  PBR          = an, Textur 4K
+  Export       = GLB
+Hinweis: Standard + Meshy 6 hat should_remesh=false und ignoriert
+den Poly-Count-Slider komplett -> deshalb die 89.400 Faces.
+================================================================
+
+
+################################################################
+# TEIL A - TEXTURE PROMPTS  (Image-to-3D, Feld "Texture Prompt")
+# Das ist der Weg, den du gehst. Beschreibt NUR Material/Farbe.
+################################################################
+
+--- 01 CUBE  (Bild: 01b_cube_eng.png)  407 Zeichen
+Dark gunmetal and brushed cold steel armor plating with a faint blue tint, matte finish. Fine engraved circuitry lines, crisp panel seams, small bolts, chamfered edge highlights. The side lenses glow cold white-blue. The top and bottom aperture funnels are lined with bright cyan-white emissive rings, glowing hottest deep inside the opening. Clean sci-fi PBR metal, cool neutral tone, even studio lighting.
+
+--- 02 SOCKEL  (Bild: 02_sockel_metall.png)  283 Zeichen
+Polished chrome and dark gunmetal machined metal, semi-gloss. Concentric engraved grooves and fine radial tick marks like an instrument dial on the top surface. Thin cyan emissive light strips inside the recessed channels between the tiers. Clean sci-fi PBR metal, cool neutral tone.
+
+--- 03 SERVERRACK  (Bild: 03_serverrack.png)  270 Zeichen
+Matte black and dark gunmetal brushed steel cabinet. Recessed front bezels, thin ventilation slots, subtle panel seams and small screws. Rows of tiny cyan and white LED indicator dots across the front. Clean industrial PBR metal, cool neutral tone, even studio lighting.
+
+--- 04 LAPTOP DUNKEL  (Bild: 04_laptop_dunkel.png)  279 Zeichen
+Matte black anodized aluminium chassis with a faint blue-grey tint, soft matte finish. Dark glass display panel with slim bezels. Black chiclet keys with fine plastic texture, dark grey trackpad, brushed metal palm rest. Clean modern product PBR materials, neutral even lighting.
+
+--- 05 LAPTOP SILBER  (Bild: 05_laptop_silber.png)  264 Zeichen
+Brushed silver-white aluminium chassis, semi-matte finish. Dark glass display panel with slim bezels. Black chiclet keys set into a light metal deck, dark grey trackpad, smooth palm rest. Clean modern product PBR materials, cool neutral tone, even studio lighting.
+
+
+################################################################
+# TEIL B - GEOMETRY PROMPTS  (nur fuer Text-to-3D, Fallback)
+# Falls Image-to-3D beim Cube den Ring weiter mitbaeckt:
+# Text-to-3D statt Image-to-3D nutzen, dann Refine mit Teil A.
+################################################################
+
+--- 01 CUBE  579 Zeichen
+A futuristic mechanical sci-fi cube, hard surface prop, cubic silhouette with sharp chamfered edges. The four side faces each hold a recessed octagonal panel framed by armor plating with a circular lens at the center. The top and bottom faces differ: stepped concentric square rings descend inward like a funnel into a deep open circular aperture at the center, an iris port ringed by segmented shutter blades, hollow and concave, a clear emitter opening. Layered metal plates, panel gaps, bolts, engraved circuitry. Isolated single object, floating free, plain empty background.
+
+--- 02 SOCKEL  425 Zeichen
+A circular sci-fi pedestal platform, hard surface prop. Low cylindrical disc built from three stacked concentric tiers of decreasing diameter, each a metal ring with a crisp beveled edge. Narrow recessed channels with thin light strips run between the tiers. The flat top has engraved concentric grooves, radial tick marks and a circular inset at the center. Isolated single object, empty top surface, plain empty background.
+
+--- 03 SERVERRACK  428 Zeichen
+A data center server rack cabinet, hard surface prop. Tall narrow rectangular tower standing upright as a closed solid box. The front face holds a vertical stack of sixteen identical horizontal 1U server units, each with a recessed bezel, ventilation slots, drive bay handles and small LED indicator dots. Flat smooth side panels with seams and screws, solid top plate with vents. Isolated single object, plain empty background.
+
+--- 04 LAPTOP DUNKEL  458 Zeichen
+A modern black business laptop, hard surface product prop, opened at 110 degrees. Thin rectangular display lid with slim bezels and a flat screen panel, joined by a discreet hinge to a slim wedge shaped base. The base has a full chiclet keyboard with individually modeled rectangular keys, a rectangular trackpad, a wide palm rest and a thin front lip. Small ports on both side edges, four low feet underneath. Isolated single object, plain empty background.
+
+--- 05 LAPTOP SILBER  446 Zeichen
+A modern silver laptop, hard surface product prop, opened at 105 degrees. Thin rectangular display lid with slim bezels and a flat dark screen panel, joined by a slim hinge to a wedge shaped base. The base has a full chiclet keyboard with individually modeled rectangular keys, a rectangular trackpad, a wide palm rest and a thin front lip. Small ports on both side edges, four low feet underneath. Isolated single object, plain empty background.

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(rg)",
+      "Exec(head)",
+      "Exec(unzip)",
+      "Exec(diff)"
+    ]
+  }
+}

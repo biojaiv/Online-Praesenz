@@ -1,0 +1,196 @@
+{
+  "name": "Vladimir Leicht",
+  "title": "Fachinformatiker für Systemintegration",
+  "fokus": "liegt auf nachhaltigen, sauber implementierten IT-Lösungen, die ich mit Ausdauer und Ideenreichtum realisiere.",
+  "signatur": ["Windows Server", "Active Directory", "baramundi UEM"],
+  "verfuegbar": "Verfügbar ab 08/2026",
+  "interessensschwerpunkte": "IT-Infrastruktur / Planung, Konfiguration und Administration komplexer Umgebungen",
+  "bildungsweg": [
+    {
+      "zeitraum": "2024–2026",
+      "titel": "Umschulung zum Fachinformatiker für Systemintegration",
+      "beschreibung": "Abschluss 2026",
+      "hinweis": "Bildungsträger: TASys GmbH"
+    },
+    {
+      "zeitraum": "01/26 - 07/26",
+      "titel": "Praxiserfahrung",
+      "beschreibung": "Praktikum beim Amt für IT und Digitalisierung beim Landratsamt Pforzheim Enzkreis"
+    },
+    {
+      "zeitraum": "2001–2004",
+      "titel": "TG Heinrich-Wieland (LK: IT & Englisch)",
+      "beschreibung": "Abitur"
+    }
+  ],
+  "beruflicherWerdegang": [
+    {
+      "zeitraum": "03/2023–12/2024",
+      "titel": "Servicemitarbeiter",
+      "beschreibung": "Esso Tankstelle · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "11/2023–01/2024",
+      "titel": "Lagerist / Warenwirtschaftssteuerung",
+      "beschreibung": "Kaufhof · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "02/2022–01/2023",
+      "titel": "Kommissionierer / Lagerist",
+      "beschreibung": "gastromatic Aldinger · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "04/2021–02/2022",
+      "titel": "Arbeitssuchend",
+      "beschreibung": "Unter erschwerten wirtschaftlichen Bedingungen"
+    },
+    {
+      "zeitraum": "07/2019–09/2020",
+      "titel": "Kommissionierer / Lagerist",
+      "beschreibung": "gastromatic Aldinger · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "02/2019–06/2019",
+      "titel": "Bauhelfer",
+      "beschreibung": "Pfirmann · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "09/2018–01/2019",
+      "titel": "Versandmitarbeiter",
+      "beschreibung": "Klingel · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "02/2018–08/2018",
+      "titel": "Galvaniseur",
+      "beschreibung": "Dudaco · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "08/2017–01/2018",
+      "titel": "Arbeitssuchend",
+      "beschreibung": ""
+    },
+    {
+      "zeitraum": "11/2011–07/2017",
+      "titel": "Pflegehelfer",
+      "beschreibung": "ISB, Helfende Hand und Mobilee · Karlsruhe, BW"
+    },
+    {
+      "zeitraum": "10/2010–09/2011",
+      "titel": "Diverse Mini-Jobs",
+      "beschreibung": ""
+    },
+    {
+      "zeitraum": "04/2010–09/2010",
+      "titel": "Arbeitsunfähig",
+      "beschreibung": "",
+      "hinweis": "Seit diesem Zeitpunkt stabiler gesundheitlicher Zustand"
+    },
+    {
+      "zeitraum": "02/2010–04/2010",
+      "titel": "Helfer in der Lagerwirtschaft",
+      "beschreibung": "DEKRA Arbeit GmbH · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "08/2008–01/2010",
+      "titel": "Arbeitsunfähig",
+      "beschreibung": ""
+    },
+    {
+      "zeitraum": "07/2008–09/2008",
+      "titel": "Produktionsmitarbeiter",
+      "beschreibung": "Witzenmann · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "02/2008–05/2008",
+      "titel": "Auslieferungsfahrer",
+      "beschreibung": "City Briefkurier · Pforzheim, BW"
+    },
+    {
+      "zeitraum": "06/2007–09/2007",
+      "titel": "Praktikum im Bereich Journalismus und Kultur",
+      "beschreibung": "M.D. · Magdeburg, SA"
+    }
+  ],
+  "skillsMax": 12,
+  "skills": [
+    {
+      "label": "Python",
+      "level": 5
+    },
+    {
+      "label": "C#",
+      "level": 4
+    },
+    {
+      "label": "HTML/CSS/PHP",
+      "level": 3
+    },
+    {
+      "label": "UEM",
+      "level": 6
+    },
+    {
+      "label": "VMs",
+      "level": 6
+    },
+    {
+      "label": "Windows Server 25",
+      "level": 6
+    },
+    {
+      "label": "Docker",
+      "level": 6
+    },
+    {
+      "label": "SQL",
+      "level": 5
+    },
+    {
+      "label": "VSC",
+      "level": 6
+    },
+    {
+      "label": "Github",
+      "level": 5
+    },
+    {
+      "label": "Linux",
+      "level": 6
+    },
+    {
+      "label": "Sicherheit",
+      "level": 5
+    },
+    {
+      "label": "Office 365",
+      "level": 6
+    }
+  ],
+  "soft": [
+    {
+      "label": "Englisch",
+      "level": 10
+    },
+    {
+      "label": "Russisch",
+      "level": 6
+    },
+    {
+      "label": "Arbeitsmoral",
+      "level": 10
+    },
+    {
+      "label": "Arbeitsdisziplin",
+      "level": 9
+    }
+  ],
+  "interessen": [
+    "Kampfsport",
+    "Lesen"
+  ],
+  "persoenlich": {
+    "geburtsdatum": "06.03.1985",
+    "kontakt": "vleicht@keemail.me",
+    "wohnort": "Pforzheim"
+  }
+}

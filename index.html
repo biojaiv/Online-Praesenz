@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vladimir Leicht — Fachinformatiker für Systemintegration</title>
+  <meta name="description" content="Portfolio von Vladimir Leicht, Fachinformatiker für Systemintegration. Abschlussprojekt, private IT-Projekte und Lebenslauf." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>.pre-intro .head{opacity:0;visibility:hidden}</style>
+  <script>
+    (() => {
+      const hash = location.hash.replace(/^#/, '').trim();
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (!reduced && (!hash || hash === 'home')) document.documentElement.classList.add('pre-intro');
+    })();
+  </script>
+</head>
+<body>
+  <!-- Der Rahmen: alles spielt sich hierin ab -->
+  <div class="frame" id="frame">
+    <div class="frame__edge frame__edge--tl"></div>
+    <div class="frame__edge frame__edge--tr"></div>
+    <div class="frame__edge frame__edge--bl"></div>
+    <div class="frame__edge frame__edge--br"></div>
+
+    <header class="head">
+      <a class="head__brand" href="#" data-target="home">
+        <!-- Drei Quadrate als echte SVG-Knoten, damit das Intro sie
+             einzeln drehen kann (aussen links, mitte rechts, Kern pulsiert) -->
+        <svg class="head__sigil" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+          <rect class="sigil__outer" x="0.5" y="0.5" width="33" height="33" />
+          <rect class="sigil__mid" x="7.5" y="7.5" width="19" height="19" />
+          <rect class="sigil__core" x="13.6" y="13.6" width="6.8" height="6.8" />
+        </svg>
+        <span class="head__name">Vladimir Leicht</span>
+        <span class="head__role">Fachinformatiker für Systemintegration</span>
+      </a>
+
+      <nav class="nav" id="nav">
+        <div class="nav__group">
+          <button class="nav__link" data-target="abschluss">Abschlussprojekt</button>
+          <div class="nav__sub">
+            <button data-target="abschluss/server">Server</button>
+            <button data-target="abschluss/uem">UEM</button>
+            <button data-target="abschluss/clients">Clients</button>
+            <button data-target="abschluss/migration">Migration</button>
+          </div>
+        </div>
+
+        <div class="nav__group">
+          <button class="nav__link" data-target="projekte">Private IT&#8209;Projekte</button>
+          <div class="nav__sub">
+            <button data-target="projekte/homelab">Homelab</button>
+            <button data-target="projekte/automation">Automatisierung</button>
+            <button data-target="projekte/web">Web</button>
+          </div>
+        </div>
+
+        <div class="nav__group">
+          <button class="nav__link" data-target="lebenslauf">Lebenslauf</button>
+          <div class="nav__sub">
+            <button data-target="lebenslauf/bildungsweg">Bildungsweg</button>
+            <button data-target="lebenslauf/faehigkeiten">Fähigkeiten</button>
+            <button data-target="lebenslauf/kontakt">Kontakt</button>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="stage" id="stage">
+      <canvas id="scene"></canvas>
+
+      <div class="boot" id="boot">
+        <div class="boot__ring"></div>
+        <span class="boot__text">Initialisiere</span>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <span class="foot__hint" id="hint">Bereich wählen</span>
+      <span class="foot__crumb" id="crumb">home</span>
+    </footer>
+  </div>
+
+  <noscript>
+    <div class="noscript">
+      Diese Seite nutzt WebGL. Bitte JavaScript aktivieren.
+    </div>
+  </noscript>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
