@@ -17,6 +17,9 @@ import { makeTripleHelix } from './helix.js';
  */
 
 const BASE_Y = -6.15;
+// Die gesamte Sockelreihe sitzt im Startbild etwas tiefer. Der Versatz
+// nimmt ungefaehr ein Drittel des bisherigen Abstandes zum unteren Rand weg.
+const HOME_ROW_DROP = -0.9;
 const BASE_BOTTOM = BASE_Y - 0.9;
 const BASE_TOP = BASE_Y + 0.9;
 const BASE_DIAMETER = 7.4;
@@ -52,7 +55,12 @@ const RESUME_IDLE_OPACITY = 0.85;
 // Groesse der Vorschau gegenueber der geoeffneten Seite. Ungeoeffnet steht die
 // erste Seite als kleines Blatt ueber dem Sockel, beim Oeffnen waechst sie auf
 // ihre volle Groesse.
-const RESUME_IDLE_SCALE = 0.8;
+const RESUME_IDLE_SCALE = 0.9;
+// Im Fokus rahmt die Kamera absichtlich etwas enger und tiefer als das Blatt.
+// Dadurch nimmt das Dokument mehr Raum nach oben ein, ohne den Sockel selbst
+// zu verschieben.
+const RESUME_FOCUS_FRAME_SCALE = 0.94;
+const RESUME_FOCUS_FRAME_SHIFT = 0.045;
 // Freies Drehen wuerde die einseitig lesbare Projektion wegkippen lassen.
 const ROTATION_LIMIT = 0.4;
 
@@ -597,8 +605,9 @@ function setHitBody(card, modelBox) {
   card.hitBounds.copy(modelBox);
   // Die dauerhaft sichtbare Lebenslauf-Vorschau soll selbst anklickbar sein,
   // nicht nur der Stein darunter.
+  const hitHeight = card.windowHeightTarget || card.windowHeight;
   const headroom = card.key === RESUME_KEY
-    ? Math.max(HIT_HEADROOM[card.key], card.windowHeight * RESUME_IDLE_SCALE + DOC_LIFT)
+    ? Math.max(HIT_HEADROOM[card.key], hitHeight * RESUME_IDLE_SCALE + DOC_LIFT)
     : HIT_HEADROOM[card.key];
   card.hitBounds.max.y = Math.max(card.hitBounds.max.y, card.surfaceY + headroom);
   card.hitBounds.getSize(_size);
@@ -624,38 +633,112 @@ function updateResumeWindow(card, notify = true) {
 
   card.baseBounds.getSize(_size);
   const width = Math.min(DOC_MAX_WIDTH, Math.max(_size.x, _size.z, 1));
-  // Das Fenster ist hoechstens eine Seite hoch. Passt auf dem Schirm weniger
-  // ins Bild, wird es flacher — dann laeuft das Dokument hindurch, und die
-  // Lesefassung daneben deckt dieselbe Flaeche ab.
-  const height = width / Math.max(pageAspect, card.windowAspect || pageAspect);
+
+  // Im Ruhezustand ist die komplette erste Seite sichtbar.
+  // Erst beim Oeffnen darf das Fenster auf die verfuegbare
+  // Bildschirmhoehe wechseln.
+  const windowAspect = card.resumeOpen
+    ? Math.max(pageAspect, card.windowAspect || pageAspect)
+    : pageAspect;
+
+  const height = width / windowAspect;
   const bottom = card.surfaceY + DOC_LIFT;
+  const firstLayout = !(card.windowWidth > 0);
 
-  card.windowWidth = width;
-  card.windowHeight = height;
-  projection.setWindow(width, height);
-  // Die Helix steht genau im Raum des Blattes: von der Sockeloberkante bis
-  // zur Oberkante der ganzen Seite.
-  card.resumeHelix?.setWindow(card.surfaceY + 0.05, DOC_LIFT + height, width);
+  card.windowWidthTarget = width;
+  card.windowHeightTarget = height;
 
-  // Das Zielbild rahmt immer die ganze Seite, auch waehrend die Vorschau noch
-  // auf ihre volle Groesse waechst.
-  card.documentBounds.min.set(-width * 0.5, bottom, DOC_FRONT - 0.05);
-  card.documentBounds.max.set(width * 0.5, bottom + height, DOC_FRONT + 0.05);
-  applyResumeScale(card);
+  if (firstLayout || card.reducedMotion) {
+    card.windowWidth = width;
+    card.windowHeight = height;
+    projection.setWindow(width, height);
+  }
+
+  card.resumeHelix?.setWindow(
+    card.surfaceY + 0.05,
+    DOC_LIFT + height,
+    width,
+  );
+
+  // Im Fokus ist der Kamerarahmen etwas kleiner als das reale Blatt
+  // und leicht nach unten versetzt.
+  //
+  // Ergebnis:
+  // Das Dokument erscheint groesser und reicht weiter nach oben.
+  const frameScale = card.resumeOpen
+    ? RESUME_FOCUS_FRAME_SCALE
+    : 1;
+
+  const frameShift = card.resumeOpen
+    ? height * RESUME_FOCUS_FRAME_SHIFT
+    : 0;
+
+  const frameHeight = height * frameScale;
+  const frameCenter = bottom + height * 0.5 - frameShift;
+
+  card.documentBounds.min.set(
+    -width * 0.5,
+    frameCenter - frameHeight * 0.5,
+    DOC_FRONT - 0.05,
+  );
+
+  card.documentBounds.max.set(
+    width * 0.5,
+    frameCenter + frameHeight * 0.5,
+    DOC_FRONT + 0.05,
+  );
+
+  if (firstLayout || card.reducedMotion) {
+    applyResumeScale(card);
+  }
+
   setHitBody(card, card.baseBounds);
-  if (notify) card.notifyBoundsChange(card.key);
+
+  if (notify) {
+    card.notifyBoundsChange(card.key);
+  }
 }
 
-/** Legt Blattgroesse und -stand nach dem aktuellen Aufblendmass fest. */
+
+/**
+ * Geometrie, Partikelrahmen UND Texturausschnitt benutzen denselben
+ * interpolierten Zustand.
+ *
+ * Dadurch entsteht beim Klick keine zweite, ploetzlich anders
+ * positionierte Dokumentflaeche mehr.
+ */
 function applyResumeScale(card) {
   const projection = card.resumeProjection;
-  if (!projection?.ready || !card.windowWidth) return;
+
+  if (!projection?.ready || !card.windowWidth) {
+    return;
+  }
+
   const width = card.windowWidth * card.docScale;
   const height = card.windowHeight * card.docScale;
   const bottom = card.surfaceY + DOC_LIFT;
-  projection.mesh.scale.set(width, height, 1);
-  projection.mesh.position.set(0, bottom + height * 0.5, DOC_FRONT);
-  card.resumeFrame?.setWindow(width, height);
+
+  projection.setWindow(
+    card.windowWidth,
+    card.windowHeight,
+  );
+
+  projection.mesh.scale.set(
+    width,
+    height,
+    1,
+  );
+
+  projection.mesh.position.set(
+    0,
+    bottom + height * 0.5,
+    DOC_FRONT,
+  );
+
+  card.resumeFrame?.setWindow(
+    width,
+    height,
+  );
 }
 
 function sharpenModel(model, maxAnisotropy) {
@@ -840,7 +923,6 @@ export function createCards({ renderer, reduced = false } = {}) {
   const pickables = [];
   const documentPickables = [];
   let boundsListener = null;
-  let openedKey = null;
   let layoutScale = 1;
   let modelRevealReleased = false;
   let resolveReady;
@@ -932,6 +1014,8 @@ export function createCards({ renderer, reduced = false } = {}) {
       surfaceY: BASE_TOP,
       windowWidth: 0,
       windowHeight: 3.2,
+      windowWidthTarget: 0,
+      windowHeightTarget: 3.2,
       // Seitenverhaeltnis des Fensters auf dem Schirm, von der Buehne gesetzt.
       windowAspect: 0,
       // Aufblendmass des Blattes: Vorschau oder ganze Seite.
@@ -942,7 +1026,10 @@ export function createCards({ renderer, reduced = false } = {}) {
       rotationVelocity: 0,
       rotationDragging: false,
       layoutIndex: cards.length,
-      layoutY: 0,
+      layoutY: HOME_ROW_DROP,
+      displayScale: 1,
+      layoutInitialized: false,
+      reducedMotion: reduced,
       pendingFallback: null,
       modelReveal: 1,
       disposed: false,
@@ -1099,15 +1186,30 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     setLayout({ spacing = 7.8, scale = 1, compact = false, stagger = 0 } = {}) {
       layoutScale = scale;
+
       for (const card of cards) {
         card.holder.position.x = (card.layoutIndex - 1) * spacing;
-        card.layoutY = card.layoutIndex === 1 ? 0 : -stagger;
-        card.holder.scale.setScalar(card.key === openedKey ? 1 : layoutScale);
+
+        card.layoutY = HOME_ROW_DROP
+          + (card.layoutIndex === 1 ? 0 : -stagger);
+
+        // Die Grundskalierung bleibt beim Anflug stabil.
+        // Die Kamera uebernimmt das Heranfahren.
+        if (!card.layoutInitialized || reduced) {
+          card.displayScale = layoutScale;
+          card.holder.scale.setScalar(card.displayScale);
+          card.layoutInitialized = true;
+        }
+
         card.resumeFrame?.setCompact(compact);
         card.rimLight.intensity = compact ? 15 : 24;
+
         if (card.ringJet) {
-          card.ringJet.uniforms.uCompact.value = compact ? 1 : 0;
-          card.ringJet.uniforms.uHeightScale.value = compact ? 1.14 : 1;
+          card.ringJet.uniforms.uCompact.value =
+            compact ? 1 : 0;
+
+          card.ringJet.uniforms.uHeightScale.value =
+            compact ? 1.14 : 1;
         }
       }
     },
@@ -1123,20 +1225,40 @@ export function createCards({ renderer, reduced = false } = {}) {
     onBoundsChange(cb) { boundsListener = cb; },
 
     /** Im Fokus bleibt nur der gewaehlte Sockel im Kamerabild. */
-    setOpened(key, isolate = false) {
-      openedKey = key;
+    setOpened(key, _isolate = false) {
       for (const card of cards) {
-        card.holder.visible = !key || !isolate || card.key === key;
-        card.resumeOpen = key === card.key && card.key === RESUME_KEY;
-        card.resumeProjection?.setOpen(card.resumeOpen);
-        card.resumeFrame?.setOpen(card.resumeOpen);
-        // Die Vorschau zeigt immer die erste Seite: was gelesen wurde, faellt
-        // beim Verlassen zurueck.
-        if (card.key === RESUME_KEY && !card.resumeOpen) {
+        // Nicht mehr hart ausblenden.
+        // Beim Anflug laufen die Nachbarsockel weich aus dem Kamerabild.
+        card.holder.visible = true;
+
+        card.resumeOpen =
+          key === card.key
+          && card.key === RESUME_KEY;
+
+        card.resumeProjection?.setOpen(
+          card.resumeOpen,
+        );
+
+        card.resumeFrame?.setOpen(
+          card.resumeOpen,
+        );
+
+        if (card.key === RESUME_KEY) {
+          updateResumeWindow(card, false);
+        }
+
+        // Beim Zurueckkehren immer wieder Seite 1 zeigen.
+        if (
+          card.key === RESUME_KEY
+          && !card.resumeOpen
+        ) {
           card.resumeProjection?.setScroll(0);
         }
-        if (key) card.target = 0;
-        card.holder.scale.setScalar(card.key === key ? 1 : layoutScale);
+
+        if (key) {
+          card.target = 0;
+        }
+
         if (!card.resumeOpen) {
           card.rotationOffset = 0;
           card.rotationVelocity = 0;
@@ -1165,20 +1287,101 @@ export function createCards({ renderer, reduced = false } = {}) {
           card.ringJet.uniforms.uHover.value = card.hover;
           card.ringJet.update(delta);
         }
-        card.comingSoon?.update(elapsed, delta, card.hover);
-        card.resumeFrame?.update(delta);
-        card.resumeProjection?.update(delta);
-        if (card.key === RESUME_KEY && card.resumeProjection) {
-          // Beim Oeffnen waechst das Blatt von der Vorschau auf die ganze
-          // Seite — im selben Zug, in dem die Kamera herangeht.
-          const scaleTarget = card.resumeOpen ? 1 : RESUME_IDLE_SCALE;
-          if (Math.abs(scaleTarget - card.docScale) > 0.0005) {
-            const grow = 1 - Math.pow(0.006, Math.min(delta, 0.1));
-            card.docScale += (scaleTarget - card.docScale) * grow;
-            if (Math.abs(scaleTarget - card.docScale) <= 0.0005) card.docScale = scaleTarget;
+        card.comingSoon?.update(
+          elapsed,
+          delta,
+          card.hover,
+        );
+
+        if (
+          card.key === RESUME_KEY
+          && card.resumeProjection
+        ) {
+          // Alle Bestandteile desselben Blattes fahren mit derselben
+          // Zeitkonstante zum neuen Zustand.
+          const geometryResponse = reduced
+            ? 1
+            : 1 - Math.pow(
+                0.012,
+                Math.min(delta, 0.1),
+              );
+
+          const scaleTarget =
+            card.resumeOpen
+              ? 1
+              : RESUME_IDLE_SCALE;
+
+          let geometryChanged = false;
+
+          for (const [currentKey, targetKey] of [
+            ["windowWidth", "windowWidthTarget"],
+            ["windowHeight", "windowHeightTarget"],
+          ]) {
+            const targetValue = card[targetKey];
+
+            if (!(targetValue > 0)) {
+              continue;
+            }
+
+            if (
+              Math.abs(
+                card[currentKey] - targetValue
+              ) > 0.0005
+            ) {
+              card[currentKey] +=
+                (
+                  targetValue
+                  - card[currentKey]
+                )
+                * geometryResponse;
+
+              if (
+                Math.abs(
+                  card[currentKey]
+                  - targetValue
+                ) <= 0.0005
+              ) {
+                card[currentKey] =
+                  targetValue;
+              }
+
+              geometryChanged = true;
+            }
+          }
+
+          if (
+            Math.abs(
+              scaleTarget
+              - card.docScale
+            ) > 0.0005
+          ) {
+            card.docScale +=
+              (
+                scaleTarget
+                - card.docScale
+              )
+              * geometryResponse;
+
+            if (
+              Math.abs(
+                scaleTarget
+                - card.docScale
+              ) <= 0.0005
+            ) {
+              card.docScale =
+                scaleTarget;
+            }
+
+            geometryChanged = true;
+          }
+
+          if (geometryChanged) {
             applyResumeScale(card);
           }
         }
+
+        card.resumeFrame?.update(delta);
+        card.resumeProjection?.update(delta);
 
         const phase = card.key.length;
         card.holder.position.y = card.layoutY
@@ -1200,8 +1403,35 @@ export function createCards({ renderer, reduced = false } = {}) {
         } else {
           card.holder.rotation.y = Math.sin(elapsed * 0.09 + phase) * 0.022;
         }
-        const baseScale = card.key === openedKey ? 1 : layoutScale;
-        card.holder.scale.setScalar(baseScale * (1 + card.hover * 0.025));
+        const baseScaleTarget = layoutScale;
+        const scaleResponse = reduced
+          ? 1
+          : 1 - Math.pow(
+              0.008,
+              Math.min(delta, 0.1),
+            );
+
+        card.displayScale +=
+          (
+            baseScaleTarget
+            - card.displayScale
+          )
+          * scaleResponse;
+
+        if (
+          Math.abs(
+            baseScaleTarget
+            - card.displayScale
+          ) < 0.0005
+        ) {
+          card.displayScale =
+            baseScaleTarget;
+        }
+
+        card.holder.scale.setScalar(
+          card.displayScale
+          * (1 + card.hover * 0.025)
+        );
         card.holder.updateWorldMatrix(true, false);
       }
     },

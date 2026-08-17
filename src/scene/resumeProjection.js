@@ -53,6 +53,20 @@ const DESKTOP_MAX_WIDTH = 1241;   // native Breite der Vorlage, kein Nachschaerf
 const COMPACT_MAX_WIDTH = 820;
 const MAX_PIXELS = 5_200_000;
 
+/**
+ * Nur fuer die Webprojektion:
+ * Der Link-Hinweiskasten auf Seite zwei wird ausgelassen.
+ *
+ * Werte innerhalb der zweiten Seite:
+ * 0 = Seitenkopf
+ * 1 = Seitenfuss
+ */
+const WEB_PAGE2_CUT =
+  new THREE.Vector2(
+    0.755,
+    0.89,
+  );
+
 /** Rasterziel: nativ, solange Hardware und Speicherbudget es zulassen. */
 function chooseRasterSize(width, height, maxTextureSize, compact) {
   const aspect = width / height;
@@ -107,7 +121,8 @@ export function createResumeProjection({
     uOffset:  { value: 0 },        // oberer Rand des Fensters, 0..1-uWindow
     uOpacity: { value: 0 },
     uFade:    { value: new THREE.Vector2(0.085, 0.055) },  // oben, unten
-    uGlow:    { value: 1.5 },
+    uGlow:     { value: 1.5 },
+    uPage2Cut: { value: WEB_PAGE2_CUT.clone() },
     // Negative Detailstufe: die Textur wird eine halbe Mipmap-Stufe schaerfer
     // abgetastet, damit die Schrift vor dem dunklen Raum nicht verwaescht.
     uBias:    { value: -0.65 },
@@ -127,25 +142,116 @@ export function createResumeProjection({
     `,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap;
-      uniform float uWindow, uOffset, uOpacity, uGlow, uBias;
-      uniform vec2 uFade;
+
+      uniform float
+        uWindow,
+        uOffset,
+        uOpacity,
+        uGlow,
+        uBias;
+
+      uniform vec2
+        uFade,
+        uPage2Cut;
+
       varying vec2 vUv;
+
       void main() {
-        // Fensterausschnitt: v = 1 ist der Dokumentkopf.
-        float v = 1.0 - uOffset - (1.0 - vUv.y) * uWindow;
-        vec4 texel = texture2D(uMap, vec2(vUv.x, v), uBias);
+        float v =
+          1.0
+          - uOffset
+          - (1.0 - vUv.y)
+            * uWindow;
 
-        // Das Blatt loest sich an Ober- und Unterkante ins Nichts auf, damit
-        // der Ausschnitt keine harte Schnittkante zeigt.
-        float fade = smoothstep(0.0, uFade.x, 1.0 - vUv.y)
-                   * smoothstep(0.0, uFade.y, vUv.y);
-        float alpha = texel.a * fade * uOpacity;
-        if (alpha < 0.004) discard;
+        float sourceV = v;
+        float webMask = 1.0;
 
-        // Anhebung der dunklen Mitteltoene: die Schrift traegt vor dem
-        // schwarzen Raum, ohne dass die hellen Flaechen ausbrennen.
-        vec3 lifted = pow(clamp(texel.rgb, 0.0, 1.0), vec3(0.78));
-        gl_FragColor = vec4(lifted * uGlow, alpha);
+        // Seite zwei liegt in der unteren Haelfte der Gesamttextur.
+        //
+        // Der Linkkasten bleibt Bestandteil von SVG/PDF.
+        // Fuer die Webprojektion wird der entsprechende Streifen
+        // uebersprungen.
+        //
+        // Der nachfolgende Inhalt rueckt dadurch unmittelbar hoch.
+        if (v < 0.5) {
+          float pageY =
+            (0.5 - v)
+            * 2.0;
+
+          if (
+            pageY
+            >= uPage2Cut.x
+          ) {
+            float sourceY =
+              pageY
+              + (
+                uPage2Cut.y
+                - uPage2Cut.x
+              );
+
+            if (sourceY > 1.0) {
+              webMask = 0.0;
+            }
+
+            sourceV =
+              0.5
+              - clamp(
+                  sourceY,
+                  0.0,
+                  1.0
+                )
+                * 0.5;
+          }
+        }
+
+        vec4 texel =
+          texture2D(
+            uMap,
+            vec2(
+              vUv.x,
+              sourceV
+            ),
+            uBias
+          );
+
+        float fade =
+          smoothstep(
+            0.0,
+            uFade.x,
+            1.0 - vUv.y
+          )
+          *
+          smoothstep(
+            0.0,
+            uFade.y,
+            vUv.y
+          );
+
+        float alpha =
+          texel.a
+          * fade
+          * uOpacity
+          * webMask;
+
+        if (alpha < 0.004) {
+          discard;
+        }
+
+        vec3 lifted =
+          pow(
+            clamp(
+              texel.rgb,
+              0.0,
+              1.0
+            ),
+            vec3(0.78)
+          );
+
+        gl_FragColor =
+          vec4(
+            lifted * uGlow,
+            alpha
+          );
       }
     `,
   });
