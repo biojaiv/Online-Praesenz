@@ -34,11 +34,11 @@ const HOME = {
 // das Kamera-Framing, die andere ueber zwei CSS-Variablen.
 const DOC_MAX_PX = 640;
 const DOC_GUTTER_X = 42;
-const DOC_GUTTER_Y = 34;
+const DOC_GUTTER_Y = 42;
 // Kameraabstand beim geoeffneten Lebenslauf als Vielfaches des Zielbilds:
 // 1.0 heisst, die erste Seite fuellt das Bild bis auf einen Hauch Rand.
 // Die rechte Maustaste plus Mausrad holt beliebig heran und wieder heraus.
-const DOCUMENT_ZOOM_DEFAULT = 1;
+const DOCUMENT_ZOOM_DEFAULT = 1.12;
 const DOCUMENT_ZOOM_MIN = 0.06;
 const DOCUMENT_ZOOM_MAX = 2.0;
 // Filmischer Takt statt maximaler Bildrate: rund 30 Bilder je Sekunde.
@@ -94,6 +94,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let composer = null;
   let noise = null;
   let bloom = null;
+  let bloomBaseTarget = 1.62;
 
   try {
     composer = new EffectComposer(renderer, {
@@ -166,19 +167,45 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   // zu verstellen, ohne focusCard erneut aufzurufen.
   let docBoundsMaxZ = 0;
   let docFitDistance = 1;
+  let viewMoving = false;
+  let viewMoveTicket = 0;
 
   /* ---------- Kamera ---------- */
 
   function moveView(target, aim, duration) {
+    const ticket = ++viewMoveTicket;
     gsap.killTweensOf([camPos, look]);
+
     if (duration <= 0 || reduced) {
       camPos.copy(target);
       look.copy(aim);
+      viewMoving = false;
       return;
     }
-    const options = { duration, ease: 'power3.inOut', overwrite: 'auto' };
-    gsap.to(camPos, { x: target.x, y: target.y, z: target.z, ...options });
-    gsap.to(look, { x: aim.x, y: aim.y, z: aim.z, ...options });
+
+    viewMoving = true;
+    const options = {
+      duration,
+      ease: 'sine.inOut',
+      overwrite: 'auto',
+    };
+
+    gsap.to(camPos, {
+      x: target.x,
+      y: target.y,
+      z: target.z,
+      ...options,
+      onComplete() {
+        if (ticket === viewMoveTicket) viewMoving = false;
+      },
+    });
+
+    gsap.to(look, {
+      x: aim.x,
+      y: aim.y,
+      z: aim.z,
+      ...options,
+    });
   }
 
   const halfFovTan = () => Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
@@ -220,7 +247,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   /** Ruhezustand: alle drei Karten im Blick. */
-  function toHome(duration = 0.75) {
+  function toHome(duration = 0.95) {
     opened = null;
     cards.setOpened(null);
     background.setDocumentOpen?.(false);
@@ -241,7 +268,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * bewusst ein Stueck Sockel stehen. Bei den uebrigen Bereichen genuegt der
    * Sockel selbst als Motiv.
    */
-  function focusCard(key, duration = 1.15) {
+  function focusCard(key, duration = 1.55) {
     opened = key;
     cards.setOpened(key, true);
     const isDocument = key === 'lebenslauf';
@@ -268,6 +295,9 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       visibleHeight = 2 * distance * tan;
       documentHeight = focusSize.y;
       focusCenter.y = document3d.max.y - focusSize.y * 0.5;
+      // Blickpunkt etwas tiefer: die Seite sitzt hoeher im Bild, waehrend
+      // unter ihr wieder ein Teil des Sockels sichtbar bleibt.
+      focusCenter.y -= focusSize.y * 0.04;
       docBoundsMaxZ = document3d.max.z;
       docFitDistance = fitDistance;
       updateDocumentLift();
@@ -464,17 +494,19 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   // Wenn das Modell nachtraeglich eintrifft oder sich das Fenster aendert,
   // wird das Zielbild einmalig nachgezogen.
   cards.onBoundsChange((key) => {
-    if (opened === key) focusCard(key, 0.7);
+    // Eine nachtraegliche Modellmeldung darf eine bereits laufende
+    // Kamerafahrt nicht abbrechen und neu starten.
+    if (opened === key && !viewMoving) focusCard(key, 0.8);
   });
 
   /* ---------- Groesse ---------- */
 
   function applyBloom() {
     if (!bloom) return;
-    // Am offenen Lebenslauf wird der Schein zurueckgenommen: der Bloom
-    // weicht sonst die Schrift auf.
     const base = view.compact ? 1.22 : 1.62;
-    bloom.intensity = (opened === 'lebenslauf' ? base * 0.45 : base) + glitch * 2.0;
+    bloomBaseTarget = opened === 'lebenslauf'
+      ? base * 0.45
+      : base;
   }
 
   let resizeFrame = 0;
@@ -511,7 +543,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     composer?.setSize(w, h);
     background.setPixelRatio(renderer.getPixelRatio());
     cards.setPixelRatio(renderer.getPixelRatio());
-    if (opened) focusCard(opened, 0.45);
+    if (opened && !viewMoving) focusCard(opened, 0.65);
   }
 
   // ResizeObserver feuert waehrend CSS-Uebergaengen mehrfach je Bild.
@@ -545,6 +577,16 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     background.update(t, dt);
     cards.update(t, dt);
+
+    if (bloom) {
+      const bloomTarget = bloomBaseTarget + glitch * 2.0;
+      const bloomResponse = 1 - Math.pow(
+        0.045,
+        Math.min(dt, 0.1),
+      );
+      bloom.intensity +=
+        (bloomTarget - bloom.intensity) * bloomResponse;
+    }
 
     const next = pick();
     if (next !== hovered) {

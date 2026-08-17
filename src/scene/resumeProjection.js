@@ -1,73 +1,26 @@
 import * as THREE from 'three';
 
-/**
- * Die Lebenslauf-Projektion.
- *
- * Der Sockel wirft ein Dokumentfenster in den Raum: eine feste, aufrechte
- * Flaeche direkt ueber der Sockeloberkante. Das Dokument selbst ist deutlich
- * hoeher als dieses Fenster — es laeuft hindurch. Dadurch bleiben beim
- * Heranfahren immer beides im Bild: ein Stueck Lebenslauf und ein Stueck
- * Sockel. Was weiter unten im Dokument liegt, holt der Besucher durch
- * Scrollen nach oben.
- *
- * Bewusst nur eine Bildquelle: das Dokument wird genau einmal geladen und
- * genau einmal in eine Textur gelegt. Der Ausschnitt entsteht im Shader
- * (uOffset/uWindow), nicht durch neue Geometrie oder neue Texturen.
- */
-
 export const CV_SVG_URL = new URL(
   '../../Elemente/lebenslauf.svg',
   import.meta.url,
 ).href;
 
-/**
- * Seitenzahl der Vorlage. Das Dokumentfenster ist genau eine Seite hoch:
- * ungeoeffnet zeigt es die erste Seite als Vorschau, geoeffnet dieselbe Seite
- * gross, und ein voller Bildlauf blaettert auf die zweite Seite.
- */
 export const CV_PAGE_COUNT = 2;
-
-/**
- * Seitenverhaeltnis einer einzelnen Seite (Breite/Hoehe) aus den Abmessungen
- * von lebenslauf.svg: 1241 x 3786 px auf zwei Seiten. Der Wert wird gebraucht,
- * bevor die Vorlage geladen ist — Projektion und Lesefassung sollen von der
- * ersten Sekunde an dieselbe Flaeche einnehmen.
- */
 export const CV_PAGE_ASPECT = 1241 / (3786 / CV_PAGE_COUNT);
 
-/**
- * Ankerpunkte der Abschnitte als Anteil der Dokumenthoehe, von oben gemessen.
- * Sie folgen dem Seitenaufbau von lebenslauf.svg (zwei Seiten, 3786 px):
- * Kopf und Fokus, Bildungsweg, Faehigkeiten mit Interessen und persoenlichen
- * Angaben, danach Seite zwei mit dem Arbeitsleben.
- */
 export const CV_ANCHORS = Object.freeze({
-  uebersicht:   0,
-  bildungsweg:  0.185,
+  uebersicht: 0,
+  bildungsweg: 0.185,
   faehigkeiten: 0.355,
-  kontakt:      0.415,
+  kontakt: 0.415,
   arbeitsleben: 0.525,
 });
 
-const DESKTOP_MAX_WIDTH = 1241;   // native Breite der Vorlage, kein Nachschaerfen
+const DESKTOP_MAX_WIDTH = 1241;
 const COMPACT_MAX_WIDTH = 820;
 const MAX_PIXELS = 5_200_000;
+const LINK_BOX_FALLBACK = Object.freeze({ start: 0.56, end: 0.71 });
 
-/**
- * Nur fuer die Webprojektion:
- * Der Link-Hinweiskasten auf Seite zwei wird ausgelassen.
- *
- * Werte innerhalb der zweiten Seite:
- * 0 = Seitenkopf
- * 1 = Seitenfuss
- */
-const WEB_PAGE2_CUT =
-  new THREE.Vector2(
-    0.755,
-    0.89,
-  );
-
-/** Rasterziel: nativ, solange Hardware und Speicherbudget es zulassen. */
 function chooseRasterSize(width, height, maxTextureSize, compact) {
   const aspect = width / height;
   const limit = Math.max(512, maxTextureSize || 4096);
@@ -75,11 +28,14 @@ function chooseRasterSize(width, height, maxTextureSize, compact) {
     compact ? COMPACT_MAX_WIDTH : DESKTOP_MAX_WIDTH,
     width,
     limit,
-    Math.floor(limit * aspect),               // Hoehe darf das Limit nicht reissen
+    Math.floor(limit * aspect),
     Math.floor(Math.sqrt(MAX_PIXELS * aspect)),
   );
   const nextWidth = Math.max(1, target);
-  return { width: nextWidth, height: Math.max(1, Math.round(nextWidth / aspect)) };
+  return {
+    width: nextWidth,
+    height: Math.max(1, Math.round(nextWidth / aspect)),
+  };
 }
 
 function loadImage(url) {
@@ -87,45 +43,220 @@ function loadImage(url) {
     const image = new Image();
     image.decoding = 'async';
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Die Lebenslauf-Vorlage konnte nicht geladen werden.'));
+    image.onerror = () => reject(
+      new Error('Die Lebenslauf-Vorlage konnte nicht geladen werden.'),
+    );
     image.src = url;
   });
 }
 
-/** Nur wenn verkleinert werden muss, entsteht ueberhaupt ein Canvas. */
-function rasterize(image, size) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size.width;
-  canvas.height = size.height;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Der Canvas-2D-Kontext ist nicht verfügbar.');
+function isAmberPixel(r, g, b, a) {
+  return a >= 42
+    && r >= 70
+    && g >= 42
+    && r - b > 18
+    && r - g > 4
+    && g - b > 2
+    && r > b * 1.05;
+}
+
+function longestAmberRun(pixels, width, y, xStart, xEnd) {
+  let run = 0;
+  let gap = 0;
+  let longest = 0;
+
+  for (let x = xStart; x < xEnd; x += 1) {
+    const index = (y * width + x) * 4;
+    const amber = isAmberPixel(
+      pixels[index],
+      pixels[index + 1],
+      pixels[index + 2],
+      pixels[index + 3],
+    );
+
+    if (amber) {
+      run += gap + 1;
+      gap = 0;
+      longest = Math.max(longest, run);
+    } else if (run > 0 && gap < 3) {
+      gap += 1;
+    } else {
+      run = 0;
+      gap = 0;
+    }
+  }
+
+  return longest;
+}
+
+/**
+ * Erkennt die zwei langen horizontalen Rahmenlinien des Linkkastens.
+ * Bei abweichender Farbwiedergabe greift ein konservativer Ersatzbereich.
+ */
+function detectLinkBoxCut(context, width, height) {
+  const pageHeight = Math.floor(height / CV_PAGE_COUNT);
+  const fallback = {
+    start: Math.round(pageHeight * LINK_BOX_FALLBACK.start),
+    end: Math.round(pageHeight * LINK_BOX_FALLBACK.end),
+    detected: false,
+  };
+
+  try {
+    const pixels = context.getImageData(
+      0,
+      pageHeight,
+      width,
+      pageHeight,
+    ).data;
+    const xStart = Math.floor(width * 0.055);
+    const xEnd = Math.ceil(width * 0.945);
+    const yStart = Math.floor(pageHeight * 0.44);
+    const yEnd = Math.ceil(pageHeight * 0.82);
+    const minimumRun = width * 0.42;
+    const groups = [];
+    let group = null;
+
+    for (let y = yStart; y < yEnd; y += 1) {
+      const score = longestAmberRun(pixels, width, y, xStart, xEnd);
+
+      if (score >= minimumRun) {
+        if (!group) {
+          group = { start: y, end: y, peakY: y, peak: score };
+        } else {
+          group.end = y;
+          if (score > group.peak) {
+            group.peak = score;
+            group.peakY = y;
+          }
+        }
+      } else if (group) {
+        groups.push(group);
+        group = null;
+      }
+    }
+    if (group) groups.push(group);
+
+    let best = null;
+    for (let first = 0; first < groups.length; first += 1) {
+      for (let second = first + 1; second < groups.length; second += 1) {
+        const top = groups[first];
+        const bottom = groups[second];
+        const gap = bottom.peakY - top.peakY;
+        if (gap < pageHeight * 0.035 || gap > pageHeight * 0.16) continue;
+
+        const middle = (top.peakY + bottom.peakY) * 0.5 / pageHeight;
+        const score = top.peak + bottom.peak
+          - Math.abs(middle - 0.635) * width;
+
+        if (!best || score > best.score) {
+          best = { top, bottom, score };
+        }
+      }
+    }
+
+    if (!best) return fallback;
+
+    const start = Math.max(
+      0,
+      best.top.start - Math.round(pageHeight * 0.012),
+    );
+    const end = Math.min(
+      pageHeight,
+      best.bottom.end + Math.round(pageHeight * 0.018),
+    );
+    const cutHeight = end - start;
+
+    if (cutHeight < pageHeight * 0.055 || cutHeight > pageHeight * 0.2) {
+      return fallback;
+    }
+
+    return { start, end, detected: true };
+  } catch (error) {
+    console.warn(
+      'Linkkasten-Erkennung fehlgeschlagen; verwende Sicherheitsausschnitt.',
+      error,
+    );
+    return fallback;
+  }
+}
+
+/**
+ * Nur die WebGL-Textur wird geändert:
+ * Seite 1 bleibt unverändert, auf Seite 2 wird der Linkkasten entfernt und
+ * alles darunter hochgerückt. PDF und Quelldatei bleiben unangetastet.
+ */
+function createWebProjectionCanvas(image, size) {
+  const source = document.createElement('canvas');
+  source.width = size.width;
+  source.height = size.height;
+  const sourceContext = source.getContext('2d', { willReadFrequently: true });
+  if (!sourceContext) {
+    throw new Error('Der Canvas-2D-Kontext ist nicht verfügbar.');
+  }
+
+  sourceContext.imageSmoothingEnabled = true;
+  sourceContext.imageSmoothingQuality = 'high';
+  sourceContext.drawImage(image, 0, 0, size.width, size.height);
+
+  const cut = detectLinkBoxCut(sourceContext, size.width, size.height);
+  const output = document.createElement('canvas');
+  output.width = size.width;
+  output.height = size.height;
+  const context = output.getContext('2d');
+  if (!context) {
+    throw new Error('Der Canvas-2D-Kontext ist nicht verfügbar.');
+  }
+
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
-  context.drawImage(image, 0, 0, size.width, size.height);
-  return canvas;
+
+  const pageHeight = Math.floor(size.height / CV_PAGE_COUNT);
+  const pageTwoTop = pageHeight;
+
+  context.drawImage(
+    source,
+    0, 0, size.width, pageHeight,
+    0, 0, size.width, pageHeight,
+  );
+  context.drawImage(
+    source,
+    0, pageTwoTop, size.width, cut.start,
+    0, pageTwoTop, size.width, cut.start,
+  );
+
+  const lowerHeight = Math.max(0, pageHeight - cut.end);
+  if (lowerHeight > 0) {
+    context.drawImage(
+      source,
+      0, pageTwoTop + cut.end, size.width, lowerHeight,
+      0, pageTwoTop + cut.start, size.width, lowerHeight,
+    );
+  }
+
+  console.info(
+    `Webprojektion: Linkkasten ${cut.detected ? 'erkannt' : 'per Ersatzbereich'} entfernt.`,
+    { start: cut.start / pageHeight, end: cut.end / pageHeight },
+  );
+
+  return output;
 }
 
 export function createResumeProjection({
   renderer,
   compact = false,
   reduced = false,
-  // Ruhehelligkeit: das Dokument steht auch ungeoeffnet ueber dem Sockel,
-  // nur zurueckgenommen — eine Vorschau, die zum Herantreten einlaedt.
   idleOpacity = 0,
   onReady,
   onError,
 } = {}) {
   const uniforms = {
-    uMap:     { value: null },
-    uWindow:  { value: 1 },        // sichtbarer Anteil der Dokumenthoehe
-    uOffset:  { value: 0 },        // oberer Rand des Fensters, 0..1-uWindow
+    uMap: { value: null },
+    uWindow: { value: 1 },
+    uOffset: { value: 0 },
     uOpacity: { value: 0 },
-    uFade:    { value: new THREE.Vector2(0.085, 0.055) },  // oben, unten
-    uGlow:     { value: 1.5 },
-    uPage2Cut: { value: WEB_PAGE2_CUT.clone() },
-    // Negative Detailstufe: die Textur wird eine halbe Mipmap-Stufe schaerfer
-    // abgetastet, damit die Schrift vor dem dunklen Raum nicht verwaescht.
-    uBias:    { value: -0.65 },
+    uFade: { value: new THREE.Vector2(0.085, 0.055) },
+    uGlow: { value: 1.5 },
+    uBias: { value: -0.65 },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -142,116 +273,20 @@ export function createResumeProjection({
     `,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap;
-
-      uniform float
-        uWindow,
-        uOffset,
-        uOpacity,
-        uGlow,
-        uBias;
-
-      uniform vec2
-        uFade,
-        uPage2Cut;
-
+      uniform float uWindow, uOffset, uOpacity, uGlow, uBias;
+      uniform vec2 uFade;
       varying vec2 vUv;
 
       void main() {
-        float v =
-          1.0
-          - uOffset
-          - (1.0 - vUv.y)
-            * uWindow;
+        float v = 1.0 - uOffset - (1.0 - vUv.y) * uWindow;
+        vec4 texel = texture2D(uMap, vec2(vUv.x, v), uBias);
+        float fade = smoothstep(0.0, uFade.x, 1.0 - vUv.y)
+          * smoothstep(0.0, uFade.y, vUv.y);
+        float alpha = texel.a * fade * uOpacity;
+        if (alpha < 0.004) discard;
 
-        float sourceV = v;
-        float webMask = 1.0;
-
-        // Seite zwei liegt in der unteren Haelfte der Gesamttextur.
-        //
-        // Der Linkkasten bleibt Bestandteil von SVG/PDF.
-        // Fuer die Webprojektion wird der entsprechende Streifen
-        // uebersprungen.
-        //
-        // Der nachfolgende Inhalt rueckt dadurch unmittelbar hoch.
-        if (v < 0.5) {
-          float pageY =
-            (0.5 - v)
-            * 2.0;
-
-          if (
-            pageY
-            >= uPage2Cut.x
-          ) {
-            float sourceY =
-              pageY
-              + (
-                uPage2Cut.y
-                - uPage2Cut.x
-              );
-
-            if (sourceY > 1.0) {
-              webMask = 0.0;
-            }
-
-            sourceV =
-              0.5
-              - clamp(
-                  sourceY,
-                  0.0,
-                  1.0
-                )
-                * 0.5;
-          }
-        }
-
-        vec4 texel =
-          texture2D(
-            uMap,
-            vec2(
-              vUv.x,
-              sourceV
-            ),
-            uBias
-          );
-
-        float fade =
-          smoothstep(
-            0.0,
-            uFade.x,
-            1.0 - vUv.y
-          )
-          *
-          smoothstep(
-            0.0,
-            uFade.y,
-            vUv.y
-          );
-
-        float alpha =
-          texel.a
-          * fade
-          * uOpacity
-          * webMask;
-
-        if (alpha < 0.004) {
-          discard;
-        }
-
-        vec3 lifted =
-          pow(
-            clamp(
-              texel.rgb,
-              0.0,
-              1.0
-            ),
-            vec3(0.78)
-          );
-
-        gl_FragColor =
-          vec4(
-            lifted * uGlow,
-            alpha
-          );
+        vec3 lifted = pow(clamp(texel.rgb, 0.0, 1.0), vec3(0.78));
+        gl_FragColor = vec4(lifted * uGlow, alpha);
       }
     `,
   });
@@ -263,23 +298,17 @@ export function createResumeProjection({
   mesh.frustumCulled = false;
 
   let texture = null;
-  let aspect = null;          // Breite/Hoehe des gesamten Dokuments
+  let aspect = null;
   let ready = false;
   let disposed = false;
   let open = false;
   let loadError = null;
   let loading = null;
-
-  // Scrollzustand: Ziel und gedaempfter Istwert, damit das Blatt nicht ruckt.
   let scrollTarget = 0;
   let scroll = 0;
-  // Fensterhoehe als Anteil der Dokumenthoehe, aus der Geometrie abgeleitet:
-  // genau eine Seite.
   let baseFraction = 1;
   const idle = THREE.MathUtils.clamp(idleOpacity, 0, 1);
   let opacityTarget = idle;
-  // Beim Wechsel zur Lesefassung tritt das Blatt bewusst langsamer ab, als
-  // es sonst auf- und abblendet: der Uebergang soll gesehen werden.
   let fadeBase = 0.02;
   let hidden = false;
 
@@ -291,6 +320,7 @@ export function createResumeProjection({
   function applyOpacityTarget() {
     opacityTarget = hidden ? 0 : (open ? 1 : idle);
     if (ready && opacityTarget > 0) mesh.visible = true;
+
     if (reduced) {
       uniforms.uOpacity.value = opacityTarget;
       mesh.visible = ready && opacityTarget > 0;
@@ -304,6 +334,7 @@ export function createResumeProjection({
 
   async function load() {
     if (loading) return loading;
+
     loading = (async () => {
       try {
         const image = await loadImage(CV_SVG_URL);
@@ -322,9 +353,7 @@ export function createResumeProjection({
           renderer?.capabilities?.maxTextureSize,
           compact,
         );
-        const source = size.width === width && size.height === height
-          ? image
-          : rasterize(image, size);
+        const source = createWebProjectionCanvas(image, size);
         if (disposed) return false;
 
         texture = new THREE.Texture(source);
@@ -333,7 +362,8 @@ export function createResumeProjection({
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.magFilter = THREE.LinearFilter;
         texture.generateMipmaps = true;
-        texture.anisotropy = renderer?.capabilities?.getMaxAnisotropy?.() || 1;
+        texture.anisotropy =
+          renderer?.capabilities?.getMaxAnisotropy?.() || 1;
         texture.needsUpdate = true;
         uniforms.uMap.value = texture;
 
@@ -348,6 +378,7 @@ export function createResumeProjection({
         return false;
       }
     })();
+
     return loading;
   }
 
@@ -357,19 +388,12 @@ export function createResumeProjection({
     mesh,
     get ready() { return ready; },
     get aspect() { return aspect; },
-    /** Breite geteilt durch Hoehe einer einzelnen Seite. */
     get pageAspect() { return aspect ? aspect * CV_PAGE_COUNT : null; },
     get error() { return loadError; },
     get scroll() { return scrollTarget; },
 
-    /**
-     * Legt den sichtbaren Ausschnitt fest.
-     * @param windowHeight Fensterhoehe in Welteinheiten
-     * @param windowWidth  Fensterbreite in Welteinheiten
-     */
     setWindow(windowWidth, windowHeight) {
-      if (!aspect) return;
-      // Anteil der Dokumenthoehe, der bei gleicher Breite ins Fenster passt.
+      if (!aspect || !(windowWidth > 0)) return;
       baseFraction = THREE.MathUtils.clamp(
         (windowHeight / windowWidth) * aspect,
         0.02,
@@ -378,7 +402,6 @@ export function createResumeProjection({
       applyWindow();
     },
 
-    /** 0 = Dokumentkopf, 1 = Dokumentende. */
     setScroll(value, immediate = false) {
       scrollTarget = THREE.MathUtils.clamp(value, 0, 1);
       if (immediate || reduced) {
@@ -387,32 +410,29 @@ export function createResumeProjection({
       }
     },
 
-    /** Oberkante des Ausschnitts auf einen Anteil der Dokumenthoehe legen. */
     scrollToFraction(fraction, immediate = false) {
       const range = Math.max(0, 1 - uniforms.uWindow.value);
       this.setScroll(range > 0 ? fraction / range : 0, immediate);
     },
 
-    /** Blaettern in Fensterhoehen: 1 = ein voller Ausschnitt weiter. */
     scrollByPages(pages) {
       const range = Math.max(0, 1 - uniforms.uWindow.value);
       if (range <= 0) return 0;
-      this.setScroll(scrollTarget + (pages * uniforms.uWindow.value) / range);
+      this.setScroll(
+        scrollTarget + (pages * uniforms.uWindow.value) / range,
+      );
       return scrollTarget;
     },
 
-    /** Anteil der Dokumenthoehe, der gerade nicht ins Fenster passt. */
-    get scrollRange() { return Math.max(0, 1 - uniforms.uWindow.value); },
+    get scrollRange() {
+      return Math.max(0, 1 - uniforms.uWindow.value);
+    },
 
     setOpen(value) {
       open = Boolean(value);
       applyOpacityTarget();
     },
 
-    /**
-     * Die Lesefassung steht an derselben Stelle: solange sie zu sehen ist,
-     * blendet das Blatt vollstaendig ab, ohne seinen Zustand zu verlieren.
-     */
     setHidden(value) {
       hidden = Boolean(value);
       fadeBase = hidden ? 0.25 : 0.12;
@@ -421,15 +441,20 @@ export function createResumeProjection({
 
     update(delta) {
       if (!ready) return;
+
       const step = 1 - Math.pow(0.0025, Math.min(delta, 0.1));
       if (scroll !== scrollTarget) {
         scroll += (scrollTarget - scroll) * step;
         if (Math.abs(scrollTarget - scroll) < 0.0004) scroll = scrollTarget;
         applyScroll(scroll);
       }
+
       const fade = 1 - Math.pow(fadeBase, Math.min(delta, 0.1));
-      uniforms.uOpacity.value += (opacityTarget - uniforms.uOpacity.value) * fade;
-      if (opacityTarget <= 0 && uniforms.uOpacity.value < 0.01) mesh.visible = false;
+      uniforms.uOpacity.value +=
+        (opacityTarget - uniforms.uOpacity.value) * fade;
+      if (opacityTarget <= 0 && uniforms.uOpacity.value < 0.01) {
+        mesh.visible = false;
+      }
     },
 
     dispose() {

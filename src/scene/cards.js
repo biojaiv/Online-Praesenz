@@ -52,15 +52,9 @@ const DOC_FRONT = 0.4;
 const RESUME_KEY = 'lebenslauf';
 // Ruhehelligkeit der Lebenslauf-Vorschau, solange der Sockel nicht offen ist.
 const RESUME_IDLE_OPACITY = 0.85;
-// Groesse der Vorschau gegenueber der geoeffneten Seite. Ungeoeffnet steht die
-// erste Seite als kleines Blatt ueber dem Sockel, beim Oeffnen waechst sie auf
-// ihre volle Groesse.
-const RESUME_IDLE_SCALE = 0.9;
-// Im Fokus rahmt die Kamera absichtlich etwas enger und tiefer als das Blatt.
-// Dadurch nimmt das Dokument mehr Raum nach oben ein, ohne den Sockel selbst
-// zu verschieben.
-const RESUME_FOCUS_FRAME_SCALE = 0.94;
-const RESUME_FOCUS_FRAME_SHIFT = 0.045;
+// Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
+// Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
+const RESUME_IDLE_SCALE = 1;
 // Freies Drehen wuerde die einseitig lesbare Projektion wegkippen lassen.
 const ROTATION_LIMIT = 0.4;
 
@@ -605,9 +599,11 @@ function setHitBody(card, modelBox) {
   card.hitBounds.copy(modelBox);
   // Die dauerhaft sichtbare Lebenslauf-Vorschau soll selbst anklickbar sein,
   // nicht nur der Stein darunter.
-  const hitHeight = card.windowHeightTarget || card.windowHeight;
   const headroom = card.key === RESUME_KEY
-    ? Math.max(HIT_HEADROOM[card.key], hitHeight * RESUME_IDLE_SCALE + DOC_LIFT)
+    ? Math.max(
+        HIT_HEADROOM[card.key],
+        card.windowHeight * RESUME_IDLE_SCALE + DOC_LIFT,
+      )
     : HIT_HEADROOM[card.key];
   card.hitBounds.max.y = Math.max(card.hitBounds.max.y, card.surfaceY + headroom);
   card.hitBounds.getSize(_size);
@@ -632,113 +628,60 @@ function updateResumeWindow(card, notify = true) {
   if (!projection?.ready || !pageAspect || card.disposed) return;
 
   card.baseBounds.getSize(_size);
-  const width = Math.min(DOC_MAX_WIDTH, Math.max(_size.x, _size.z, 1));
+  const width = Math.min(
+    DOC_MAX_WIDTH,
+    Math.max(_size.x, _size.z, 1),
+  );
 
-  // Im Ruhezustand ist die komplette erste Seite sichtbar.
-  // Erst beim Oeffnen darf das Fenster auf die verfuegbare
-  // Bildschirmhoehe wechseln.
-  const windowAspect = card.resumeOpen
-    ? Math.max(pageAspect, card.windowAspect || pageAspect)
-    : pageAspect;
-
-  const height = width / windowAspect;
+  // Eine Seite behaelt immer ihr echtes Seitenverhaeltnis.
+  // Bildschirmformat und Lesefassung duerfen die 3D-Projektion nicht stauchen.
+  const height = width / pageAspect;
   const bottom = card.surfaceY + DOC_LIFT;
-  const firstLayout = !(card.windowWidth > 0);
 
-  card.windowWidthTarget = width;
-  card.windowHeightTarget = height;
+  card.windowWidth = width;
+  card.windowHeight = height;
 
-  if (firstLayout || card.reducedMotion) {
-    card.windowWidth = width;
-    card.windowHeight = height;
-    projection.setWindow(width, height);
-  }
-
+  projection.setWindow(width, height);
   card.resumeHelix?.setWindow(
     card.surfaceY + 0.05,
     DOC_LIFT + height,
     width,
   );
 
-  // Im Fokus ist der Kamerarahmen etwas kleiner als das reale Blatt
-  // und leicht nach unten versetzt.
-  //
-  // Ergebnis:
-  // Das Dokument erscheint groesser und reicht weiter nach oben.
-  const frameScale = card.resumeOpen
-    ? RESUME_FOCUS_FRAME_SCALE
-    : 1;
-
-  const frameShift = card.resumeOpen
-    ? height * RESUME_FOCUS_FRAME_SHIFT
-    : 0;
-
-  const frameHeight = height * frameScale;
-  const frameCenter = bottom + height * 0.5 - frameShift;
-
   card.documentBounds.min.set(
     -width * 0.5,
-    frameCenter - frameHeight * 0.5,
+    bottom,
     DOC_FRONT - 0.05,
   );
-
   card.documentBounds.max.set(
     width * 0.5,
-    frameCenter + frameHeight * 0.5,
+    bottom + height,
     DOC_FRONT + 0.05,
   );
 
-  if (firstLayout || card.reducedMotion) {
-    applyResumeScale(card);
-  }
-
+  applyResumeScale(card);
   setHitBody(card, card.baseBounds);
 
-  if (notify) {
-    card.notifyBoundsChange(card.key);
-  }
+  if (notify) card.notifyBoundsChange(card.key);
 }
 
-
-/**
- * Geometrie, Partikelrahmen UND Texturausschnitt benutzen denselben
- * interpolierten Zustand.
- *
- * Dadurch entsteht beim Klick keine zweite, ploetzlich anders
- * positionierte Dokumentflaeche mehr.
- */
+/** Das Blatt aendert beim Oeffnen weder Groesse noch Seitenverhaeltnis. */
 function applyResumeScale(card) {
   const projection = card.resumeProjection;
+  if (!projection?.ready || !card.windowWidth) return;
 
-  if (!projection?.ready || !card.windowWidth) {
-    return;
-  }
-
-  const width = card.windowWidth * card.docScale;
-  const height = card.windowHeight * card.docScale;
+  const width = card.windowWidth;
+  const height = card.windowHeight;
   const bottom = card.surfaceY + DOC_LIFT;
 
-  projection.setWindow(
-    card.windowWidth,
-    card.windowHeight,
-  );
-
-  projection.mesh.scale.set(
-    width,
-    height,
-    1,
-  );
-
+  projection.setWindow(width, height);
+  projection.mesh.scale.set(width, height, 1);
   projection.mesh.position.set(
     0,
     bottom + height * 0.5,
     DOC_FRONT,
   );
-
-  card.resumeFrame?.setWindow(
-    width,
-    height,
-  );
+  card.resumeFrame?.setWindow(width, height);
 }
 
 function sharpenModel(model, maxAnisotropy) {
@@ -1014,12 +957,10 @@ export function createCards({ renderer, reduced = false } = {}) {
       surfaceY: BASE_TOP,
       windowWidth: 0,
       windowHeight: 3.2,
-      windowWidthTarget: 0,
-      windowHeightTarget: 3.2,
       // Seitenverhaeltnis des Fensters auf dem Schirm, von der Buehne gesetzt.
       windowAspect: 0,
-      // Aufblendmass des Blattes: Vorschau oder ganze Seite.
-      docScale: RESUME_IDLE_SCALE,
+      // Die physische Seitengroesse bleibt beim Oeffnen unveraendert.
+      docScale: 1,
       resumeOpen: false,
       notifyBoundsChange(key) { boundsListener?.(key); },
       rotationOffset: 0,
@@ -1029,7 +970,6 @@ export function createCards({ renderer, reduced = false } = {}) {
       layoutY: HOME_ROW_DROP,
       displayScale: 1,
       layoutInitialized: false,
-      reducedMotion: reduced,
       pendingFallback: null,
       modelReveal: 1,
       disposed: false,
@@ -1070,10 +1010,9 @@ export function createCards({ renderer, reduced = false } = {}) {
      */
     setDocumentAspect(ratio) {
       if (!resumeCard || !(ratio > 0)) return;
-      if (Math.abs((resumeCard.windowAspect || 0) - ratio) < 0.002) return;
       resumeCard.windowAspect = ratio;
-      // Ohne Meldung: das Zielbild wird vom Aufrufer ohnehin neu gesetzt.
-      updateResumeWindow(resumeCard, false);
+      // Das Bildschirmformat wird nur fuer Kamera und HTML-Lesefassung
+      // gespeichert. Die 3D-Seite bleibt unverzerrt.
     },
 
     /* ---------- Uebergang zur Lesefassung ---------- */
@@ -1227,37 +1166,21 @@ export function createCards({ renderer, reduced = false } = {}) {
     /** Im Fokus bleibt nur der gewaehlte Sockel im Kamerabild. */
     setOpened(key, _isolate = false) {
       for (const card of cards) {
-        // Nicht mehr hart ausblenden.
-        // Beim Anflug laufen die Nachbarsockel weich aus dem Kamerabild.
+        // Nachbarsockel verschwinden nicht schlagartig, sondern laufen
+        // waehrend der Kamerafahrt aus dem Bild.
         card.holder.visible = true;
-
         card.resumeOpen =
           key === card.key
           && card.key === RESUME_KEY;
 
-        card.resumeProjection?.setOpen(
-          card.resumeOpen,
-        );
+        card.resumeProjection?.setOpen(card.resumeOpen);
+        card.resumeFrame?.setOpen(card.resumeOpen);
 
-        card.resumeFrame?.setOpen(
-          card.resumeOpen,
-        );
-
-        if (card.key === RESUME_KEY) {
-          updateResumeWindow(card, false);
-        }
-
-        // Beim Zurueckkehren immer wieder Seite 1 zeigen.
-        if (
-          card.key === RESUME_KEY
-          && !card.resumeOpen
-        ) {
+        if (card.key === RESUME_KEY && !card.resumeOpen) {
           card.resumeProjection?.setScroll(0);
         }
 
-        if (key) {
-          card.target = 0;
-        }
+        if (key) card.target = 0;
 
         if (!card.resumeOpen) {
           card.rotationOffset = 0;
@@ -1293,100 +1216,13 @@ export function createCards({ renderer, reduced = false } = {}) {
           card.hover,
         );
 
-        if (
-          card.key === RESUME_KEY
-          && card.resumeProjection
-        ) {
-          // Alle Bestandteile desselben Blattes fahren mit derselben
-          // Zeitkonstante zum neuen Zustand.
-          const geometryResponse = reduced
-            ? 1
-            : 1 - Math.pow(
-                0.012,
-                Math.min(delta, 0.1),
-              );
-
-          const scaleTarget =
-            card.resumeOpen
-              ? 1
-              : RESUME_IDLE_SCALE;
-
-          let geometryChanged = false;
-
-          for (const [currentKey, targetKey] of [
-            ["windowWidth", "windowWidthTarget"],
-            ["windowHeight", "windowHeightTarget"],
-          ]) {
-            const targetValue = card[targetKey];
-
-            if (!(targetValue > 0)) {
-              continue;
-            }
-
-            if (
-              Math.abs(
-                card[currentKey] - targetValue
-              ) > 0.0005
-            ) {
-              card[currentKey] +=
-                (
-                  targetValue
-                  - card[currentKey]
-                )
-                * geometryResponse;
-
-              if (
-                Math.abs(
-                  card[currentKey]
-                  - targetValue
-                ) <= 0.0005
-              ) {
-                card[currentKey] =
-                  targetValue;
-              }
-
-              geometryChanged = true;
-            }
-          }
-
-          if (
-            Math.abs(
-              scaleTarget
-              - card.docScale
-            ) > 0.0005
-          ) {
-            card.docScale +=
-              (
-                scaleTarget
-                - card.docScale
-              )
-              * geometryResponse;
-
-            if (
-              Math.abs(
-                scaleTarget
-                - card.docScale
-              ) <= 0.0005
-            ) {
-              card.docScale =
-                scaleTarget;
-            }
-
-            geometryChanged = true;
-          }
-
-          if (geometryChanged) {
-            applyResumeScale(card);
-          }
-        }
-
         card.resumeFrame?.update(delta);
         card.resumeProjection?.update(delta);
 
         const phase = card.key.length;
         card.holder.position.y = card.layoutY
           + Math.sin(elapsed * 0.18 + phase) * 0.11
-          + card.hover * 0.3;
+          + card.hover * 0.16;
         if (card.key === RESUME_KEY) {
           if (!card.rotationDragging && card.rotationVelocity !== 0) {
             const before = card.rotationOffset;
