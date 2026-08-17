@@ -35,10 +35,36 @@ function sectionFromRoute(route) {
   return SECTIONS.has(section) ? section : 'uebersicht';
 }
 
+function compactTimelineItems(items = []) {
+  const grouped = new Map();
+
+  for (const item of items) {
+    const key = [item.titel, item.beschreibung, item.hinweis]
+      .map((value) => String(value ?? '').trim())
+      .join('\u0000');
+    const existing = grouped.get(key);
+
+    if (existing) {
+      if (item.zeitraum) existing.periods.push(item.zeitraum);
+      continue;
+    }
+
+    grouped.set(key, {
+      ...item,
+      periods: item.zeitraum ? [item.zeitraum] : [],
+    });
+  }
+
+  return [...grouped.values()].map(({ periods, ...item }) => ({
+    ...item,
+    zeitraum: periods.join(' · '),
+  }));
+}
+
 function timeline(items = [], extraClass = '') {
   return `
     <ol class="cv-timeline ${extraClass}">
-      ${items.map((item) => `
+      ${compactTimelineItems(items).map((item) => `
         <li>
           <time>${escapeHTML(item.zeitraum)}</time>
           <div>
@@ -84,7 +110,6 @@ function overview(data) {
       <dl class="cv-facts">
         <div><dt>Schwerpunkt</dt><dd>${escapeHTML(data.interessensschwerpunkte)}</dd></div>
         <div><dt>Standort</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
-        <div><dt>Geboren</dt><dd>${escapeHTML(personal.geburtsdatum)}</dd></div>
       </dl>
     </section>`;
 }
@@ -92,8 +117,8 @@ function overview(data) {
 function education(data) {
   return `
     <section class="cv-section" id="cv-education" aria-labelledby="cv-education-title">
-      <p class="cv-kicker">Chronologie</p>
-      <h2 id="cv-education-title">Bildungsweg</h2>
+      <p class="cv-kicker">Qualifikation</p>
+      <h2 id="cv-education-title">Ausbildung & Praxis</h2>
       ${timeline(data.bildungsweg)}
     </section>`;
 }
@@ -101,23 +126,23 @@ function education(data) {
 function work(data) {
   return `
     <section class="cv-section cv-section--work" id="cv-work" aria-labelledby="cv-work-title">
-      <p class="cv-kicker cv-kicker--amber">Arbeitsleben</p>
+      <p class="cv-kicker cv-kicker--amber">Erfahrung</p>
       <h2 id="cv-work-title">Beruflicher Werdegang</h2>
       ${timeline(data.beruflicherWerdegang, 'cv-timeline--work')}
     </section>`;
 }
 
 function skills(data) {
-  const personal = data.persoenlich || {};
   const groups = [
-    ['Technische Fähigkeiten', data.skills || []],
-    ['Persönliche Fähigkeiten', data.soft || []],
+    ['Technische Kompetenzen', data.skills || []],
+    ['Sprachen & Arbeitsweise', data.soft || []],
   ];
+
   return `
     <section class="cv-section" id="cv-skills" aria-labelledby="cv-skills-title">
-      <p class="cv-kicker">Kompetenzmatrix</p>
-      <h2 id="cv-skills-title">Fähigkeiten</h2>
-      <div class="cv-lower-grid">
+      <p class="cv-kicker">Kompetenzen</p>
+      <h2 id="cv-skills-title">Technik & Arbeitsweise</h2>
+      <div class="cv-lower-grid cv-lower-grid--skills">
         <div class="cv-skill-groups">
           ${groups.map(([title, rows]) => `
             <div class="cv-skill-group">
@@ -127,19 +152,13 @@ function skills(data) {
               </ul>
             </div>`).join('')}
         </div>
-        <aside class="cv-skill-side" aria-label="Interessen und persönliche Informationen">
+        <aside class="cv-skill-side" aria-label="Interessen">
           <div class="cv-side-block">
-            <p class="cv-kicker">Freiraum</p>
+            <p class="cv-kicker">Ausgleich</p>
             <h3>Interessen</h3>
-            <ul class="cv-interests-list">${(data.interessen || []).map((interest) => `<li>${escapeHTML(interest)}</li>`).join('')}</ul>
-          </div>
-          <div class="cv-side-block">
-            <p class="cv-kicker cv-kicker--amber">Persönliche Informationen</p>
-            <dl class="cv-personal-list">
-              <div><dt>Geburtsdatum</dt><dd>${escapeHTML(personal.geburtsdatum)}</dd></div>
-              <div><dt>Kontakt</dt><dd><a href="mailto:${escapeHTML(personal.kontakt)}">${escapeHTML(personal.kontakt)}</a></dd></div>
-              <div><dt>Wohnort</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
-            </dl>
+            <ul class="cv-interests-list">${(data.interessen || [])
+              .map((interest) => `<li>${escapeHTML(interest)}</li>`)
+              .join('')}</ul>
           </div>
         </aside>
       </div>
@@ -149,25 +168,22 @@ function skills(data) {
 function contact(data) {
   const personal = data.persoenlich || {};
   const email = escapeHTML(personal.kontakt);
+
   return `
     <section class="cv-section cv-section--contact" id="cv-contact" aria-labelledby="cv-contact-title">
       <div class="cv-contact-grid">
         <div>
-          <p class="cv-kicker">Persönliche Daten</p>
+          <p class="cv-kicker">Erreichbarkeit</p>
           <h2 id="cv-contact-title">Kontakt</h2>
         </div>
         <dl class="cv-contact-list">
           <div><dt>E-Mail</dt><dd><a href="mailto:${email}">${email}</a></dd></div>
           <div><dt>Standort</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
+          <div><dt>Verfügbarkeit</dt><dd>${escapeHTML(data.verfuegbar)}</dd></div>
           <div><dt>Geburtsdatum</dt><dd>${escapeHTML(personal.geburtsdatum)}</dd></div>
         </dl>
       </div>
-      <div class="cv-interests">
-        <p class="cv-kicker">Freiraum</p>
-        <h3>Interessen</h3>
-        <ul>${(data.interessen || []).map((interest) => `<li>${escapeHTML(interest)}</li>`).join('')}</ul>
-      </div>
-      <a class="cv-primary-action" href="mailto:${email}">Nachricht verfassen</a>
+      <a class="cv-primary-action" href="mailto:${email}">E-Mail schreiben</a>
     </section>`;
 }
 
@@ -199,12 +215,12 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
         <div><span>Curriculum Vitæ</span><small>Lesefassung · Live-Datensatz</small></div>
         <span class="cv-status">Synchron</span>
       </header>
-      <nav class="cv-nav" aria-label="Lebenslaufbereiche" role="tablist">
-        <button type="button" role="tab" data-cv-target="lebenslauf">Übersicht</button>
-        <button type="button" role="tab" data-cv-target="lebenslauf/arbeitsleben">Arbeitsleben</button>
-        <button type="button" role="tab" data-cv-target="lebenslauf/bildungsweg">Bildungsweg</button>
-        <button type="button" role="tab" data-cv-target="lebenslauf/faehigkeiten">Fähigkeiten</button>
-        <button type="button" role="tab" data-cv-target="lebenslauf/kontakt">Kontakt</button>
+      <nav class="cv-nav" aria-label="Lebenslaufabschnitte">
+        <button type="button" data-cv-target="lebenslauf">Profil</button>
+        <button type="button" data-cv-target="lebenslauf/faehigkeiten">Kompetenzen</button>
+        <button type="button" data-cv-target="lebenslauf/bildungsweg">Ausbildung</button>
+        <button type="button" data-cv-target="lebenslauf/arbeitsleben">Werdegang</button>
+        <button type="button" data-cv-target="lebenslauf/kontakt">Kontakt</button>
       </nav>
       <div class="cv-hologram__body" tabindex="0" aria-label="Scrollbarer Lebenslaufinhalt">
         <p class="cv-state">Lebenslaufdaten werden entschlüsselt …</p>
@@ -241,7 +257,8 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     for (const button of nav.querySelectorAll('[data-cv-target]')) {
       const active = button.dataset.cvTarget === route;
       button.classList.toggle('is-active', active);
-      button.setAttribute('aria-selected', active ? 'true' : 'false');
+      if (active) button.setAttribute('aria-current', 'location');
+      else button.removeAttribute('aria-current');
     }
   }
 
@@ -258,20 +275,20 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     }
     body.innerHTML = [
       overview(data),
-      education(data),
       skills(data),
-      contact(data),
+      education(data),
       work(data),
+      contact(data),
     ].join('');
   }
 
   function scrollToSection(behavior = 'smooth') {
     const section = sectionFromRoute(route);
-    if (section === 'uebersicht') {
-      body.scrollTo({ top: 0, behavior });
-      return;
-    }
-    body.querySelector(ANCHORS[section])?.scrollIntoView({ block: 'start', behavior });
+    const target = section === 'uebersicht'
+      ? body.querySelector(ANCHORS.uebersicht)
+      : body.querySelector(ANCHORS[section]);
+    const top = target ? Math.max(0, target.offsetTop - 8) : 0;
+    body.scrollTo({ top, behavior });
   }
 
   async function load() {
@@ -327,6 +344,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
         panel.hidden = false;
         actionSlot.prepend(toggle);
         scrollToSection('auto');
+        requestAnimationFrame(() => scrollToSection('auto'));
         body.focus({ preventScroll: true });
         onOpenChange?.(true);
         await afterAnimation(article, 1100);
@@ -365,7 +383,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
 
   nav.addEventListener('keydown', (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    const tabs = [...nav.querySelectorAll('[role="tab"]')];
+    const tabs = [...nav.querySelectorAll('[data-cv-target]')];
     const current = Math.max(0, tabs.indexOf(document.activeElement));
     const next = event.key === 'Home' ? 0 : event.key === 'End'
       ? tabs.length - 1

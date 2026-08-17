@@ -14,6 +14,52 @@ const boot = document.getElementById('boot');
 const stageEl = document.getElementById('stage');
 const crumb = document.getElementById('crumb');
 const hint = document.getElementById('hint');
+const foot = document.querySelector('.foot');
+
+const ROUTE_LABELS = Object.freeze({
+  home: 'Home',
+  abschluss: 'Abschlussprojekt',
+  server: 'Server',
+  uem: 'UEM',
+  clients: 'Clients',
+  migration: 'Migration',
+  projekte: 'Private IT-Projekte',
+  homelab: 'Homelab',
+  automation: 'Automatisierung',
+  web: 'Web',
+  lebenslauf: 'Lebenslauf',
+  arbeitsleben: 'Werdegang',
+  bildungsweg: 'Ausbildung',
+  faehigkeiten: 'Kompetenzen',
+  kontakt: 'Kontakt',
+});
+
+let currentRoute = 'home';
+let readerIsOpen = false;
+
+function formatRoute(target) {
+  return String(target || 'home')
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => ROUTE_LABELS[segment] || segment)
+    .join(' · ');
+}
+
+function updateFooter() {
+  const root = currentRoute.split('/')[0] || 'home';
+  crumb.textContent = formatRoute(currentRoute);
+  hint.textContent = root === 'home'
+    ? 'Bereich wählen'
+    : root === 'lebenslauf'
+      ? readerIsOpen
+        ? 'Abschnitt wählen · Scrollen · ESC zur Projektion'
+        : 'Scrollen zum Weiterlesen · ESC zurück'
+      : 'ESC zurück';
+
+  foot?.classList.toggle('is-contextual', root !== 'home');
+  foot?.classList.toggle('is-reader-open', readerIsOpen);
+  if (foot) foot.dataset.section = root;
+}
 
 // Der Sockel bekommt bis zu vier Sekunden Vorsprung hinter dem Boot-Layer.
 const MODEL_GATE = 4000;
@@ -53,6 +99,8 @@ const reader = createReader({
   // Vor dem Erscheinen raeumt die Buehne: Projektion ab, Helix auf.
   onTransition: (open) => stage?.beginReaderTransition(open),
   onOpenChange: (open) => {
+    readerIsOpen = open;
+    updateFooter();
     stage?.setReaderOpen(open);
     download?.dock(open ? reader.actionSlot : null);
   },
@@ -80,12 +128,9 @@ const router = createRouter({
     reader?.setRoute(target);
     download?.setVisible(root === 'lebenslauf');
 
-    crumb.textContent = target;
-    hint.textContent = root === 'home'
-      ? 'Bereich wählen'
-      : root === 'lebenslauf'
-        ? 'Scrollen zum Weiterlesen · ESC zurück'
-        : 'Zurück mit ESC';
+    currentRoute = target;
+    if (root !== 'lebenslauf') readerIsOpen = false;
+    updateFooter();
   },
 });
 
