@@ -50,6 +50,196 @@ function loadImage(url) {
   });
 }
 
+
+function clampUnit(value) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function smoothUnit(edge0, edge1, value) {
+  const t = clampUnit((value - edge0) / Math.max(0.0001, edge1 - edge0));
+  return t * t * (3 - 2 * t);
+}
+
+function buildBackgroundGrid(pixels, width, height) {
+  const columns = 8;
+  const rows = 12;
+  const grid = new Array(columns * rows);
+
+  for (let row = 0; row < rows; row += 1) {
+    const yStart = Math.floor(row * height / rows);
+    const yEnd = Math.ceil((row + 1) * height / rows);
+    for (let column = 0; column < columns; column += 1) {
+      const xStart = Math.floor(column * width / columns);
+      const xEnd = Math.ceil((column + 1) * width / columns);
+      const step = Math.max(3, Math.floor(Math.min(
+        xEnd - xStart,
+        yEnd - yStart,
+      ) / 18));
+      const histogram = new Uint32Array(64);
+
+      for (let y = yStart; y < yEnd; y += step) {
+        for (let x = xStart; x < xEnd; x += step) {
+          const offset = (y * width + x) * 4;
+          if (pixels[offset + 3] < 24) continue;
+          const red = pixels[offset];
+          const green = pixels[offset + 1];
+          const blue = pixels[offset + 2];
+          const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+          const luma = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+          if (luma <= 128 && chroma <= 82) {
+            histogram[Math.min(63, Math.floor(luma / 2))] += 1;
+          }
+        }
+      }
+
+      let mode = 0;
+      for (let index = 1; index < histogram.length; index += 1) {
+        if (histogram[index] > histogram[mode]) mode = index;
+      }
+      const targetLuma = mode * 2 + 1;
+      let redTotal = 0;
+      let greenTotal = 0;
+      let blueTotal = 0;
+      let samples = 0;
+
+      for (let y = yStart; y < yEnd; y += step) {
+        for (let x = xStart; x < xEnd; x += step) {
+          const offset = (y * width + x) * 4;
+          if (pixels[offset + 3] < 24) continue;
+          const red = pixels[offset];
+          const green = pixels[offset + 1];
+          const blue = pixels[offset + 2];
+          const luma = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+          const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+          if (Math.abs(luma - targetLuma) <= 10 && chroma <= 82) {
+            redTotal += red;
+            greenTotal += green;
+            blueTotal += blue;
+            samples += 1;
+          }
+        }
+      }
+
+      grid[row * columns + column] = samples > 0
+        ? { r: redTotal / samples, g: greenTotal / samples, b: blueTotal / samples }
+        : { r: 6, g: 12, b: 20 };
+    }
+  }
+
+  return { columns, rows, grid };
+}
+
+function sampleBackground(model, x, y, width, height, output) {
+  const gx = width > 1 ? x / (width - 1) * (model.columns - 1) : 0;
+  const gy = height > 1 ? y / (height - 1) * (model.rows - 1) : 0;
+  const left = Math.floor(gx);
+  const top = Math.floor(gy);
+  const right = Math.min(model.columns - 1, left + 1);
+  const bottom = Math.min(model.rows - 1, top + 1);
+  const tx = gx - left;
+  const ty = gy - top;
+  const a = model.grid[top * model.columns + left];
+  const b = model.grid[top * model.columns + right];
+  const c = model.grid[bottom * model.columns + left];
+  const d = model.grid[bottom * model.columns + right];
+  const mix = (p, q, r, s) => {
+    const upper = p + (q - p) * tx;
+    const lower = r + (s - r) * tx;
+    return upper + (lower - upper) * ty;
+  };
+  output[0] = mix(a.r, b.r, c.r, d.r);
+  output[1] = mix(a.g, b.g, c.g, d.g);
+  output[2] = mix(a.b, b.b, c.b, d.b);
+  return output;
+}
+
+/**
+ * Entfernt nur den eingebrannten Hintergrund von Seite eins.
+ * RGB-Werte und Pixelpositionen aller Informationen bleiben unverändert;
+ * ausschliesslich der Alphakanal wird aus dem lokalen Hintergrund abgeleitet.
+ */
+function makeFirstPageTransparent(context, width, pageHeight) {
+  const image = context.getImageData(0, 0, width, pageHeight);
+  const pixels = image.data;
+  const background = buildBackgroundGrid(pixels, width, pageHeight);
+  const mask = new Uint8Array(width * pageHeight);
+  const expanded = new Uint8Array(mask.length);
+  const base = new Float32Array(3);
+
+  const lumaAt = (x, y) => {
+    const safeX = Math.min(width - 1, Math.max(0, x));
+    const safeY = Math.min(pageHeight - 1, Math.max(0, y));
+    const offset = (safeY * width + safeX) * 4;
+    return pixels[offset] * 0.2126
+      + pixels[offset + 1] * 0.7152
+      + pixels[offset + 2] * 0.0722;
+  };
+
+  for (let y = 0; y < pageHeight; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixelIndex = y * width + x;
+      const offset = pixelIndex * 4;
+      if (pixels[offset + 3] === 0) continue;
+      const red = pixels[offset];
+      const green = pixels[offset + 1];
+      const blue = pixels[offset + 2];
+      sampleBackground(background, x, y, width, pageHeight, base);
+      const distance = Math.hypot(red - base[0], green - base[1], blue - base[2]);
+      const luma = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+      const baseLuma = base[0] * 0.2126 + base[1] * 0.7152 + base[2] * 0.0722;
+      const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+      const baseChroma = Math.max(base[0], base[1], base[2]) - Math.min(base[0], base[1], base[2]);
+      const edge = Math.max(
+        Math.abs(lumaAt(x + 1, y) - lumaAt(x - 1, y)),
+        Math.abs(lumaAt(x, y + 1) - lumaAt(x, y - 1)),
+      );
+      let signal = Math.max(
+        smoothUnit(4, 34, distance),
+        smoothUnit(2, 28, luma - baseLuma),
+        smoothUnit(7, 45, chroma - baseChroma),
+        smoothUnit(5, 30, edge),
+      );
+      if (luma >= 96 || chroma >= 76) signal = Math.max(signal, 0.97);
+      mask[pixelIndex] = Math.round(Math.pow(clampUnit(signal), 0.58) * 255);
+    }
+  }
+
+  for (let y = 0; y < pageHeight; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixelIndex = y * width + x;
+      let strongest = mask[pixelIndex];
+      for (let dy = -1; dy <= 1; dy += 1) {
+        const sy = y + dy;
+        if (sy < 0 || sy >= pageHeight) continue;
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const sx = x + dx;
+          if (sx < 0 || sx >= width) continue;
+          const neighbour = mask[sy * width + sx];
+          const weighted = dx === 0 && dy === 0
+            ? neighbour
+            : Math.round(neighbour * 0.82);
+          if (weighted > strongest) strongest = weighted;
+        }
+      }
+      expanded[pixelIndex] = strongest;
+    }
+  }
+
+  let transparent = 0;
+  for (let pixelIndex = 0; pixelIndex < expanded.length; pixelIndex += 1) {
+    const alphaOffset = pixelIndex * 4 + 3;
+    pixels[alphaOffset] = Math.round(
+      pixels[alphaOffset] * expanded[pixelIndex] / 255,
+    );
+    if (pixels[alphaOffset] <= 2) transparent += 1;
+  }
+
+  context.putImageData(image, 0, 0);
+  console.info('Webprojektion: Hintergrund von Seite eins entfernt.', {
+    transparentRatio: transparent / expanded.length,
+  });
+}
+
 function isAmberPixel(r, g, b, a) {
   return a >= 42
     && r >= 70
@@ -182,8 +372,9 @@ function detectLinkBoxCut(context, width, height) {
 
 /**
  * Nur die WebGL-Textur wird geändert:
- * Seite 1 bleibt unverändert, auf Seite 2 wird der Linkkasten entfernt und
- * alles darunter hochgerückt. PDF und Quelldatei bleiben unangetastet.
+ * Auf Seite 1 wird ausschliesslich der eingebrannte Hintergrund transparent;
+ * Seite 2 verliert den Linkkasten und der darunterliegende Inhalt rückt hoch.
+ * PDF, RGB-Inhalte und Pixelpositionen der ersten Seite bleiben unangetastet.
  */
 function createWebProjectionCanvas(image, size) {
   const source = document.createElement('canvas');
@@ -202,7 +393,7 @@ function createWebProjectionCanvas(image, size) {
   const output = document.createElement('canvas');
   output.width = size.width;
   output.height = size.height;
-  const context = output.getContext('2d');
+  const context = output.getContext('2d', { willReadFrequently: true });
   if (!context) {
     throw new Error('Der Canvas-2D-Kontext ist nicht verfügbar.');
   }
@@ -218,6 +409,8 @@ function createWebProjectionCanvas(image, size) {
     0, 0, size.width, pageHeight,
     0, 0, size.width, pageHeight,
   );
+  makeFirstPageTransparent(context, size.width, pageHeight);
+
   context.drawImage(
     source,
     0, pageTwoTop, size.width, cut.start,

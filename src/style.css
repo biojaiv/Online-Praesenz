@@ -103,7 +103,7 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--s-6);
-  padding: var(--s-5) var(--s-6) var(--s-4);
+  padding: var(--s-5) var(--s-6) var(--s-3);
   border-bottom: 1px solid var(--line);
   transition: border-color 1.1s var(--ease-ritual);
 }
@@ -287,7 +287,7 @@ body {
   align-items: flex-start;
 }
 
-.nav__group { text-align: right; }
+.nav__group { position: relative; text-align: right; }
 
 .nav__link {
   appearance: none;
@@ -328,11 +328,16 @@ body {
 .nav__link.is-active::after { transform: scaleX(1); transform-origin: left; }
 
 .nav__sub {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 7;
   display: flex;
+  min-width: max-content;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--s-1);
-  margin-top: var(--s-3);
+  padding-top: var(--s-3);
   opacity: 0;
   transform: translateY(-4px);
   pointer-events: none;
@@ -374,6 +379,101 @@ body {
   height: 100%;
   display: block;
   touch-action: none;
+}
+
+
+/* ---------- Kamerafahrt-Hinweis ---------- */
+
+.camera-dolly-guide {
+  position: absolute;
+  left: var(--s-4);
+  top: 50%;
+  z-index: 4;
+  width: 52px;
+  height: 142px;
+  color: var(--cyan);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-8px, -50%) scale(0.96);
+  filter: drop-shadow(0 0 8px rgb(var(--fiber-blue-rgb) / 0.18));
+  transition:
+    opacity 0.55s var(--ease-ritual),
+    transform 0.55s var(--ease-ritual),
+    filter 0.35s var(--ease-ritual);
+}
+.camera-dolly-guide.is-visible {
+  opacity: 0.58;
+  transform: translate(0, -50%) scale(1);
+}
+.camera-dolly-guide.is-active {
+  opacity: 0.96;
+  filter:
+    drop-shadow(0 0 5px rgb(var(--fiber-blue-rgb) / 0.55))
+    drop-shadow(0 0 14px rgb(var(--fiber-blue-rgb) / 0.28));
+}
+.camera-dolly-guide svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.camera-dolly-guide__rail,
+.camera-dolly-guide__arrow,
+.camera-dolly-guide__mouse,
+.camera-dolly-guide__button,
+.camera-dolly-guide__pulse {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.camera-dolly-guide__rail {
+  opacity: 0.3;
+  stroke-dasharray: 2 5;
+}
+.camera-dolly-guide__arrow {
+  opacity: 0.48;
+  transition:
+    opacity 0.22s var(--ease-ritual),
+    stroke 0.22s var(--ease-ritual),
+    filter 0.22s var(--ease-ritual);
+}
+.camera-dolly-guide__node {
+  fill: var(--cyan);
+  opacity: 0.42;
+}
+.camera-dolly-guide__mouse {
+  fill: rgb(3 10 18 / 0.44);
+  stroke: var(--fiber-white);
+  opacity: 0.74;
+}
+.camera-dolly-guide__button {
+  stroke: var(--amber);
+  opacity: 0.9;
+  animation: camera-guide-breathe 2.6s var(--ease-ritual) infinite;
+}
+.camera-dolly-guide__pulse {
+  stroke: var(--violet);
+  opacity: 0.34;
+}
+.camera-dolly-guide.is-near .camera-dolly-guide__arrow--near,
+.camera-dolly-guide.is-far .camera-dolly-guide__arrow--far {
+  stroke: var(--amber);
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.78));
+}
+.camera-dolly-guide.is-near .camera-dolly-guide__node--near,
+.camera-dolly-guide.is-far .camera-dolly-guide__node--far {
+  fill: var(--amber);
+  opacity: 1;
+}
+@keyframes camera-guide-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .camera-dolly-guide { display: none; }
 }
 
 /* ---------- Lesefassung ---------- */
