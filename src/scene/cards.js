@@ -54,6 +54,11 @@ const RESUME_IDLE_OPACITY = 0.85;
 // Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
 // Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
 const RESUME_IDLE_SCALE = 1;
+// Die Weltgeometrie der Projektion bleibt bewusst etwas kleiner als der
+// Sockeldurchmesser. Da die Fokus-Kamera aus den Dokumentgrenzen berechnet
+// wird, bleibt die Nahansicht unveraendert gross. Im Startbild passen dagegen
+// auch die obere Dokumentkante und der dynamische Partikelrahmen ins Bild.
+const RESUME_WORLD_SCALE = 0.88;
 // Die Projektion darf nach dem Oeffnen ohne Anschlag um ihre Hochachse
 // gedreht werden. Die Werte steuern Empfindlichkeit und Auslauf.
 const RESUME_ROTATION_SPEED = 0.0105;
@@ -629,10 +634,14 @@ function updateResumeWindow(card, notify = true) {
   if (!projection?.ready || !pageAspect || card.disposed) return;
 
   card.baseBounds.getSize(_size);
-  const width = Math.min(
+  const fullWidth = Math.min(
     DOC_MAX_WIDTH,
     Math.max(_size.x, _size.z, 1),
   );
+  // Die Unterkante bleibt an derselben Stelle. Nur die Blattabmessungen
+  // werden verkleinert; dadurch wandern obere Dokument- und Rahmenkante
+  // sicher nach unten, ohne Sockel, Kamera oder Interaktionen zu veraendern.
+  const width = fullWidth * RESUME_WORLD_SCALE;
 
   // Eine Seite behaelt immer ihr echtes Seitenverhaeltnis.
   // Bildschirmformat und Lesefassung duerfen die 3D-Projektion nicht stauchen.
