@@ -96,7 +96,7 @@ stage?.start();
 const reader = createReader({
   container: stageEl,
   onNavigate: (target) => router.go(target),
-  // Vor dem Erscheinen raeumt die Buehne: Projektion ab, Helix auf.
+  // Vor dem Erscheinen blendet die Buehne die Projektion kontrolliert ab.
   onTransition: (open) => stage?.beginReaderTransition(open),
   onOpenChange: (open) => {
     readerIsOpen = open;

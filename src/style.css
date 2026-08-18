@@ -104,7 +104,6 @@ body {
   justify-content: space-between;
   gap: var(--s-6);
   padding: var(--s-5) var(--s-6) var(--s-3);
-  border-bottom: 1px solid var(--line);
   transition: border-color 1.1s var(--ease-ritual);
 }
 
@@ -386,15 +385,15 @@ body {
 
 .camera-dolly-guide {
   position: absolute;
-  left: var(--s-4);
+  right: var(--s-4);
   top: 50%;
   z-index: 4;
-  width: 52px;
-  height: 142px;
+  width: 76px;
+  height: 146px;
   color: var(--cyan);
   opacity: 0;
   pointer-events: none;
-  transform: translate(-8px, -50%) scale(0.96);
+  transform: translate(8px, -50%) scale(0.96);
   filter: drop-shadow(0 0 8px rgb(var(--fiber-blue-rgb) / 0.18));
   transition:
     opacity 0.55s var(--ease-ritual),
@@ -402,14 +401,14 @@ body {
     filter 0.35s var(--ease-ritual);
 }
 .camera-dolly-guide.is-visible {
-  opacity: 0.58;
+  opacity: 0.62;
   transform: translate(0, -50%) scale(1);
 }
 .camera-dolly-guide.is-active {
-  opacity: 0.96;
+  opacity: 0.98;
   filter:
-    drop-shadow(0 0 5px rgb(var(--fiber-blue-rgb) / 0.55))
-    drop-shadow(0 0 14px rgb(var(--fiber-blue-rgb) / 0.28));
+    drop-shadow(0 0 5px rgb(var(--fiber-blue-rgb) / 0.58))
+    drop-shadow(0 0 14px rgb(var(--fiber-blue-rgb) / 0.3));
 }
 .camera-dolly-guide svg {
   display: block;
@@ -420,18 +419,23 @@ body {
 .camera-dolly-guide__rail,
 .camera-dolly-guide__arrow,
 .camera-dolly-guide__mouse,
-.camera-dolly-guide__button,
-.camera-dolly-guide__pulse {
-  fill: none;
-  stroke: currentColor;
+.camera-dolly-guide__left-button,
+.camera-dolly-guide__wheel,
+.camera-dolly-guide__wheel-mark,
+.camera-dolly-guide__rotation,
+.camera-dolly-guide__rotation-arrow {
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 .camera-dolly-guide__rail {
-  opacity: 0.3;
+  fill: none;
+  stroke: currentColor;
+  opacity: 0.24;
   stroke-dasharray: 2 5;
 }
 .camera-dolly-guide__arrow {
+  fill: none;
+  stroke: currentColor;
   opacity: 0.48;
   transition:
     opacity 0.22s var(--ease-ritual),
@@ -443,18 +447,31 @@ body {
   opacity: 0.42;
 }
 .camera-dolly-guide__mouse {
-  fill: rgb(3 10 18 / 0.44);
+  fill: rgb(3 10 18 / 0.5);
   stroke: var(--fiber-white);
-  opacity: 0.74;
+  opacity: 0.76;
 }
-.camera-dolly-guide__button {
+.camera-dolly-guide__left-button {
+  fill: rgb(var(--amber-rgb) / 0.1);
   stroke: var(--amber);
-  opacity: 0.9;
+  opacity: 0.92;
   animation: camera-guide-breathe 2.6s var(--ease-ritual) infinite;
 }
-.camera-dolly-guide__pulse {
+.camera-dolly-guide__wheel {
+  fill: rgb(var(--fiber-blue-rgb) / 0.14);
+  stroke: var(--cyan);
+  opacity: 0.96;
+}
+.camera-dolly-guide__wheel-mark {
+  fill: none;
+  stroke: var(--fiber-white);
+  opacity: 0.76;
+}
+.camera-dolly-guide__rotation,
+.camera-dolly-guide__rotation-arrow {
+  fill: none;
   stroke: var(--violet);
-  opacity: 0.34;
+  opacity: 0.58;
 }
 .camera-dolly-guide.is-near .camera-dolly-guide__arrow--near,
 .camera-dolly-guide.is-far .camera-dolly-guide__arrow--far {
@@ -467,8 +484,11 @@ body {
   fill: var(--amber);
   opacity: 1;
 }
+.camera-dolly-guide.is-active .camera-dolly-guide__wheel {
+  filter: drop-shadow(0 0 5px rgb(var(--fiber-blue-rgb) / 0.72));
+}
 @keyframes camera-guide-breathe {
-  0%, 100% { opacity: 0.45; }
+  0%, 100% { opacity: 0.48; }
   50% { opacity: 1; }
 }
 
@@ -655,7 +675,6 @@ body {
   opacity: 0;
   visibility: hidden;
 }
-.frame.is-intro .head { border-bottom-color: transparent; }
 .frame.is-intro .head::before { opacity: 0; }
 .frame.is-intro .head__role { animation: none; }
 
@@ -916,28 +935,24 @@ body {
 }
 
 /*
- * Hervortreten und Zurueckweichen.
- *
- * Die Lesefassung waechst aus der Dreifachhelix heraus, die aus dem Sockel
- * aufsteigt — also von unten, aus einem Punkt, und nicht aus der Mitte des
- * Bildes. Beim Schliessen laeuft dieselbe Bewegung zurueck.
+ * Hervortreten und Zurueckweichen ohne zusaetzliche 3D-Geometrie.
+ * Die Lesefassung uebernimmt ruhig die Position der Projektion.
  */
 .cv-hologram.is-emerging {
-  transform-origin: 50% 100%;
-  animation: cv-emerge 0.82s var(--ease-ritual) both;
+  transform-origin: 50% 50%;
+  animation: cv-emerge 0.56s var(--ease-ritual) both;
 }
 .cv-hologram.is-fading {
-  transform-origin: 50% 100%;
-  animation: cv-emerge 0.4s ease-in reverse both;
+  transform-origin: 50% 50%;
+  animation: cv-emerge 0.34s ease-in reverse both;
 }
 
 @keyframes cv-emerge {
   from {
     opacity: 0;
-    transform: translateY(9%) scale(0.07);
-    filter: blur(7px) brightness(1.8);
+    transform: translateY(1.5%) scale(0.985);
+    filter: blur(2px) brightness(1.12);
   }
-  55% { opacity: 1; }
   to {
     opacity: 1;
     transform: none;

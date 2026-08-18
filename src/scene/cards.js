@@ -3,7 +3,6 @@ import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LIGHT_PALETTE, lightColor } from './palette.js';
 import { createResumeProjection, CV_ANCHORS, CV_PAGE_COUNT } from './resumeProjection.js';
-import { makeTripleHelix } from './helix.js';
 
 /**
  * Die drei interaktiven Bereichssockel.
@@ -19,7 +18,7 @@ import { makeTripleHelix } from './helix.js';
 const BASE_Y = -6.15;
 // Die gesamte Sockelreihe sitzt im Startbild etwas tiefer. Der Versatz
 // nimmt ungefaehr ein Drittel des bisherigen Abstandes zum unteren Rand weg.
-const HOME_ROW_DROP = -0.9;
+const HOME_ROW_DROP = -1.6;
 const BASE_BOTTOM = BASE_Y - 0.9;
 const BASE_TOP = BASE_Y + 0.9;
 const BASE_DIAMETER = 7.4;
@@ -55,8 +54,10 @@ const RESUME_IDLE_OPACITY = 0.85;
 // Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
 // Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
 const RESUME_IDLE_SCALE = 1;
-// Freies Drehen wuerde die einseitig lesbare Projektion wegkippen lassen.
-const ROTATION_LIMIT = 0.4;
+// Die Projektion darf nach dem Oeffnen ohne Anschlag um ihre Hochachse
+// gedreht werden. Die Werte steuern Empfindlichkeit und Auslauf.
+const RESUME_ROTATION_SPEED = 0.0105;
+const RESUME_ROTATION_DAMPING = 0.055;
 
 const MODEL_URL = new URL(
   '../../Elemente/Sockel/Sockel_V2_web.glb',
@@ -642,11 +643,6 @@ function updateResumeWindow(card, notify = true) {
   card.windowHeight = height;
 
   projection.setWindow(width, height);
-  card.resumeHelix?.setWindow(
-    card.surfaceY + 0.05,
-    DOC_LIFT + height,
-    width,
-  );
 
   card.documentBounds.min.set(
     -width * 0.5,
@@ -891,9 +887,6 @@ export function createCards({ renderer, reduced = false } = {}) {
     const resumeFrame = isResume
       ? makeResumeFrame(time, { reduced, idleOpacity: 0.5 })
       : null;
-    // Der Uebergang zur Lesefassung laeuft ueber diese Helix; im Ruhezustand
-    // kostet sie nichts, weil ihre Gruppe unsichtbar bleibt.
-    const resumeHelix = isResume ? makeTripleHelix(time, { reduced }) : null;
     const resumeProjection = isResume
       ? createResumeProjection({
           renderer,
@@ -925,7 +918,6 @@ export function createCards({ renderer, reduced = false } = {}) {
     if (ringJet) holder.add(ringJet.group);
     if (comingSoon) holder.add(comingSoon.group);
     if (resumeFrame) holder.add(resumeFrame.group);
-    if (resumeHelix) holder.add(resumeHelix.group);
     if (resumeProjection) {
       holder.add(resumeProjection.mesh);
       documentPickables.push(resumeProjection.mesh);
@@ -940,7 +932,6 @@ export function createCards({ renderer, reduced = false } = {}) {
       comingSoon,
       resumeProjection,
       resumeFrame,
-      resumeHelix,
       accentRing,
       rimLight,
       hit,
@@ -1000,7 +991,6 @@ export function createCards({ renderer, reduced = false } = {}) {
     setPixelRatio(pr) {
       for (const card of cards) {
         card.ringJet?.setPixelRatio(pr);
-        card.resumeHelix?.setPixelRatio(pr);
       }
     },
 
@@ -1021,21 +1011,6 @@ export function createCards({ renderer, reduced = false } = {}) {
     setProjectionHidden(value) {
       resumeCard?.resumeProjection?.setHidden(value);
       resumeCard?.resumeFrame?.setHidden(value);
-    },
-
-    /** Aufstieg der Dreifachhelix; loest sich ein, wenn sie steht. */
-    riseHelix(duration) {
-      return resumeCard?.resumeHelix?.rise(duration) ?? Promise.resolve();
-    },
-
-    /** Die Helix gibt die Lesefassung frei und verweht nach oben. */
-    releaseHelix(duration) {
-      return resumeCard?.resumeHelix?.release(duration) ?? Promise.resolve();
-    },
-
-    /** Rueckweg: der Strom sinkt in den Sockel. */
-    sinkHelix(duration) {
-      return resumeCard?.resumeHelix?.sink(duration) ?? Promise.resolve();
     },
 
     /* ---------- Dokumentfenster ---------- */
@@ -1079,6 +1054,9 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     get documentScroll() { return resumeCard?.resumeProjection?.scroll ?? 0; },
+    get documentRotation() {
+      return resumeCard?.resumeProjection?.mesh.rotation.y ?? 0;
+    },
 
     /* ---------- Drehen ---------- */
 
@@ -1090,13 +1068,16 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     rotateResume(deltaX) {
       if (!resumeCard) return;
-      const before = resumeCard.rotationOffset;
-      resumeCard.rotationOffset = THREE.MathUtils.clamp(
-        before + deltaX * 0.006,
-        -ROTATION_LIMIT,
-        ROTATION_LIMIT,
+      const delta = THREE.MathUtils.clamp(
+        deltaX * RESUME_ROTATION_SPEED,
+        -0.18,
+        0.18,
       );
-      resumeCard.rotationVelocity = resumeCard.rotationOffset - before;
+      resumeCard.rotationOffset = THREE.MathUtils.euclideanModulo(
+        resumeCard.rotationOffset + delta + Math.PI,
+        Math.PI * 2,
+      ) - Math.PI;
+      resumeCard.rotationVelocity = delta;
     },
 
     endResumeRotation() {
@@ -1224,20 +1205,44 @@ export function createCards({ renderer, reduced = false } = {}) {
           + Math.sin(elapsed * 0.18 + phase) * 0.11
           + card.hover * 0.16;
         if (card.key === RESUME_KEY) {
-          if (!card.rotationDragging && card.rotationVelocity !== 0) {
-            const before = card.rotationOffset;
-            card.rotationOffset = THREE.MathUtils.clamp(
-              before + card.rotationVelocity * Math.min(1.8, delta * 60),
-              -ROTATION_LIMIT,
-              ROTATION_LIMIT,
+          if (
+            !card.rotationDragging
+            && Math.abs(card.rotationVelocity) > 0.000001
+          ) {
+            card.rotationOffset = THREE.MathUtils.euclideanModulo(
+              card.rotationOffset
+                + card.rotationVelocity * Math.min(1.8, delta * 60)
+                + Math.PI,
+              Math.PI * 2,
+            ) - Math.PI;
+            card.rotationVelocity *= Math.pow(
+              RESUME_ROTATION_DAMPING,
+              Math.min(delta, 0.1),
             );
-            card.rotationVelocity = card.rotationOffset === before
-              ? 0
-              : card.rotationVelocity * Math.pow(0.055, Math.min(delta, 0.1));
+            if (Math.abs(card.rotationVelocity) < 0.000001) {
+              card.rotationVelocity = 0;
+            }
           }
-          card.holder.rotation.y = Math.sin(elapsed * 0.09 + phase) * 0.016 + card.rotationOffset;
+
+          // Der Sockel bleibt ruhig. Nur Blatt und Partikelrahmen drehen sich
+          // gemeinsam um die Mitte der Projektion.
+          card.holder.rotation.y = card.resumeOpen
+            ? 0
+            : Math.sin(elapsed * 0.09 + phase) * 0.016;
+
+          const documentYaw = card.resumeOpen
+            ? card.rotationOffset
+            : 0;
+
+          if (card.resumeProjection) {
+            card.resumeProjection.mesh.rotation.y = documentYaw;
+          }
+          if (card.resumeFrame) {
+            card.resumeFrame.group.rotation.y = documentYaw;
+          }
         } else {
-          card.holder.rotation.y = Math.sin(elapsed * 0.09 + phase) * 0.022;
+          card.holder.rotation.y =
+            Math.sin(elapsed * 0.09 + phase) * 0.022;
         }
         const baseScaleTarget = layoutScale;
         const scaleResponse = reduced
@@ -1276,7 +1281,6 @@ export function createCards({ renderer, reduced = false } = {}) {
       for (const card of cards) {
         card.disposed = true;
         card.resumeProjection?.dispose();
-        card.resumeHelix?.dispose();
       }
       disposeObject(group);
       group.clear();

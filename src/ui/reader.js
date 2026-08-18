@@ -318,10 +318,9 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   /**
    * Der Wechsel zwischen Projektion und Lesefassung.
    *
-   * Beide nehmen dieselbe Flaeche ein, also darf keiner von beiden einfach
-   * erscheinen: erst raeumt die Buehne (`onTransition`), dann waechst das
-   * Blatt aus der Helix heraus. Waehrend der Sequenz bleibt der Umschalter
-   * stumm, damit sich zwei Laeufe nicht kreuzen.
+   * Beide nehmen dieselbe Flaeche ein. Die Buehne blendet zuerst die
+   * Projektion ab; anschliessend tritt die Lesefassung ruhig an ihre Stelle.
+   * Waehrend der Sequenz bleibt der Umschalter gesperrt.
    */
   async function setOpen(next) {
     const value = Boolean(next) && route.split('/')[0] === ROOT;
@@ -347,7 +346,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
         requestAnimationFrame(() => scrollToSection('auto'));
         body.focus({ preventScroll: true });
         onOpenChange?.(true);
-        await afterAnimation(article, 1100);
+        await afterAnimation(article, 720);
         article.classList.remove('is-emerging');
       } else {
         article.classList.remove('is-emerging');

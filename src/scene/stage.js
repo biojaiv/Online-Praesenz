@@ -35,13 +35,17 @@ const HOME = {
 const DOC_MAX_PX = 640;
 const DOC_GUTTER_X = 42;
 const DOC_GUTTER_Y = 42;
-// Kameraabstand beim geoeffneten Lebenslauf als Vielfaches des Zielbilds:
-// 1.0 heisst, die erste Seite fuellt das Bild bis auf einen Hauch Rand.
-// Die rechte Maustaste plus Mausrad holt beliebig heran und wieder heraus.
-const DOCUMENT_ZOOM_DEFAULT = 1.1;
-const DOCUMENT_ZOOM_MIN = 0.72;
-const DOCUMENT_ZOOM_MAX = 1.72;
-const DOCUMENT_DRAG_SENSITIVITY = 1.8;
+// Kameraabstand beim geoeffneten Lebenslauf als Vielfaches des Zielbilds.
+// Mausrad ohne Zusatztaste blaettert. Linke Maustaste halten plus Mausrad
+// faehrt die Kamera entlang ihrer festen Blickachse vor und zurueck.
+const DOCUMENT_ZOOM_DEFAULT = 1.08;
+const DOCUMENT_ZOOM_MIN = 0.001;
+const DOCUMENT_ZOOM_MAX = 2.1;
+const DOCUMENT_WHEEL_SENSITIVITY = 1.65;
+// Abstand zur Projektion bei frontaler Sicht. Der Wert liegt nur wenig ueber
+// der Nah-Clippingebene; beim Drehen kommt automatisch die nach vorn ragende
+// halbe Blattbreite hinzu, damit die Kamera nie im Blatt steckt.
+const DOCUMENT_MIN_CLEARANCE = 0.24;
 // Filmischer Takt statt maximaler Bildrate: rund 30 Bilder je Sekunde.
 // Der Abzug verhindert, dass ein 60-Hz-Bildschirm auf 20 Hz einrastet.
 const FRAME_BUDGET = 1000 / 30 - 3;
@@ -162,18 +166,18 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let scrollLiftTarget = 0;
   let visibleHeight = 1;
   let documentHeight = 1;
-  // Rechte Maustaste gedrueckt: das Mausrad zoomt, statt zu blaettern.
+  // Linke Maustaste auf der Projektion gedrueckt: das Mausrad faehrt
+  // die Kamera, statt im Lebenslauf zu blaettern.
   let zoomHold = false;
   let docZoom = DOCUMENT_ZOOM_DEFAULT;
   let docZoomTarget = DOCUMENT_ZOOM_DEFAULT;
-  let documentDollyActive = false;
-  let documentDollyDragging = false;
   let dollyGuideTimer = 0;
   // Beim Lebenslauf-Framing gespeichert: Z der Dokumentvorderkante und
   // Grundabstand bei docZoom=1. zoomDocument nutzt beide, um nur camPos.z
   // zu verstellen, ohne focusCard erneut aufzurufen.
   let docBoundsMaxZ = 0;
   let docFitDistance = 1;
+  let docHalfWidth = 1;
   let viewMoving = false;
   let viewMoveTicket = 0;
 
@@ -182,15 +186,31 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   dollyGuide.className = 'camera-dolly-guide';
   dollyGuide.setAttribute('aria-hidden', 'true');
   dollyGuide.innerHTML = `
-    <svg viewBox="0 0 52 142" focusable="false" aria-hidden="true">
-      <path class="camera-dolly-guide__rail" d="M26 18V124" />
-      <path class="camera-dolly-guide__arrow camera-dolly-guide__arrow--near" d="M18 28L26 18L34 28" />
-      <path class="camera-dolly-guide__arrow camera-dolly-guide__arrow--far" d="M18 114L26 124L34 114" />
-      <circle class="camera-dolly-guide__node camera-dolly-guide__node--near" cx="26" cy="42" r="2" />
-      <circle class="camera-dolly-guide__node camera-dolly-guide__node--far" cx="26" cy="100" r="2" />
-      <rect class="camera-dolly-guide__mouse" x="16" y="54" width="20" height="34" rx="10" />
-      <path class="camera-dolly-guide__button" d="M26 55V67M17 67H35" />
-      <path class="camera-dolly-guide__pulse" d="M11 71H5M47 71H41" />
+    <svg viewBox="0 0 76 146" focusable="false" aria-hidden="true">
+      <path class="camera-dolly-guide__rail" d="M38 15V131" />
+      <path class="camera-dolly-guide__arrow camera-dolly-guide__arrow--near"
+        d="M30 27L38 16L46 27" />
+      <path class="camera-dolly-guide__arrow camera-dolly-guide__arrow--far"
+        d="M30 119L38 130L46 119" />
+
+      <rect class="camera-dolly-guide__mouse"
+        x="23" y="40" width="30" height="62" rx="15" />
+      <path class="camera-dolly-guide__left-button"
+        d="M24 57A14 14 0 0 1 38 41V62H24Z" />
+      <rect class="camera-dolly-guide__wheel"
+        x="35" y="48" width="6" height="15" rx="3" />
+      <path class="camera-dolly-guide__wheel-mark"
+        d="M38 50V54M38 57V61" />
+
+      <path class="camera-dolly-guide__rotation"
+        d="M16 111C22 104 29 101 38 101C47 101 54 104 60 111" />
+      <path class="camera-dolly-guide__rotation-arrow"
+        d="M14 105L16 111L22 109M54 109L60 111L62 105" />
+
+      <circle class="camera-dolly-guide__node camera-dolly-guide__node--near"
+        cx="38" cy="32" r="2" />
+      <circle class="camera-dolly-guide__node camera-dolly-guide__node--far"
+        cx="38" cy="114" r="2" />
     </svg>`;
   guideHost?.append(dollyGuide);
 
@@ -205,7 +225,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     window.clearTimeout(dollyGuideTimer);
     setDollyGuide(opened === 'lebenslauf' && !readerOpen, true, direction);
     dollyGuideTimer = window.setTimeout(() => {
-      if (!documentDollyDragging) {
+      if (!zoomHold) {
         setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
       }
     }, 320);
@@ -301,8 +321,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     cards.setDocumentScroll(0, true);
     docZoom = DOCUMENT_ZOOM_DEFAULT;
     docZoomTarget = DOCUMENT_ZOOM_DEFAULT;
-    documentDollyActive = false;
-    documentDollyDragging = false;
     zoomHold = false;
     setDollyGuide(false);
     scrollLiftTarget = 0;
@@ -352,6 +370,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       focusCenter.y -= focusSize.y * 0.04;
       docBoundsMaxZ = document3d.max.z;
       docFitDistance = fitDistance;
+      docHalfWidth = focusSize.x * 0.5;
       docZoomTarget = docZoom;
       updateDocumentLift();
     } else {
@@ -392,34 +411,44 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * zuruecksetzt), wird nur camPos.z per gsap verstoellt. Look-At und
    * Y-Position bleiben stabil — der Ausschnitt wandert nicht.
    */
+  function takeOverDocumentCamera() {
+    if (!viewMoving || !(docFitDistance > 0)) return;
+    cancelViewMove();
+    const currentDistance = Math.max(
+      DOCUMENT_MIN_CLEARANCE,
+      camPos.z - docBoundsMaxZ,
+    );
+    docZoom = currentDistance / docFitDistance;
+    docZoomTarget = THREE.MathUtils.clamp(
+      docZoom,
+      DOCUMENT_ZOOM_MIN,
+      DOCUMENT_ZOOM_MAX,
+    );
+  }
+
   function zoomDocument(step) {
     if (opened !== 'lebenslauf' || readerOpen || !(docFitDistance > 0)) return;
+
+    // Erst die tatsaechliche Radbewegung uebernimmt die Kamera. Ein blosses
+    // Gedrueckthalten der linken Taste unterbricht die Anfahrt nicht.
+    takeOverDocumentCamera();
+
     docZoomTarget = THREE.MathUtils.clamp(
       docZoomTarget * Math.exp(step),
       DOCUMENT_ZOOM_MIN,
       DOCUMENT_ZOOM_MAX,
     );
-    documentDollyActive = true;
   }
 
-  function beginDocumentDolly() {
+  function beginDocumentWheelZoom() {
     if (opened !== 'lebenslauf' || readerOpen || !(docFitDistance > 0)) return;
-    cancelViewMove();
-    const currentDistance = Math.max(0.001, camPos.z - docBoundsMaxZ);
-    docZoom = THREE.MathUtils.clamp(
-      currentDistance / docFitDistance,
-      DOCUMENT_ZOOM_MIN,
-      DOCUMENT_ZOOM_MAX,
-    );
-    docZoomTarget = docZoom;
-    documentDollyActive = true;
-    documentDollyDragging = true;
+    zoomHold = true;
     setDollyGuide(true, true, null);
     canvas.style.cursor = 'ns-resize';
   }
 
-  function endDocumentDolly() {
-    documentDollyDragging = false;
+  function endDocumentWheelZoom() {
+    zoomHold = false;
     setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
     canvas.style.cursor = '';
   }
@@ -434,9 +463,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     const delta = event.deltaY * unit;
     if (!delta) return;
     event.preventDefault();
-    // Rechte Maustaste gedrueckt: dieselbe Geste holt das Blatt heran.
     if (zoomHold) {
-      zoomDocument((delta / view.height) * 1.35);
+      if (drag) drag.wheelUsed = true;
+      canvas.style.cursor = 'ns-resize';
+      zoomDocument((delta / view.height) * DOCUMENT_WHEEL_SENSITIVITY);
       pulseDollyGuide(delta < 0 ? 'near' : 'far');
     } else {
       scrollDocument(delta / view.height);
@@ -464,36 +494,54 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   /* ---------- Zeiger ---------- */
 
-  function onPointerMove(event) {
+  function updatePointerFromEvent(event) {
     const nx = ((event.clientX - view.left) / view.width) * 2 - 1;
     const ny = -(((event.clientY - view.top) / view.height) * 2 - 1);
     ndc.set(nx, ny);
+    return { nx, ny };
+  }
+
+  function onPointerMove(event) {
+    const { nx, ny } = updatePointerFromEvent(event);
 
     if (drag && drag.id === event.pointerId) {
       const dx = event.clientX - drag.x;
       const dy = event.clientY - drag.y;
       drag.x = event.clientX;
       drag.y = event.clientY;
+
       if (!drag.moved) {
-        const travel = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+        const travel = Math.hypot(
+          event.clientX - drag.startX,
+          event.clientY - drag.startY,
+        );
+
         if (travel > 6) {
           drag.moved = true;
-          // Waagerecht dreht das Blatt; senkrecht fährt die Kamera auf der
-          // festgelegten Blickachse vor und zurück.
-          drag.axis = Math.abs(event.clientX - drag.startX)
-            >= Math.abs(event.clientY - drag.startY) ? 'x' : 'y';
-          if (opened === 'lebenslauf') {
-            if (drag.axis === 'x') cards.beginResumeRotation();
-            else beginDocumentDolly();
+          if (
+            Math.abs(event.clientX - drag.startX)
+            >= Math.abs(event.clientY - drag.startY)
+          ) {
+            drag.axis = 'x';
+            if (opened === 'lebenslauf') {
+              takeOverDocumentCamera();
+              cards.beginResumeRotation();
+            }
+          } else if (drag.pointerType === 'touch') {
+            drag.axis = 'y';
+          } else {
+            // Bei der Maus bleibt die senkrechte Bewegung frei, weil die
+            // Kamerafahrt ausschliesslich ueber das Mausrad erfolgt.
+            drag.axis = 'hold';
           }
         }
       }
+
       if (drag.moved && opened === 'lebenslauf') {
         if (drag.axis === 'x') {
           cards.rotateResume(dx);
-        } else {
-          zoomDocument((dy / view.height) * DOCUMENT_DRAG_SENSITIVITY);
-          setDollyGuide(true, true, dy < 0 ? 'near' : 'far');
+        } else if (drag.axis === 'y' && drag.pointerType === 'touch') {
+          scrollDocument(-dy / view.height);
         }
       }
     }
@@ -507,45 +555,49 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onPointerDown(event) {
-    if (event.button === 2) {
-      zoomHold = opened === 'lebenslauf' && !readerOpen;
-      return;
-    }
     if (event.button !== 0 && event.pointerType !== 'touch') return;
+
+    updatePointerFromEvent(event);
+    const onDocument = opened === 'lebenslauf' && hitsDocument();
+    const canWheelZoom = event.button === 0
+      && event.pointerType !== 'touch'
+      && opened === 'lebenslauf'
+      && !readerOpen;
+
     drag = {
       id: event.pointerId,
+      pointerType: event.pointerType,
       x: event.clientX,
       y: event.clientY,
       startX: event.clientX,
       startY: event.clientY,
       moved: false,
+      wheelUsed: false,
       axis: null,
-      onDocument: opened === 'lebenslauf' && hitsDocument(),
+      onDocument,
     };
+
+    if (canWheelZoom) beginDocumentWheelZoom();
+
     canvas.setPointerCapture?.(event.pointerId);
   }
 
   function onPointerUp(event) {
-    if (event.button === 2) zoomHold = false;
     if (!drag || drag.id !== event.pointerId) return;
-    const { moved, onDocument, axis } = drag;
+    const { moved, wheelUsed, onDocument } = drag;
     drag = null;
+
+    if (zoomHold) endDocumentWheelZoom();
     cards.endResumeRotation();
-    if (axis === 'y') endDocumentDolly();
-    if (moved) return;
+
+    if (moved || wheelUsed) return;
     if (hovered) listener?.('select', hovered);
     // Ein Klick neben das Dokument fuehrt zurueck, ein Klick darauf nicht.
     else if (opened && !onDocument) listener?.('select', 'home');
   }
 
-  /** Ueber dem geoeffneten Lebenslauf gehoert die rechte Taste dem Zoom. */
-  function onContextMenu(event) {
-    if (opened === 'lebenslauf' && !readerOpen) event.preventDefault();
-  }
-
   function onWindowBlur() {
-    zoomHold = false;
-    if (drag?.axis === 'y') endDocumentDolly();
+    if (zoomHold) endDocumentWheelZoom();
     drag = null;
     cards.endResumeRotation();
   }
@@ -556,7 +608,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointercancel', onPointerUp);
   canvas.addEventListener('wheel', onWheel, { passive: false });
-  canvas.addEventListener('contextmenu', onContextMenu);
   window.addEventListener('blur', onWindowBlur);
   window.addEventListener('keydown', onKeydown);
 
@@ -671,14 +722,24 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       opened === 'lebenslauf'
       && !readerOpen
       && !viewMoving
-      && (
-        documentDollyActive
-        || Math.abs(docZoomTarget - docZoom) > 0.0004
-      )
     ) {
+      // Bei frontaler Ansicht darf die Kamera bis knapp vor die Flaeche.
+      // Beim Drehen vergroessert sich der Mindestabstand automatisch um die
+      // nach vorne ragende halbe Blattbreite.
+      const rotationClearance =
+        Math.abs(Math.sin(cards.documentRotation)) * docHalfWidth;
+      const minimumDistance =
+        Math.max(DOCUMENT_MIN_CLEARANCE, camera.near * 2.4)
+        + rotationClearance;
+      const requestedDistance = docFitDistance * docZoomTarget;
+      const targetDistance = Math.max(requestedDistance, minimumDistance);
+      const effectiveZoomTarget = targetDistance / docFitDistance;
+
       const dollyResponse = 1 - Math.pow(0.0035, Math.min(dt, 0.1));
-      docZoom += (docZoomTarget - docZoom) * dollyResponse;
-      if (Math.abs(docZoomTarget - docZoom) < 0.0004) docZoom = docZoomTarget;
+      docZoom += (effectiveZoomTarget - docZoom) * dollyResponse;
+      if (Math.abs(effectiveZoomTarget - docZoom) < 0.0004) {
+        docZoom = effectiveZoomTarget;
+      }
 
       const distance = docFitDistance * docZoom;
       const targetZ = docBoundsMaxZ + distance;
@@ -688,10 +749,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       look.lerp(documentRouteLook, dollyResponse);
       visibleHeight = 2 * distance * halfFovTan();
       updateDocumentLift();
-
-      if (docZoom === docZoomTarget && !documentDollyDragging) {
-        documentDollyActive = false;
-      }
     }
 
     if (bloom) {
@@ -747,34 +804,28 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     /** Die flache Lesefassung uebernimmt Rad und Tasten, solange sie offen ist. */
     setReaderOpen(value) {
       readerOpen = Boolean(value);
+      if (zoomHold) endDocumentWheelZoom();
       setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
-      if (readerOpen) {
-        cards.endResumeRotation();
-        // Die Lesefassung steht: die Helix gibt sie frei und verweht.
-        cards.releaseHelix();
-      }
+      if (readerOpen) cards.endResumeRotation();
     },
 
     /**
      * Der Uebergang zwischen Projektion und Lesefassung.
      *
-     * Beim Oeffnen blendet das Blatt ab, waehrend aus der Mitte des Sockels
-     * die Dreifachhelix aufsteigt; erst wenn sie steht, tritt die Lesefassung
-     * daraus hervor. Beim Schliessen sinkt der Strom zurueck und das Blatt
-     * kommt wieder. Das Versprechen loest sich, sobald die Buehne bereit ist.
+     * Die 3D-Projektion blendet kontrolliert ab, danach erscheint die
+     * Lesefassung ohne zusaetzliche Spiral- oder DNA-Geometrie.
      */
     async beginReaderTransition(open) {
       readerSequence += 1;
       const ticket = readerSequence;
       cards.setProjectionHidden(open);
-      if (!open) {
-        cards.sinkHelix();
-        return;
-      }
-      if (reduced) return;
-      await new Promise((resolve) => { window.setTimeout(resolve, 240); });
+
+      if (!open || reduced) return;
+
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 220);
+      });
       if (ticket !== readerSequence) return;
-      await cards.riseHelix();
     },
 
     /**
@@ -847,7 +898,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
       canvas.removeEventListener('wheel', onWheel);
-      canvas.removeEventListener('contextmenu', onContextMenu);
       window.removeEventListener('blur', onWindowBlur);
       window.removeEventListener('keydown', onKeydown);
       gsap.killTweensOf([camPos, look, cards.group.position, cards.group.scale]);
