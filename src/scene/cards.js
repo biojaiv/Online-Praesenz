@@ -430,9 +430,18 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
     uniforms,
     setOrigin(y) { originY = y; },
     setWindow(width, height) {
+      // Die obere Rahmenkante bleibt exakt auf der Dokumentkante. Nur die
+      // untere Partikelbahn wird geringfuegig in das Blatt hineingezogen,
+      // damit sie dort ebenso ueberlappt wie an der gegenueberliegenden Seite.
+      const bottomOverlap = height * 0.018;
+      const frameHeight = height - bottomOverlap;
       uniforms.uHalfWidth.value = width * 0.5;
-      uniforms.uHalfHeight.value = height * 0.5;
-      group.position.set(0, originY + DOC_LIFT + height * 0.5, DOC_FRONT);
+      uniforms.uHalfHeight.value = frameHeight * 0.5;
+      group.position.set(
+        0,
+        originY + DOC_LIFT + bottomOverlap + frameHeight * 0.5,
+        DOC_FRONT,
+      );
       if (idle > 0 && !hidden) group.visible = true;
     },
     setOpen(value, immediate = false) {
