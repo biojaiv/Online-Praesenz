@@ -1748,3 +1748,214 @@ body {
     text-overflow: ellipsis;
   }
 }
+
+/* ---------- Lesefassung, Zeitleiste und Bedienhinweise ---------- */
+
+/* Profil-Signatur: Begriffe bernsteinfarben, Trennpunkte weiss, exakt mittig. */
+.cv-signature__tools {
+  width: calc(100% + 13px);
+  margin-left: -13px;
+  justify-content: center;
+  row-gap: 7px;
+  color: var(--amber);
+  text-align: center;
+}
+.cv-signature__tools span {
+  color: var(--amber);
+}
+.cv-signature__tools i {
+  color: var(--fiber-white);
+  opacity: 0.96;
+}
+
+/* Kreis, Datum und Beschreibung teilen eine echte gemeinsame Mittelachse. */
+.cv-timeline {
+  position: relative;
+}
+.cv-timeline::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 18px;
+  bottom: 18px;
+  left: 4px;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--amber-rgb) / 0.06),
+    var(--amber),
+    rgb(var(--amber-rgb) / 0.06)
+  );
+}
+.cv-timeline li,
+.cv-timeline--work li {
+  grid-template-columns: 18px minmax(124px, 0.82fr) minmax(0, 1.8fr);
+  column-gap: 12px;
+  align-items: center;
+  padding: 18px 0;
+}
+.cv-timeline li::before {
+  z-index: 1;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.cv-timeline li:not(:last-child)::after {
+  content: none;
+}
+.cv-timeline time {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+.cv-timeline li > div {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  min-width: 0;
+}
+
+/* Der ESC-Hinweis ist ein echter Schalter und wird nur bei einer Aktion aktiv. */
+.foot__hint {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-align: left;
+  text-transform: inherit;
+}
+.foot__hint:disabled {
+  cursor: default;
+}
+.foot.is-esc-actionable .foot__hint {
+  cursor: pointer;
+  will-change: transform, filter, text-shadow;
+}
+.foot.is-esc-actionable .foot__esc-label {
+  animation: foot-esc-pulse 5.8s ease-in-out infinite;
+}
+.foot.is-esc-actionable .foot__hint:hover,
+.foot.is-esc-actionable .foot__hint:focus-visible {
+  animation: foot-esc-distort 0.42s steps(2, end) infinite;
+  filter: brightness(1.45) contrast(1.28);
+}
+.foot.is-esc-actionable .foot__hint:hover .foot__esc-label,
+.foot.is-esc-actionable .foot__hint:focus-visible .foot__esc-label {
+  color: #ffffff;
+}
+@keyframes foot-esc-pulse {
+  0%, 100% {
+    color: #f4fbff;
+    text-shadow: 0 0 5px rgb(255 255 255 / 0.12);
+  }
+  50% {
+    color: var(--amber);
+    text-shadow:
+      0 0 6px rgb(var(--amber-rgb) / 0.42),
+      0 0 15px rgb(var(--amber-rgb) / 0.2);
+  }
+}
+@keyframes foot-esc-distort {
+  0%, 100% {
+    transform: translate(0, 0) skewX(0deg) scaleX(1);
+    text-shadow: none;
+  }
+  20% {
+    transform: translate(-4px, 1px) skewX(-13deg) scaleX(1.05);
+    text-shadow:
+      4px 0 #53f5ff,
+      -4px 0 #ff4fd8,
+      0 0 12px #ffffff;
+  }
+  40% {
+    transform: translate(5px, -1px) skewX(15deg) scaleX(0.96);
+    text-shadow:
+      -5px 0 var(--amber),
+      3px 0 #b8ff4d;
+  }
+  60% {
+    transform: translate(-2px, 1px) skewX(-8deg) scaleX(1.08);
+    text-shadow:
+      6px 0 #ff4fd8,
+      -3px 0 #53f5ff;
+  }
+  80% {
+    transform: translate(3px, -1px) skewX(9deg) scaleX(0.98);
+    text-shadow:
+      -4px 0 #53f5ff,
+      4px 0 var(--amber);
+  }
+}
+
+/* Bediengrafik: laufende Aufwaerts-Chevrons und direkte Richtungsanzeige. */
+.camera-dolly-guide {
+  width: 96px;
+}
+.camera-dolly-guide__flow-chevron,
+.camera-dolly-guide__drag-direction,
+.camera-dolly-guide__wheel-direction {
+  fill: none;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.camera-dolly-guide__flow-chevron {
+  stroke: var(--cyan);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: camera-guide-chevron-flow 1.5s linear infinite;
+}
+.camera-dolly-guide__flow-chevron--2 {
+  animation-delay: -0.5s;
+}
+.camera-dolly-guide__flow-chevron--3 {
+  animation-delay: -1s;
+}
+.camera-dolly-guide__drag-direction,
+.camera-dolly-guide__wheel-direction {
+  stroke: var(--amber);
+  opacity: 0.12;
+  transition:
+    opacity 0.18s var(--ease-ritual),
+    filter 0.18s var(--ease-ritual);
+}
+.camera-dolly-guide.is-left .camera-dolly-guide__drag-direction--left,
+.camera-dolly-guide.is-right .camera-dolly-guide__drag-direction--right,
+.camera-dolly-guide.is-near .camera-dolly-guide__wheel-direction--up,
+.camera-dolly-guide.is-far .camera-dolly-guide__wheel-direction--down {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.82));
+}
+.camera-dolly-guide.is-active .camera-dolly-guide__left-button {
+  fill: rgb(var(--amber-rgb) / 0.22);
+  filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.58));
+}
+@keyframes camera-guide-chevron-flow {
+  0% {
+    opacity: 0;
+    transform: translateY(13px);
+  }
+  24% {
+    opacity: 0.86;
+  }
+  72% {
+    opacity: 0.52;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+}
+
+@media (max-width: 680px), (max-height: 620px) {
+  .cv-timeline li,
+  .cv-timeline--work li {
+    grid-template-columns: 18px 88px minmax(0, 1fr);
+    column-gap: 9px;
+  }
+}

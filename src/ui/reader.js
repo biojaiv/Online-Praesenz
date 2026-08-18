@@ -408,6 +408,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   return {
     element: panel,
     get isOpen() { return open; },
+    close() { return setOpen(false); },
     /** Ablage in der Fusszeile fuer weitere Knoepfe der offenen Lesefassung. */
     get actionSlot() { return actionSlot; },
 

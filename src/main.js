@@ -47,17 +47,41 @@ function formatRoute(target) {
 
 function updateFooter() {
   const root = currentRoute.split('/')[0] || 'home';
+  const escapable = root !== 'home';
   crumb.textContent = formatRoute(currentRoute);
-  hint.textContent = root === 'home'
-    ? 'Bereich wählen'
-    : root === 'lebenslauf'
-      ? readerIsOpen
-        ? 'Abschnitt wählen · Scrollen · ESC zur Projektion'
-        : 'Scrollen zum Weiterlesen · ESC zurück'
-      : 'ESC zurück';
 
-  foot?.classList.toggle('is-contextual', root !== 'home');
+  if (hint instanceof HTMLButtonElement) {
+    const lead = root === 'home'
+      ? 'Bereich wählen'
+      : root === 'lebenslauf'
+        ? readerIsOpen
+          ? 'Abschnitt wählen · Scrollen ·'
+          : 'Scrollen zum Weiterlesen ·'
+        : '';
+    const escapeLabel = escapable
+      ? readerIsOpen
+        ? 'ESC zur Projektion'
+        : 'ESC zurück'
+      : '';
+
+    hint.innerHTML = [
+      lead ? `<span class="foot__hint-lead">${lead}</span>` : '',
+      escapeLabel ? `<span class="foot__esc-label">${escapeLabel}</span>` : '',
+    ].filter(Boolean).join(' ');
+    hint.disabled = !escapable;
+    hint.setAttribute(
+      'aria-label',
+      readerIsOpen
+        ? 'Zur Projektion zurückkehren'
+        : escapable
+          ? 'Zum Hauptbereich zurückkehren'
+          : 'Kein Rücksprung verfügbar',
+    );
+  }
+
+  foot?.classList.toggle('is-contextual', escapable);
   foot?.classList.toggle('is-reader-open', readerIsOpen);
+  foot?.classList.toggle('is-esc-actionable', escapable);
   if (foot) foot.dataset.section = root;
 }
 
@@ -134,6 +158,21 @@ const router = createRouter({
   },
 });
 
+async function activateFooterHint() {
+  const root = currentRoute.split('/')[0] || 'home';
+  if (root === 'home') return;
+
+  if (readerIsOpen) {
+    await reader?.close();
+    return;
+  }
+
+  playSound('release');
+  router.go('home');
+}
+
+hint?.addEventListener('click', activateFooterHint);
+
 // Klick in der Szene fuehrt ueber denselben Weg wie die Kopfzeile,
 // damit Hash, Kamerafahrt und Zurueck-Knopf nie auseinanderlaufen.
 stage?.on((event, key) => {
@@ -191,6 +230,7 @@ document.addEventListener('visibilitychange', onVisibilityChange);
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    hint?.removeEventListener('click', activateFooterHint);
     unsubscribeExplored();
     stopBrandGlitch?.();
     reader?.dispose();
