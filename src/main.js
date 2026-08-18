@@ -37,18 +37,29 @@ const ROUTE_LABELS = Object.freeze({
 let currentRoute = 'home';
 let readerIsOpen = false;
 
-function formatRoute(target) {
-  return String(target || 'home')
+function formatRoute(target, { includeReader = false } = {}) {
+  const segments = String(target || 'home')
     .split('/')
-    .filter(Boolean)
-    .map((segment) => ROUTE_LABELS[segment] || segment)
-    .join(' · ');
+    .filter(Boolean);
+  const labels = segments
+    .map((segment) => ROUTE_LABELS[segment] || segment);
+
+  if (includeReader && segments[0] === 'lebenslauf') {
+    // Lesefassung ist ein Darstellungsmodus innerhalb des Lebenslaufs.
+    // Unterbereiche bleiben dahinter sichtbar, zum Beispiel:
+    // Lebenslauf > Lesefassung > Kompetenzen.
+    labels.splice(1, 0, 'Lesefassung');
+  }
+
+  return labels.join(' > ');
 }
 
 function updateFooter() {
   const root = currentRoute.split('/')[0] || 'home';
   const escapable = root !== 'home';
-  crumb.textContent = formatRoute(currentRoute);
+  crumb.textContent = formatRoute(currentRoute, {
+    includeReader: readerIsOpen,
+  });
 
   if (hint instanceof HTMLButtonElement) {
     const lead = root === 'home'

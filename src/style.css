@@ -1841,7 +1841,7 @@ body {
 }
 .foot.is-esc-actionable .foot__hint:hover,
 .foot.is-esc-actionable .foot__hint:focus-visible {
-  animation: foot-esc-distort 0.42s steps(2, end) infinite;
+  animation: foot-esc-distort 0.3s steps(2, end) 1;
   filter: brightness(1.45) contrast(1.28);
 }
 .foot.is-esc-actionable .foot__hint:hover .foot__esc-label,
@@ -1957,5 +1957,62 @@ body {
   .cv-timeline--work li {
     grid-template-columns: 18px 88px minmax(0, 1fr);
     column-gap: 9px;
+  }
+}
+
+/* ---------- Einheitlicher Signalbruch an Bedienelementen ---------- */
+/*
+ * Derselbe kontrollierte Signalbruch wie beim Ruecksprung links unten.
+ * Die Dauer entspricht dem bisherigen kurzen Neon-Flick der Kopfzeile:
+ * genau 0,3 Sekunden und kein Dauerlauf waehrend des Hover-Zustands.
+ */
+.nav__link,
+.nav__sub button,
+.cv-action,
+.cv-nav button,
+.cv-back,
+.cv-primary-action,
+.cv-state button {
+  transform-origin: center;
+  will-change: transform, filter, text-shadow;
+}
+
+.nav__link:hover,
+.nav__link:focus-visible,
+.nav__sub button:hover,
+.nav__sub button:focus-visible,
+.cv-action:hover,
+.cv-action:focus-visible,
+.cv-nav button:hover,
+.cv-nav button:focus-visible,
+.cv-back:hover,
+.cv-back:focus-visible,
+.cv-primary-action:hover,
+.cv-primary-action:focus-visible,
+.cv-state button:hover,
+.cv-state button:focus-visible {
+  animation: foot-esc-distort 0.3s steps(2, end) 1;
+  filter: brightness(1.45) contrast(1.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foot.is-esc-actionable .foot__hint:hover,
+  .foot.is-esc-actionable .foot__hint:focus-visible,
+  .nav__link:hover,
+  .nav__link:focus-visible,
+  .nav__sub button:hover,
+  .nav__sub button:focus-visible,
+  .cv-action:hover,
+  .cv-action:focus-visible,
+  .cv-nav button:hover,
+  .cv-nav button:focus-visible,
+  .cv-back:hover,
+  .cv-back:focus-visible,
+  .cv-primary-action:hover,
+  .cv-primary-action:focus-visible,
+  .cv-state button:hover,
+  .cv-state button:focus-visible {
+    animation: none !important;
+    filter: none !important;
   }
 }
