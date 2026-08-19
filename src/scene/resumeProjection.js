@@ -414,25 +414,35 @@ function alignFirstPageBottomRule(context, width, pageHeight) {
  * vollständig an ihrer Originalposition und in ihrer Originalhelligkeit.
  */
 function secondPageBlueSignal(r, g, b, a) {
-  if (a < 18) return 0;
+  if (a < 20) return 0;
 
   const peak = Math.max(g, b);
+  const floor = Math.min(r, g, b);
+  const chroma = Math.max(r, g, b) - floor;
   const blueLead = b - r;
   const cyanLead = g - r;
 
+  // Weiße bzw. graue Schrift bleibt vollständig außerhalb der Maske.
+  // Insbesondere dürfen leicht bläulich antialiaste Textkanten nicht mehr
+  // verschoben oder an ihrer ursprünglichen Position abgeschwächt werden.
   if (
-    peak < 32
-    || blueLead < 7
-    || cyanLead < 1
-    || b < g * 0.78
+    peak < 38
+    || chroma < 26
+    || blueLead < 18
+    || cyanLead < 8
+    || b < r * 1.16
+    || g < r * 1.05
   ) return 0;
 
-  const hue = smoothUnit(7, 34, blueLead)
-    * smoothUnit(1, 28, cyanLead);
-  const light = smoothUnit(24, 118, peak)
-    * smoothUnit(7, 38, blueLead);
+  const hue = smoothUnit(18, 48, blueLead)
+    * smoothUnit(8, 34, cyanLead);
+  const saturation = smoothUnit(26, 72, chroma);
+  const brightness = smoothUnit(34, 128, peak);
 
-  return clampUnit(Math.max(hue, light * 0.86));
+  return clampUnit(Math.max(
+    hue * saturation,
+    saturation * brightness * 0.9,
+  ));
 }
 
 function expandLocalMask(mask, width, height, radius = 1) {
@@ -597,12 +607,9 @@ function attachSecondPageBottomProsthesis(
     }
   }
 
-  const mask = expandLocalMask(
-    baseMask,
-    stripWidth,
-    bandHeight,
-    1,
-  );
+  // Keine Dilatation: ausschließlich das tatsächlich blaue Quellpixel
+  // darf versetzt werden. Benachbarte weiße Schrift bleibt bitweise unberührt.
+  const mask = baseMask;
 
   const shiftedTop = bandTop - cutHeight;
   const targetTop = pageHeight - edgeInset - bandHeight;
@@ -629,7 +636,7 @@ function attachSecondPageBottomProsthesis(
 
     for (let localX = 0; localX < stripWidth; localX += 1) {
       const strength = mask[localY * stripWidth + localX] / 255;
-      if (strength <= 0.035) continue;
+      if (strength <= 0.12) continue;
 
       const x = sourceX + localX;
       const sourceIndex = (sourceY * width + x) * 4;
@@ -740,7 +747,9 @@ function moveSecondPageCorner(
   cutHeight,
   side,
 ) {
-  const edgeWidth = Math.max(28, Math.round(width * 0.21));
+  // Die Eckornamente liegen unmittelbar am Seitenrand. Der engere
+  // Suchbereich schließt Datum und Fließtext sicher aus.
+  const edgeWidth = Math.max(28, Math.round(width * 0.135));
   const xStart = side === 'left' ? 0 : width - edgeWidth;
   const xEnd = side === 'left' ? edgeWidth : width;
   const edgeInset = Math.max(1, Math.round(pageHeight * 0.001));
@@ -768,7 +777,7 @@ function moveSecondPageCorner(
     return 0;
   }
 
-  const padding = Math.max(3, Math.round(pageHeight * 0.008));
+  const padding = Math.max(2, Math.round(pageHeight * 0.0045));
   const bandTop = Math.max(searchTop, detected.start - padding);
   const bandBottom = Math.min(
     searchBottom,
@@ -797,12 +806,9 @@ function moveSecondPageCorner(
     }
   }
 
-  const mask = expandLocalMask(
-    baseMask,
-    regionWidth,
-    bandHeight,
-    2,
-  );
+  // Auch hier keine räumliche Erweiterung: Nur das tatsächlich als
+  // Blau/Cyan erkannte Ornamentpixel darf seinen Ort wechseln.
+  const mask = baseMask;
 
   const shiftedTop = bandTop - cutHeight;
   const targetTop = pageHeight - edgeInset - bandHeight;
@@ -828,7 +834,7 @@ function moveSecondPageCorner(
 
     for (let localX = 0; localX < regionWidth; localX += 1) {
       const strength = mask[localY * regionWidth + localX] / 255;
-      if (strength <= 0.035) continue;
+      if (strength <= 0.12) continue;
 
       const x = xStart + localX;
       const sourceIndex = (sourceY * width + x) * 4;
