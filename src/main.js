@@ -199,7 +199,7 @@ readerRef = reader;
 if (stage && reader) reader.setRect(stage.documentRect());
 
 // Der Download taucht erst auf, wenn der Lebenslauf offen steht.
-const download = createDownloadButton({ container: stageEl });
+const download = createDownloadButton({ container: stageEl, reader });
 
 const unsubscribeExplored = onExploredChange(() => stage?.setExplored(getExplored()));
 

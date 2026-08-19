@@ -639,6 +639,342 @@ function attachSecondPageBottomProsthesis(
   return true;
 }
 
+
+/**
+ * Versetzt die beiden blauen Eckornamente der zweiten Seite an die reale
+ * Dokumentunterkante. Der Partikelrahmen bleibt vollständig unangetastet.
+ *
+ * Die Ornamente werden aus dem unveränderten Quellraster isoliert, an ihrer
+ * durch den Linkkasten-Ausschnitt hochgerückten Position ausgeblendet und
+ * unten wieder eingesetzt. Nur kühle Blau-/Cyanpixel samt engem Leuchtsaum
+ * werden übertragen; der Bereich dazwischen bleibt optisch unverändert.
+ */
+function cornerProsthesisSignal(r, g, b, a) {
+  if (a < 8) return 0;
+
+  const coolPeak = Math.max(g, b);
+  const blueLead = b - r;
+  const cyanLead = g - r;
+
+  if (coolPeak < 18 || blueLead < 1 || cyanLead < -8) return 0;
+
+  const blueBias = smoothUnit(1, 28, blueLead);
+  const cyanBias = smoothUnit(-8, 22, cyanLead);
+  const brightness = smoothUnit(16, 105, coolPeak);
+
+  return clampUnit(Math.max(
+    blueBias * cyanBias,
+    blueBias * brightness * 0.84,
+  ));
+}
+
+function findCornerBand(
+  pixels,
+  width,
+  pageHeight,
+  xStart,
+  xEnd,
+  searchTop,
+  searchBottom,
+) {
+  const span = Math.max(1, xEnd - xStart);
+  const minimumRowHits = Math.max(6, Math.round(span * 0.028));
+  const groups = [];
+  let group = null;
+  let gap = 0;
+
+  for (let y = searchTop; y < searchBottom; y += 1) {
+    let hits = 0;
+    let energy = 0;
+
+    for (let x = xStart; x < xEnd; x += 1) {
+      const index = (y * width + x) * 4;
+      const signal = cornerProsthesisSignal(
+        pixels[index],
+        pixels[index + 1],
+        pixels[index + 2],
+        pixels[index + 3],
+      );
+      energy += signal;
+      if (signal >= 0.09) hits += 1;
+    }
+
+    if (hits >= minimumRowHits) {
+      if (!group) {
+        group = {
+          start: y,
+          end: y,
+          totalHits: hits,
+          peakHits: hits,
+          energy,
+        };
+      } else {
+        group.end = y;
+        group.totalHits += hits;
+        group.peakHits = Math.max(group.peakHits, hits);
+        group.energy += energy;
+      }
+      gap = 0;
+    } else if (group && gap < 3) {
+      gap += 1;
+    } else if (group) {
+      groups.push(group);
+      group = null;
+      gap = 0;
+    }
+  }
+
+  if (group) groups.push(group);
+  if (!groups.length) return null;
+
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (const candidate of groups) {
+    const height = candidate.end - candidate.start + 1;
+    if (height < 4) continue;
+
+    const verticalBias = candidate.end / Math.max(1, pageHeight);
+    const score = candidate.totalHits
+      + candidate.peakHits * 5
+      + candidate.energy * 0.35
+      + verticalBias * span * 0.08;
+
+    if (score > bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
+
+function moveSecondPageCorner(
+  sourcePixels,
+  outputPixels,
+  width,
+  pageHeight,
+  cutHeight,
+  side,
+) {
+  const edgeWidth = Math.max(24, Math.round(width * 0.22));
+  const xStart = side === 'left' ? 0 : width - edgeWidth;
+  const xEnd = side === 'left' ? edgeWidth : width;
+  const searchPadding = Math.max(12, Math.round(pageHeight * 0.22));
+  const searchTop = Math.max(
+    0,
+    pageHeight - cutHeight - searchPadding,
+  );
+  const edgeInset = Math.max(1, Math.round(pageHeight * 0.001));
+  const searchBottom = pageHeight - edgeInset;
+
+  const detected = findCornerBand(
+    sourcePixels,
+    width,
+    pageHeight,
+    xStart,
+    xEnd,
+    searchTop,
+    searchBottom,
+  );
+
+  if (!detected) {
+    console.warn(
+      `Webprojektion: ${side === 'left' ? 'linkes' : 'rechtes'} `
+      + 'blaues Eckornament nicht sicher erkannt.',
+    );
+    return 0;
+  }
+
+  const verticalPadding = Math.max(4, Math.round(pageHeight * 0.012));
+  const bandTop = Math.max(searchTop, detected.start - verticalPadding);
+  const bandBottom = Math.min(
+    searchBottom,
+    detected.end + verticalPadding + 1,
+  );
+  const bandHeight = bandBottom - bandTop;
+
+  if (bandHeight <= 0) return 0;
+
+  const regionWidth = xEnd - xStart;
+  const baseMask = new Uint8Array(regionWidth * bandHeight);
+  const expandedMask = new Uint8Array(baseMask.length);
+
+  for (let localY = 0; localY < bandHeight; localY += 1) {
+    const sourceY = bandTop + localY;
+
+    for (let localX = 0; localX < regionWidth; localX += 1) {
+      const x = xStart + localX;
+      const sourceIndex = (sourceY * width + x) * 4;
+      const signal = cornerProsthesisSignal(
+        sourcePixels[sourceIndex],
+        sourcePixels[sourceIndex + 1],
+        sourcePixels[sourceIndex + 2],
+        sourcePixels[sourceIndex + 3],
+      );
+      baseMask[localY * regionWidth + localX] = Math.round(signal * 255);
+    }
+  }
+
+  // Ein enger Saum nimmt das weiche blaue Leuchten der Eckelemente mit,
+  // ohne rechteckige Hintergrundflächen zu übertragen.
+  const dilation = 3;
+  for (let localY = 0; localY < bandHeight; localY += 1) {
+    for (let localX = 0; localX < regionWidth; localX += 1) {
+      let strongest = baseMask[localY * regionWidth + localX];
+
+      for (let dy = -dilation; dy <= dilation; dy += 1) {
+        const sampleY = localY + dy;
+        if (sampleY < 0 || sampleY >= bandHeight) continue;
+
+        for (let dx = -dilation; dx <= dilation; dx += 1) {
+          const sampleX = localX + dx;
+          if (sampleX < 0 || sampleX >= regionWidth) continue;
+
+          const distance = Math.max(Math.abs(dx), Math.abs(dy));
+          const weight = distance === 0
+            ? 1
+            : distance === 1
+              ? 0.84
+              : distance === 2
+                ? 0.62
+                : 0.42;
+          const value = Math.round(
+            baseMask[sampleY * regionWidth + sampleX] * weight,
+          );
+          if (value > strongest) strongest = value;
+        }
+      }
+
+      expandedMask[localY * regionWidth + localX] = strongest;
+    }
+  }
+
+  const shiftedTop = bandTop - cutHeight;
+  const targetTop = pageHeight - edgeInset - bandHeight;
+
+  if (
+    shiftedTop < 0
+    || targetTop < 0
+    || targetTop <= shiftedTop
+  ) {
+    console.warn(
+      'Webprojektion: Eckornament-Geometrie ist nicht plausibel.',
+      { side, bandTop, shiftedTop, targetTop, bandHeight, cutHeight },
+    );
+    return 0;
+  }
+
+  let movedPixels = 0;
+
+  for (let localY = 0; localY < bandHeight; localY += 1) {
+    const sourceY = bandTop + localY;
+    const shiftedY = shiftedTop + localY;
+    const targetY = targetTop + localY;
+
+    for (let localX = 0; localX < regionWidth; localX += 1) {
+      const mask = expandedMask[localY * regionWidth + localX] / 255;
+      if (mask <= 0.025) continue;
+
+      const x = xStart + localX;
+      const sourceIndex = (sourceY * width + x) * 4;
+      const shiftedIndex = (shiftedY * width + x) * 4;
+      const targetIndex = (targetY * width + x) * 4;
+
+      outputPixels[shiftedIndex + 3] = Math.round(
+        outputPixels[shiftedIndex + 3] * (1 - mask),
+      );
+
+      const sourceAlpha = sourcePixels[sourceIndex + 3] / 255;
+      const alpha = clampUnit(sourceAlpha * mask);
+      const targetAlpha = outputPixels[targetIndex + 3] / 255;
+      const combinedAlpha = alpha + targetAlpha * (1 - alpha);
+
+      if (combinedAlpha <= 0.0001) continue;
+
+      outputPixels[targetIndex] = Math.round(
+        (
+          sourcePixels[sourceIndex] * alpha
+          + outputPixels[targetIndex] * targetAlpha * (1 - alpha)
+        ) / combinedAlpha,
+      );
+      outputPixels[targetIndex + 1] = Math.round(
+        (
+          sourcePixels[sourceIndex + 1] * alpha
+          + outputPixels[targetIndex + 1] * targetAlpha * (1 - alpha)
+        ) / combinedAlpha,
+      );
+      outputPixels[targetIndex + 2] = Math.round(
+        (
+          sourcePixels[sourceIndex + 2] * alpha
+          + outputPixels[targetIndex + 2] * targetAlpha * (1 - alpha)
+        ) / combinedAlpha,
+      );
+      outputPixels[targetIndex + 3] = Math.round(combinedAlpha * 255);
+      movedPixels += 1;
+    }
+  }
+
+  console.info(
+    `Webprojektion: ${side === 'left' ? 'linkes' : 'rechtes'} `
+    + 'Eckornament an Dokumentunterkante versetzt.',
+    {
+      from: detected.end / pageHeight,
+      to: (targetTop + bandHeight) / pageHeight,
+      movedPixels,
+    },
+  );
+
+  return movedPixels;
+}
+
+function attachSecondPageCornerProstheses(
+  sourceContext,
+  outputContext,
+  width,
+  pageHeight,
+  pageTwoTop,
+  cut,
+) {
+  const cutHeight = Math.max(0, cut.end - cut.start);
+  if (cutHeight <= 0) return false;
+
+  const sourcePage = sourceContext.getImageData(
+    0,
+    pageTwoTop,
+    width,
+    pageHeight,
+  );
+  const outputPage = outputContext.getImageData(
+    0,
+    pageTwoTop,
+    width,
+    pageHeight,
+  );
+
+  const leftPixels = moveSecondPageCorner(
+    sourcePage.data,
+    outputPage.data,
+    width,
+    pageHeight,
+    cutHeight,
+    'left',
+  );
+  const rightPixels = moveSecondPageCorner(
+    sourcePage.data,
+    outputPage.data,
+    width,
+    pageHeight,
+    cutHeight,
+    'right',
+  );
+
+  if (leftPixels + rightPixels <= 0) return false;
+
+  outputContext.putImageData(outputPage, 0, pageTwoTop);
+  return true;
+}
+
 function isAmberPixel(r, g, b, a) {
   return a >= 42
     && r >= 70
@@ -827,6 +1163,14 @@ function createWebProjectionCanvas(image, size) {
   }
 
   attachSecondPageBottomProsthesis(
+    sourceContext,
+    context,
+    size.width,
+    pageHeight,
+    pageTwoTop,
+    cut,
+  );
+  attachSecondPageCornerProstheses(
     sourceContext,
     context,
     size.width,
