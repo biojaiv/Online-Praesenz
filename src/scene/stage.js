@@ -186,7 +186,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   dollyGuide.className = 'camera-dolly-guide';
   dollyGuide.setAttribute('aria-hidden', 'true');
   dollyGuide.innerHTML = `
-    <svg viewBox="0 0 96 146" focusable="false" aria-hidden="true">
+    <svg viewBox="0 0 76 146" focusable="false" aria-hidden="true">
       <path class="camera-dolly-guide__rail" d="M38 15V131" />
       <path class="camera-dolly-guide__arrow camera-dolly-guide__arrow--near"
         d="M30 27L38 16L46 27" />
@@ -202,33 +202,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       <path class="camera-dolly-guide__wheel-mark"
         d="M38 50V54M38 57V61" />
 
-      <path class="camera-dolly-guide__wheel-direction camera-dolly-guide__wheel-direction--up"
-        d="M38 72V66M34 70L38 66L42 70" />
-      <path class="camera-dolly-guide__wheel-direction camera-dolly-guide__wheel-direction--down"
-        d="M38 91V97M34 93L38 97L42 93" />
-      <path class="camera-dolly-guide__drag-direction camera-dolly-guide__drag-direction--left"
-        d="M37 80H28M28 80L33 75M28 80L33 85" />
-      <path class="camera-dolly-guide__drag-direction camera-dolly-guide__drag-direction--right"
-        d="M39 88H48M48 88L43 83M48 88L43 93" />
-
-      <path class="camera-dolly-guide__rotation"
-        d="M16 111C22 104 29 101 38 101C47 101 54 104 60 111" />
-      <path class="camera-dolly-guide__rotation-arrow"
-        d="M14 105L16 111L22 109M54 109L60 111L62 105" />
+      <path class="camera-dolly-guide__turn-direction camera-dolly-guide__turn-direction--left"
+        d="M36 111C29 111 23 108 18 103M18 103L19 110M18 103L25 104" />
+      <path class="camera-dolly-guide__turn-direction camera-dolly-guide__turn-direction--right"
+        d="M40 111C47 111 53 108 58 103M58 103L57 110M58 103L51 104" />
 
       <circle class="camera-dolly-guide__node camera-dolly-guide__node--near"
         cx="38" cy="32" r="2" />
       <circle class="camera-dolly-guide__node camera-dolly-guide__node--far"
         cx="38" cy="114" r="2" />
-
-      <g class="camera-dolly-guide__flow" aria-hidden="true">
-        <path class="camera-dolly-guide__flow-chevron camera-dolly-guide__flow-chevron--1"
-          d="M72 116L78 110L84 116" />
-        <path class="camera-dolly-guide__flow-chevron camera-dolly-guide__flow-chevron--2"
-          d="M72 100L78 94L84 100" />
-        <path class="camera-dolly-guide__flow-chevron camera-dolly-guide__flow-chevron--3"
-          d="M72 84L78 78L84 84" />
-      </g>
     </svg>`;
   guideHost?.append(dollyGuide);
 

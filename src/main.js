@@ -37,29 +37,84 @@ const ROUTE_LABELS = Object.freeze({
 let currentRoute = 'home';
 let readerIsOpen = false;
 
-function formatRoute(target, { includeReader = false } = {}) {
+function routeParts(target, { includeReader = false } = {}) {
   const segments = String(target || 'home')
     .split('/')
     .filter(Boolean);
-  const labels = segments
-    .map((segment) => ROUTE_LABELS[segment] || segment);
+  const parts = segments.map((segment, index) => ({
+    key: segment,
+    label: ROUTE_LABELS[segment] || segment,
+    route: segments.slice(0, index + 1).join('/'),
+    action: 'route',
+  }));
 
   if (includeReader && segments[0] === 'lebenslauf') {
-    // Lesefassung ist ein Darstellungsmodus innerhalb des Lebenslaufs.
-    // Unterbereiche bleiben dahinter sichtbar, zum Beispiel:
-    // Lebenslauf > Lesefassung > Kompetenzen.
-    labels.splice(1, 0, 'Lesefassung');
+    // Lesefassung ist ein aufklappbarer Darstellungsmodus. Der Eintrag bleibt
+    // deshalb als eigene, anklickbare Ebene im Pfad erhalten.
+    parts.splice(1, 0, {
+      key: 'lesefassung',
+      label: 'Lesefassung',
+      route: 'lebenslauf',
+      action: 'reader',
+    });
   }
 
-  return labels.join(' > ');
+  return parts;
+}
+
+function formatRoute(target, options) {
+  return routeParts(target, options)
+    .map((part) => part.label)
+    .join(' > ');
+}
+
+function renderBreadcrumb() {
+  if (!(crumb instanceof HTMLElement)) return;
+
+  const parts = routeParts(currentRoute, {
+    includeReader: readerIsOpen,
+  });
+  crumb.replaceChildren();
+  crumb.setAttribute('role', 'navigation');
+  crumb.setAttribute(
+    'aria-label',
+    `Aktueller Pfad: ${formatRoute(currentRoute, {
+      includeReader: readerIsOpen,
+    })}`,
+  );
+
+  parts.forEach((part, index) => {
+    if (index > 0) {
+      const separator = document.createElement('span');
+      separator.className = 'foot__crumb-separator';
+      separator.textContent = '>';
+      separator.setAttribute('aria-hidden', 'true');
+      crumb.append(separator);
+    }
+
+    const current = index === parts.length - 1;
+    const item = document.createElement(current ? 'span' : 'button');
+    item.className = 'foot__crumb-item';
+    item.textContent = part.label;
+
+    if (current) {
+      item.classList.add('is-current');
+      item.setAttribute('aria-current', 'page');
+    } else {
+      item.type = 'button';
+      item.dataset.crumbAction = part.action;
+      item.dataset.crumbRoute = part.route;
+      item.setAttribute('aria-label', `Zu ${part.label} zurückkehren`);
+    }
+
+    crumb.append(item);
+  });
 }
 
 function updateFooter() {
   const root = currentRoute.split('/')[0] || 'home';
   const escapable = root !== 'home';
-  crumb.textContent = formatRoute(currentRoute, {
-    includeReader: readerIsOpen,
-  });
+  renderBreadcrumb();
 
   if (hint instanceof HTMLButtonElement) {
     const lead = root === 'home'
@@ -184,6 +239,27 @@ async function activateFooterHint() {
 
 hint?.addEventListener('click', activateFooterHint);
 
+async function activateBreadcrumb(event) {
+  const control = event.target instanceof Element
+    ? event.target.closest('[data-crumb-action]')
+    : null;
+  if (!(control instanceof HTMLButtonElement)) return;
+
+  const action = control.dataset.crumbAction;
+  const target = control.dataset.crumbRoute || 'home';
+
+  // Klick auf die Lebenslauf-Ebene klappt eine geoeffnete Lesefassung ein.
+  // Klick auf "Lesefassung" selbst bleibt in der Lesefassung und springt
+  // lediglich zu deren Profilanfang.
+  if (action === 'route' && readerIsOpen && target === 'lebenslauf') {
+    await reader?.close();
+  }
+
+  if (target !== currentRoute) router.go(target);
+}
+
+crumb?.addEventListener('click', activateBreadcrumb);
+
 // Klick in der Szene fuehrt ueber denselben Weg wie die Kopfzeile,
 // damit Hash, Kamerafahrt und Zurueck-Knopf nie auseinanderlaufen.
 stage?.on((event, key) => {
@@ -242,6 +318,7 @@ if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
     hint?.removeEventListener('click', activateFooterHint);
+    crumb?.removeEventListener('click', activateBreadcrumb);
     unsubscribeExplored();
     stopBrandGlitch?.();
     reader?.dispose();

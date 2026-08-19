@@ -41,9 +41,10 @@ const HIT_HEADROOM = { abschluss: TEASER_Y + 0.6, projekte: TEASER_Y + 0.6, lebe
 // Seite hoch; die Breite folgt daraus und bleibt hoechstens so breit wie der
 // Sockel.
 const DOC_MAX_WIDTH = 7.35;
-// Das Blatt beginnt oberhalb der Partikelfahne — in jeder Groesse und in
-// jedem Bildlauf. Faenge es tiefer an, fraesse der Strahl die ersten Zeilen.
-const DOC_LIFT = JET_HEIGHT + 0.3;
+// Das Blatt greift leicht in die obere Zone der Partikelfahne. Zusammen mit
+// der bereits eingerueckten unteren Rahmenkante wirkt es dadurch, als wuerde
+// das Hologramm unmittelbar aus dem Duesenstrahl materialisieren.
+const DOC_LIFT = JET_HEIGHT - 0.13;
 // Das Blatt schwebt nahezu zentrisch ueber dem Sockel — direkt ueber dem
 // Partikelstrahl, nicht weit davor. Ein kleiner Z-Versatz haelt den
 // vorderen Sockelrand aus dem Blick auf den Seitenfuss.

@@ -61,12 +61,21 @@ function compactTimelineItems(items = []) {
   }));
 }
 
+function timelinePeriods(value) {
+  return String(value ?? '')
+    .split(' · ')
+    .map((period) => period.trim())
+    .filter(Boolean)
+    .map((period) => `<span>${escapeHTML(period)}</span>`)
+    .join('');
+}
+
 function timeline(items = [], extraClass = '') {
   return `
     <ol class="cv-timeline ${extraClass}">
       ${compactTimelineItems(items).map((item) => `
         <li>
-          <time>${escapeHTML(item.zeitraum)}</time>
+          <time>${timelinePeriods(item.zeitraum)}</time>
           <div>
             <h3>${escapeHTML(item.titel)}</h3>
             ${item.beschreibung ? `<p>${escapeHTML(item.beschreibung)}</p>` : ''}

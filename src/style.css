@@ -1768,16 +1768,16 @@ body {
   opacity: 0.96;
 }
 
-/* Kreis, Datum und Beschreibung teilen eine echte gemeinsame Mittelachse. */
-.cv-timeline {
+/* Beruflicher Werdegang: alle Eintraege beginnen auf derselben Achse. */
+.cv-hologram .cv-timeline {
   position: relative;
 }
-.cv-timeline::before {
+.cv-hologram .cv-timeline::before {
   content: "";
   position: absolute;
   z-index: 0;
-  top: 18px;
-  bottom: 18px;
+  top: 20px;
+  bottom: 20px;
   left: 4px;
   width: 1px;
   background: linear-gradient(
@@ -1787,33 +1787,48 @@ body {
     rgb(var(--amber-rgb) / 0.06)
   );
 }
-.cv-timeline li,
-.cv-timeline--work li {
-  grid-template-columns: 18px minmax(124px, 0.82fr) minmax(0, 1.8fr);
+.cv-hologram .cv-timeline li,
+.cv-hologram .cv-timeline--work li {
+  grid-template-columns: 18px 138px minmax(0, 1fr);
   column-gap: 12px;
-  align-items: center;
-  padding: 18px 0;
+  align-items: start;
+  padding: 20px 0;
 }
-.cv-timeline li::before {
+.cv-hologram .cv-timeline li::before {
   z-index: 1;
-  top: 50%;
+  top: 29px;
   transform: translateY(-50%);
 }
-.cv-timeline li:not(:last-child)::after {
+.cv-hologram .cv-timeline li:not(:last-child)::after {
   content: none;
 }
-.cv-timeline time {
+.cv-hologram .cv-timeline time {
   grid-column: 2;
   grid-row: 1;
-  align-self: center;
-  display: block;
+  align-self: start;
+  display: grid;
+  gap: 4px;
+  line-height: 1.35;
   font-variant-numeric: tabular-nums;
 }
-.cv-timeline li > div {
+.cv-hologram .cv-timeline time span {
+  display: block;
+  white-space: nowrap;
+}
+.cv-hologram .cv-timeline li > div {
   grid-column: 3;
   grid-row: 1;
-  align-self: center;
+  align-self: start;
+  display: grid;
   min-width: 0;
+  gap: 6px;
+}
+.cv-hologram .cv-timeline li > div h3,
+.cv-hologram .cv-timeline li > div p {
+  margin: 0;
+}
+.cv-hologram .cv-timeline li > div .cv-note {
+  margin-top: 0 !important;
 }
 
 /* Der ESC-Hinweis ist ein echter Schalter und wird nur bei einer Aktion aktiv. */
@@ -1892,42 +1907,24 @@ body {
   }
 }
 
-/* Bediengrafik: laufende Aufwaerts-Chevrons und direkte Richtungsanzeige. */
+/* Bediengrafik: nur die direkt unter der Maus liegenden Drehpfeile. */
 .camera-dolly-guide {
-  width: 96px;
+  width: 76px;
 }
-.camera-dolly-guide__flow-chevron,
-.camera-dolly-guide__drag-direction,
-.camera-dolly-guide__wheel-direction {
+.camera-dolly-guide__turn-direction {
   fill: none;
+  stroke: var(--violet);
   stroke-width: 1;
+  opacity: 0.28;
   vector-effect: non-scaling-stroke;
-}
-.camera-dolly-guide__flow-chevron {
-  stroke: var(--cyan);
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: camera-guide-chevron-flow 1.5s linear infinite;
-}
-.camera-dolly-guide__flow-chevron--2 {
-  animation-delay: -0.5s;
-}
-.camera-dolly-guide__flow-chevron--3 {
-  animation-delay: -1s;
-}
-.camera-dolly-guide__drag-direction,
-.camera-dolly-guide__wheel-direction {
-  stroke: var(--amber);
-  opacity: 0.12;
   transition:
     opacity 0.18s var(--ease-ritual),
+    stroke 0.18s var(--ease-ritual),
     filter 0.18s var(--ease-ritual);
 }
-.camera-dolly-guide.is-left .camera-dolly-guide__drag-direction--left,
-.camera-dolly-guide.is-right .camera-dolly-guide__drag-direction--right,
-.camera-dolly-guide.is-near .camera-dolly-guide__wheel-direction--up,
-.camera-dolly-guide.is-far .camera-dolly-guide__wheel-direction--down {
+.camera-dolly-guide.is-left .camera-dolly-guide__turn-direction--left,
+.camera-dolly-guide.is-right .camera-dolly-guide__turn-direction--right {
+  stroke: var(--amber);
   opacity: 1;
   filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.82));
 }
@@ -1935,28 +1932,16 @@ body {
   fill: rgb(var(--amber-rgb) / 0.22);
   filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.58));
 }
-@keyframes camera-guide-chevron-flow {
-  0% {
-    opacity: 0;
-    transform: translateY(13px);
-  }
-  24% {
-    opacity: 0.86;
-  }
-  72% {
-    opacity: 0.52;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-18px);
-  }
-}
 
 @media (max-width: 680px), (max-height: 620px) {
-  .cv-timeline li,
-  .cv-timeline--work li {
-    grid-template-columns: 18px 88px minmax(0, 1fr);
+  .cv-hologram .cv-timeline li,
+  .cv-hologram .cv-timeline--work li {
+    grid-template-columns: 18px 96px minmax(0, 1fr);
     column-gap: 9px;
+    padding: 14px 0;
+  }
+  .cv-hologram .cv-timeline li::before {
+    top: 21px;
   }
 }
 
@@ -2015,4 +2000,34 @@ body {
     animation: none !important;
     filter: none !important;
   }
+}
+
+/* ---------- Klickbarer Pfad rechts unten ---------- */
+.foot__crumb {
+  transform-origin: right center;
+  cursor: default;
+  will-change: transform, filter, text-shadow;
+}
+.foot__crumb-item {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  white-space: nowrap;
+}
+button.foot__crumb-item {
+  cursor: pointer;
+}
+.foot__crumb-separator {
+  color: var(--amber-dim);
+  opacity: 0.82;
+}
+.foot__crumb:hover,
+.foot__crumb:focus-within {
+  animation: foot-esc-distort 0.3s steps(2, end) 1;
+  filter: brightness(1.45) contrast(1.28);
 }
