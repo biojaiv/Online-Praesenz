@@ -199,8 +199,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         d="M24 57A14 14 0 0 1 38 41V62H24Z" />
       <rect class="camera-dolly-guide__wheel"
         x="35" y="48" width="6" height="15" rx="3" />
-      <path class="camera-dolly-guide__wheel-mark"
-        d="M38 50V54M38 57V61" />
+      <path class="camera-dolly-guide__wheel-mark camera-dolly-guide__wheel-mark--upper"
+        d="M38 50V54" />
+      <path class="camera-dolly-guide__wheel-mark camera-dolly-guide__wheel-mark--lower"
+        d="M38 57V61" />
 
       <path class="camera-dolly-guide__turn-direction camera-dolly-guide__turn-direction--left"
         d="M36 111C29 111 23 108 18 103M18 103L19 110M18 103L25 104" />

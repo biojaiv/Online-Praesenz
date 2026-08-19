@@ -431,16 +431,16 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
     uniforms,
     setOrigin(y) { originY = y; },
     setWindow(width, height) {
-      // Die obere Rahmenkante bleibt exakt unveraendert. Die untere
-      // Partikelbahn wird auf die sichtbare blaue Abschlusskante des
-      // Dokuments gelegt, sodass beide Raender deckungsgleich erscheinen.
-      const bottomOverlap = height * 0.106;
-      const frameHeight = height - bottomOverlap;
+      // Der dynamische Partikelrahmen folgt exakt den vier physikalischen
+      // Dokumentkanten. Dadurch kann kein Dokumentinhalt unterhalb der
+      // unteren bunten Kante erscheinen. Da DOC_LIFT bereits knapp innerhalb
+      // der oberen Jetzone liegt, sitzt diese Unterkante zugleich unmittelbar
+      // am Uebergang zwischen Duesenstrahl und Hologramm.
       uniforms.uHalfWidth.value = width * 0.5;
-      uniforms.uHalfHeight.value = frameHeight * 0.5;
+      uniforms.uHalfHeight.value = height * 0.5;
       group.position.set(
         0,
-        originY + DOC_LIFT + bottomOverlap + frameHeight * 0.5,
+        originY + DOC_LIFT + height * 0.5,
         DOC_FRONT,
       );
       if (idle > 0 && !hidden) group.visible = true;

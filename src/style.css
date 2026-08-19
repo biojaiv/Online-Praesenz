@@ -466,6 +466,24 @@ body {
   fill: none;
   stroke: var(--fiber-white);
   opacity: 0.76;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.camera-dolly-guide.is-visible .camera-dolly-guide__wheel-mark {
+  animation: camera-guide-wheel-blink 1.1s steps(2, end) infinite;
+}
+.camera-dolly-guide.is-visible .camera-dolly-guide__wheel-mark--lower {
+  animation-delay: -0.55s;
+}
+@keyframes camera-guide-wheel-blink {
+  0%, 44%, 100% {
+    opacity: 0.18;
+    filter: none;
+  }
+  50%, 94% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgb(var(--fiber-blue-rgb) / 0.86));
+  }
 }
 .camera-dolly-guide__rotation,
 .camera-dolly-guide__rotation-arrow {

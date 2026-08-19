@@ -20,6 +20,14 @@ const DESKTOP_MAX_WIDTH = 1241;
 const COMPACT_MAX_WIDTH = 820;
 const MAX_PIXELS = 5_200_000;
 const LINK_BOX_FALLBACK = Object.freeze({ start: 0.56, end: 0.71 });
+// Die sichtbare blaue Abschlusskante der ersten Seite liegt in der
+// Vorlage rund 10,6 % oberhalb des Seitenendes. Der Partikelrahmen bleibt
+// unverändert; nur diese dekorative Rasterkante wird an seine bestehende
+// Unterkante versetzt.
+const FIRST_PAGE_BOTTOM_RULE_OFFSET = 0.106;
+const FIRST_PAGE_BOTTOM_RULE_SEARCH = 0.028;
+const FIRST_PAGE_BOTTOM_RULE_BAND = 0.0035;
+const FIRST_PAGE_BOTTOM_RULE_EDGE_INSET = 0.0015;
 
 function chooseRasterSize(width, height, maxTextureSize, compact) {
   const aspect = width / height;
@@ -240,6 +248,161 @@ function makeFirstPageTransparent(context, width, pageHeight) {
   });
 }
 
+
+function isBlueBottomRulePixel(r, g, b, a) {
+  return a >= 24
+    && b >= 42
+    && b - r >= 8
+    && g - r >= 2
+    && b >= g * 0.82;
+}
+
+function longestBlueBottomRuleRun(pixels, width, y, xStart, xEnd) {
+  let bestStart = -1;
+  let bestEnd = -1;
+  let runStart = -1;
+  let runEnd = -1;
+  let gap = 0;
+
+  const finishRun = () => {
+    if (runStart < 0 || runEnd < runStart) return;
+    if (
+      bestStart < 0
+      || (runEnd - runStart) > (bestEnd - bestStart)
+    ) {
+      bestStart = runStart;
+      bestEnd = runEnd;
+    }
+  };
+
+  for (let x = xStart; x < xEnd; x += 1) {
+    const index = (y * width + x) * 4;
+    const blue = isBlueBottomRulePixel(
+      pixels[index],
+      pixels[index + 1],
+      pixels[index + 2],
+      pixels[index + 3],
+    );
+
+    if (blue) {
+      if (runStart < 0) runStart = x;
+      runEnd = x;
+      gap = 0;
+    } else if (runStart >= 0 && gap < 3) {
+      gap += 1;
+    } else if (runStart >= 0) {
+      finishRun();
+      runStart = -1;
+      runEnd = -1;
+      gap = 0;
+    }
+  }
+
+  finishRun();
+
+  return {
+    start: bestStart,
+    end: bestEnd,
+    length: bestStart >= 0 ? bestEnd - bestStart + 1 : 0,
+  };
+}
+
+/**
+ * Versetzt ausschließlich die bereits vorhandene blaue horizontale
+ * Abschlusskante der ersten Seite. Dokumentinhalt, Dokumentgeometrie und
+ * Partikelrahmen bleiben an ihren Positionen.
+ */
+function alignFirstPageBottomRule(context, width, pageHeight) {
+  const image = context.getImageData(0, 0, width, pageHeight);
+  const pixels = image.data;
+  const expectedY = Math.round(
+    pageHeight * (1 - FIRST_PAGE_BOTTOM_RULE_OFFSET),
+  );
+  const searchRadius = Math.max(
+    4,
+    Math.round(pageHeight * FIRST_PAGE_BOTTOM_RULE_SEARCH),
+  );
+  const yStart = Math.max(0, expectedY - searchRadius);
+  const yEnd = Math.min(pageHeight - 1, expectedY + searchRadius);
+  const xStart = Math.floor(width * 0.08);
+  const xEnd = Math.ceil(width * 0.92);
+  const minimumRun = width * 0.24;
+
+  let best = null;
+
+  for (let y = yStart; y <= yEnd; y += 1) {
+    const run = longestBlueBottomRuleRun(
+      pixels,
+      width,
+      y,
+      xStart,
+      xEnd,
+    );
+    if (!best || run.length > best.length) {
+      best = { ...run, y };
+    }
+  }
+
+  if (!best || best.length < minimumRun) {
+    console.warn(
+      'Webprojektion: blaue Abschlusskante nicht sicher erkannt; '
+      + 'Position bleibt unverändert.',
+      {
+        expectedY: expectedY / pageHeight,
+        bestRun: best?.length ?? 0,
+        minimumRun,
+      },
+    );
+    return false;
+  }
+
+  const bandRadius = Math.max(
+    2,
+    Math.round(pageHeight * FIRST_PAGE_BOTTOM_RULE_BAND),
+  );
+  const sourceY = Math.max(0, best.y - bandRadius);
+  const sourceBottom = Math.min(pageHeight, best.y + bandRadius + 1);
+  const bandHeight = sourceBottom - sourceY;
+  const horizontalMargin = Math.max(2, Math.round(width * 0.008));
+  const sourceX = Math.max(0, best.start - horizontalMargin);
+  const sourceRight = Math.min(width, best.end + horizontalMargin + 1);
+  const stripWidth = sourceRight - sourceX;
+  const edgeInset = Math.max(
+    1,
+    Math.round(pageHeight * FIRST_PAGE_BOTTOM_RULE_EDGE_INSET),
+  );
+  const targetY = pageHeight - edgeInset - bandHeight;
+
+  if (targetY <= sourceBottom || stripWidth <= 0 || bandHeight <= 0) {
+    console.warn(
+      'Webprojektion: blaue Abschlusskante konnte nicht sicher versetzt werden.',
+    );
+    return false;
+  }
+
+  const strip = context.getImageData(
+    sourceX,
+    sourceY,
+    stripWidth,
+    bandHeight,
+  );
+
+  // Nur der erkannte horizontale Streifen wird versetzt. Die seitlichen
+  // Dekore und alle übrigen Dokumentpixel bleiben exakt an ihrem Ort.
+  context.clearRect(sourceX, sourceY, stripWidth, bandHeight);
+  context.putImageData(strip, sourceX, targetY);
+
+  console.info(
+    'Webprojektion: blaue Abschlusskante an Partikelrahmen ausgerichtet.',
+    {
+      from: best.y / pageHeight,
+      to: (targetY + bandHeight * 0.5) / pageHeight,
+    },
+  );
+
+  return true;
+}
+
 function isAmberPixel(r, g, b, a) {
   return a >= 42
     && r >= 70
@@ -410,6 +573,7 @@ function createWebProjectionCanvas(image, size) {
     0, 0, size.width, pageHeight,
   );
   makeFirstPageTransparent(context, size.width, pageHeight);
+  alignFirstPageBottomRule(context, size.width, pageHeight);
 
   context.drawImage(
     source,
@@ -473,8 +637,16 @@ export function createResumeProjection({
       void main() {
         float v = 1.0 - uOffset - (1.0 - vUv.y) * uWindow;
         vec4 texel = texture2D(uMap, vec2(vUv.x, v), uBias);
-        float fade = smoothstep(0.0, uFade.x, 1.0 - vUv.y)
-          * smoothstep(0.0, uFade.y, vUv.y);
+        float topFade = smoothstep(0.0, uFade.x, 1.0 - vUv.y);
+        float bottomFade = smoothstep(0.0, uFade.y, vUv.y);
+        // Die an die Unterkante versetzte blaue Abschlusslinie soll mit dem
+        // Partikelrahmen sichtbar überlappen, ohne den normalen Inhaltsfade
+        // am unteren Fensterrand aufzuheben.
+        float blueRule = smoothstep(0.035, 0.16, texel.b - texel.r)
+          * smoothstep(-0.015, 0.10, texel.g - texel.r);
+        float edgeRule = blueRule
+          * (1.0 - smoothstep(0.003, 0.022, vUv.y));
+        float fade = topFade * max(bottomFade, edgeRule);
         float alpha = texel.a * fade * uOpacity;
         if (alpha < 0.004) discard;
 
