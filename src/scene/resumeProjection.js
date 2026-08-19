@@ -403,6 +403,242 @@ function alignFirstPageBottomRule(context, width, pageHeight) {
   return true;
 }
 
+/**
+ * Erzeugt für Seite zwei eine unsichtbare Verlängerung zwischen dem nach oben
+ * gerückten Inhalt und der unveränderten unteren Partikelkante.
+ *
+ * Beim Entfernen des Linkkastens wird der untere Seiteninhalt um cutHeight
+ * nach oben versetzt. Die blaue Abschlusskante darf diese Bewegung nicht
+ * mitmachen: Ihre blauen und cyanfarbenen Pixel werden aus dem ursprünglichen
+ * unteren Seitenband gelöst, am verschobenen Ort entfernt und direkt an der
+ * physischen Seitenunterkante wieder eingesetzt. Der Raum dazwischen bleibt
+ * vollständig transparent und bildet die unsichtbare "Prothese".
+ */
+function blueProsthesisSignal(r, g, b, a) {
+  if (a < 8) return 0;
+
+  const peak = Math.max(g, b);
+  const blueLead = b - r;
+  const cyanLead = g - r;
+
+  if (peak < 22 || blueLead < 2 || cyanLead < -6) return 0;
+
+  const blueBias = smoothUnit(2, 28, blueLead);
+  const cyanBias = smoothUnit(-6, 22, cyanLead);
+  const brightness = smoothUnit(18, 100, peak);
+
+  return clampUnit(Math.max(
+    blueBias * cyanBias,
+    blueBias * brightness * 0.82,
+  ));
+}
+
+function attachSecondPageBottomProsthesis(
+  sourceContext,
+  outputContext,
+  width,
+  pageHeight,
+  pageTwoTop,
+  cut,
+) {
+  const cutHeight = Math.max(0, cut.end - cut.start);
+  const minimumCut = Math.max(2, Math.round(pageHeight * 0.01));
+
+  if (cutHeight < minimumCut) {
+    console.warn(
+      'Webprojektion: Randprothese übersprungen; Linkkastenausschnitt ist zu klein.',
+    );
+    return false;
+  }
+
+  const sourcePage = sourceContext.getImageData(
+    0,
+    pageTwoTop,
+    width,
+    pageHeight,
+  );
+  const outputPage = outputContext.getImageData(
+    0,
+    pageTwoTop,
+    width,
+    pageHeight,
+  );
+  const sourcePixels = sourcePage.data;
+  const outputPixels = outputPage.data;
+
+  // Gesucht wird nur im unteren Originalbereich, der durch das Hochrücken
+  // des Inhalts seine Abschlusskante nach oben verlieren würde.
+  const searchPadding = Math.max(10, Math.round(pageHeight * 0.16));
+  const searchTop = Math.max(
+    cut.end,
+    pageHeight - cutHeight - searchPadding,
+  );
+  const searchBottom = Math.max(
+    searchTop + 1,
+    pageHeight - Math.max(2, Math.round(pageHeight * 0.002)),
+  );
+  const xStart = Math.floor(width * 0.08);
+  const xEnd = Math.ceil(width * 0.92);
+
+  let bestY = -1;
+  let bestHits = 0;
+  let bestScore = 0;
+
+  for (let y = searchTop; y < searchBottom; y += 1) {
+    let hits = 0;
+    let score = 0;
+
+    for (let x = xStart; x < xEnd; x += 1) {
+      const index = (y * width + x) * 4;
+      const signal = blueProsthesisSignal(
+        sourcePixels[index],
+        sourcePixels[index + 1],
+        sourcePixels[index + 2],
+        sourcePixels[index + 3],
+      );
+
+      score += signal;
+      if (signal >= 0.12) hits += 1;
+    }
+
+    if (
+      hits > bestHits
+      || (hits === bestHits && score > bestScore)
+    ) {
+      bestY = y;
+      bestHits = hits;
+      bestScore = score;
+    }
+  }
+
+  const minimumHits = Math.max(24, Math.round(width * 0.055));
+  if (bestY < 0 || bestHits < minimumHits) {
+    console.warn(
+      'Webprojektion: blaue Abschlusskante der zweiten Seite '
+      + 'nicht sicher erkannt; Randprothese bleibt inaktiv.',
+      { bestHits, minimumHits },
+    );
+    return false;
+  }
+
+  const bandRadius = Math.max(5, Math.round(pageHeight * 0.009));
+  const bandTop = Math.max(searchTop, bestY - bandRadius);
+  const bandBottom = Math.min(pageHeight, bestY + bandRadius + 1);
+  const bandHeight = bandBottom - bandTop;
+  const baseMask = new Uint8Array(width * bandHeight);
+  const expandedMask = new Uint8Array(baseMask.length);
+
+  for (let localY = 0; localY < bandHeight; localY += 1) {
+    const sourceY = bandTop + localY;
+
+    for (let x = 0; x < width; x += 1) {
+      const index = (sourceY * width + x) * 4;
+      const signal = blueProsthesisSignal(
+        sourcePixels[index],
+        sourcePixels[index + 1],
+        sourcePixels[index + 2],
+        sourcePixels[index + 3],
+      );
+      baseMask[localY * width + x] = Math.round(signal * 255);
+    }
+  }
+
+  // Zwei Pixel weiche Ausdehnung nehmen den hellen Saum der Kante mit,
+  // ohne den dunklen Seitenhintergrund in die Prothese zu kopieren.
+  for (let localY = 0; localY < bandHeight; localY += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let strongest = baseMask[localY * width + x];
+
+      for (let dy = -2; dy <= 2; dy += 1) {
+        const sampleY = localY + dy;
+        if (sampleY < 0 || sampleY >= bandHeight) continue;
+
+        for (let dx = -2; dx <= 2; dx += 1) {
+          const sampleX = x + dx;
+          if (sampleX < 0 || sampleX >= width) continue;
+
+          const distance = Math.max(Math.abs(dx), Math.abs(dy));
+          const weight = distance === 0 ? 1 : distance === 1 ? 0.82 : 0.58;
+          const value = Math.round(
+            baseMask[sampleY * width + sampleX] * weight,
+          );
+          if (value > strongest) strongest = value;
+        }
+      }
+
+      expandedMask[localY * width + x] = strongest;
+    }
+  }
+
+  const edgeInset = Math.max(1, Math.round(pageHeight * 0.001));
+  const targetTop = pageHeight - edgeInset - bandHeight;
+  const shiftedTop = bandTop - cutHeight;
+
+  if (
+    targetTop < 0
+    || shiftedTop < 0
+    || targetTop <= shiftedTop
+  ) {
+    console.warn(
+      'Webprojektion: Geometrie der Randprothese ist nicht plausibel.',
+      { bandTop, shiftedTop, targetTop, bandHeight, cutHeight },
+    );
+    return false;
+  }
+
+  // Die eigentliche Prothese ist vollkommen transparent.
+  for (let y = targetTop; y < targetTop + bandHeight; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      outputPixels[(y * width + x) * 4 + 3] = 0;
+    }
+  }
+
+  let movedPixels = 0;
+
+  for (let localY = 0; localY < bandHeight; localY += 1) {
+    const sourceY = bandTop + localY;
+    const shiftedY = shiftedTop + localY;
+    const targetY = targetTop + localY;
+
+    for (let x = 0; x < width; x += 1) {
+      const mask = expandedMask[localY * width + x] / 255;
+      if (mask <= 0.025) continue;
+
+      const sourceIndex = (sourceY * width + x) * 4;
+      const shiftedIndex = (shiftedY * width + x) * 4;
+      const targetIndex = (targetY * width + x) * 4;
+
+      // Die mit dem Seiteninhalt hochgerückte Kopie wird ausschließlich an
+      // den erkannten Randpixeln entfernt. Text und übrige Inhalte bleiben.
+      outputPixels[shiftedIndex + 3] = Math.round(
+        outputPixels[shiftedIndex + 3] * (1 - mask),
+      );
+
+      outputPixels[targetIndex] = sourcePixels[sourceIndex];
+      outputPixels[targetIndex + 1] = sourcePixels[sourceIndex + 1];
+      outputPixels[targetIndex + 2] = sourcePixels[sourceIndex + 2];
+      outputPixels[targetIndex + 3] = Math.round(
+        sourcePixels[sourceIndex + 3] * mask,
+      );
+      movedPixels += 1;
+    }
+  }
+
+  outputContext.putImageData(outputPage, 0, pageTwoTop);
+
+  console.info(
+    'Webprojektion: transparente Randprothese der zweiten Seite eingesetzt.',
+    {
+      source: bestY / pageHeight,
+      formerPosition: (bestY - cutHeight) / pageHeight,
+      target: (targetTop + bandHeight * 0.5) / pageHeight,
+      movedPixels,
+    },
+  );
+
+  return true;
+}
+
 function isAmberPixel(r, g, b, a) {
   return a >= 42
     && r >= 70
@@ -589,6 +825,15 @@ function createWebProjectionCanvas(image, size) {
       0, pageTwoTop + cut.start, size.width, lowerHeight,
     );
   }
+
+  attachSecondPageBottomProsthesis(
+    sourceContext,
+    context,
+    size.width,
+    pageHeight,
+    pageTwoTop,
+    cut,
+  );
 
   console.info(
     `Webprojektion: Linkkasten ${cut.detected ? 'erkannt' : 'per Ersatzbereich'} entfernt.`,
