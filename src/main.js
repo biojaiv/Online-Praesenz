@@ -7,10 +7,11 @@ import { startBrandGlitch } from './ui/glitch.js';
 import { createReader } from './ui/reader.js';
 import { createDownloadButton } from './ui/download.js';
 import { getExplored, onExploredChange } from './state/explored.js';
-import { primeSounds, playSound } from './ui/audio.js';
+import { primeSounds, playSound, waitForSoundUnlock } from './ui/audio.js';
 
 const canvas = document.getElementById('scene');
 const boot = document.getElementById('boot');
+const bootText = boot?.querySelector('.boot__text');
 const stageEl = document.getElementById('stage');
 const crumb = document.getElementById('crumb');
 const hint = document.getElementById('hint');
@@ -199,7 +200,7 @@ readerRef = reader;
 if (stage && reader) reader.setRect(stage.documentRect());
 
 // Der Download taucht erst auf, wenn der Lebenslauf offen steht.
-const download = createDownloadButton({ container: stageEl, reader });
+const download = createDownloadButton({ container: stageEl });
 
 const unsubscribeExplored = onExploredChange(() => stage?.setExplored(getExplored()));
 
@@ -274,9 +275,19 @@ stage?.on((event, key) => {
  * nicht abgebrochen und das fertige Modell blendet später weich ein.
  */
 async function beginExperience() {
-  // Die kurzen Signale liegen bereit, bevor sie das erste Mal gebraucht
-  // werden; ohne Nutzergeste bleiben sie schlicht stumm.
+  // Die Sounds werden zunächst vorgeladen. Für ein Intro mit zeitlich exakt
+  // gesetzten Klangsignalen ist eine echte Nutzergeste erforderlich:
+  // Browser dürfen unaufgeforderten Ton blockieren. Deshalb bleibt nur beim
+  // Intro der Boot-Layer bis zum ersten Klick oder Tastendruck stehen.
   primeSounds();
+
+  if (wantIntro) {
+    const previousBootText = bootText?.textContent || 'Initialisiere';
+    if (bootText) bootText.textContent = 'Klicken oder Taste drücken';
+    await waitForSoundUnlock();
+    if (bootText) bootText.textContent = previousBootText;
+  }
+
   let gateTimer = 0;
   await Promise.race([
     stage?.ready ?? Promise.resolve('fallback'),
