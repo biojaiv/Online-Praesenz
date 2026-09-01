@@ -197,23 +197,50 @@ function updateFooter() {
 
 // Der Sockel bekommt bis zu vier Sekunden Vorsprung hinter dem Boot-Layer.
 const MODEL_GATE = 4000;
+const BOOT_HARD_LIMIT = 6000; // STARTUP_FAILSAFE_V5_1_1
 
 let stage = null;
+let bootLimitTimer = 0;
 let enhancements = null;
+let enhancementTimer = 0;
 let stopBrandGlitch = null;
 let stopHeaderSymbols = null;
 // Die Buehne meldet die Flaeche des Dokuments, bevor die Lesefassung existiert.
 let readerRef = null;
 
+function ensureEnhancements() {
+  if (enhancements || !stage || !(canvas instanceof HTMLCanvasElement)) {
+    return enhancements;
+  }
+
+  try {
+    enhancements = createExperienceEnhancements({
+      stage,
+      canvas,
+      getRoute: () => currentRoute,
+      isReaderOpen: () => readerIsOpen,
+    });
+    enhancements.setRoute(currentRoute);
+    enhancements.setReaderOpen(readerIsOpen);
+  } catch (error) {
+    // Zusatzbeleuchtung darf niemals den Start der eigentlichen Seite blockieren.
+    console.error('Optionale Szenenerweiterungen konnten nicht gestartet werden:', error);
+    enhancements = null;
+  }
+  return enhancements;
+}
+
+function scheduleEnhancements(delay = 180) {
+  window.clearTimeout(enhancementTimer);
+  enhancementTimer = window.setTimeout(() => {
+    enhancementTimer = 0;
+    ensureEnhancements();
+  }, Math.max(0, delay));
+}
+
 try {
   stage = createStage(canvas, {
     onDocumentRect: (rect) => readerRef?.setRect(rect),
-  });
-  enhancements = createExperienceEnhancements({
-    stage,
-    canvas,
-    getRoute: () => currentRoute,
-    isReaderOpen: () => readerIsOpen,
   });
 } catch (err) {
   console.error('WebGL konnte nicht initialisiert werden:', err);
@@ -230,8 +257,19 @@ try {
 // Die Kamera muss vor dem allerersten Bild in der Tiefe stehen.
 const wantIntro = !!stage && shouldPlayIntro();
 let introRunning = wantIntro;
-if (wantIntro) stage.intro.begin();
-else document.documentElement.classList.remove('pre-intro');
+if (introRunning) {
+  try {
+    stage.intro.begin();
+  } catch (error) {
+    // Auch ein defekter optionaler Intro-Hook darf die Website nicht sperren.
+    console.error('Intro konnte nicht vorbereitet werden; starte ohne Intro:', error);
+    introRunning = false;
+    document.documentElement.classList.remove('pre-intro');
+    try { stage?.intro?.finish?.(); } catch {}
+  }
+} else {
+  document.documentElement.classList.remove('pre-intro');
+}
 stage?.start();
 
 const reader = createReader({
@@ -243,7 +281,8 @@ const reader = createReader({
     readerIsOpen = open;
     updateFooter();
     stage?.setReaderOpen(open);
-    enhancements?.setReaderOpen(open);
+    const activeEnhancements = open ? ensureEnhancements() : enhancements;
+    activeEnhancements?.setReaderOpen(open);
     download?.dock(open ? reader.actionSlot : null);
   },
 });
@@ -272,6 +311,7 @@ const router = createRouter({
 
     currentRoute = target;
     if (root !== 'lebenslauf') readerIsOpen = false;
+    if (root === 'lebenslauf' && !introRunning) ensureEnhancements();
     enhancements?.setRoute(target);
     updateFooter();
   },
@@ -282,7 +322,7 @@ async function activateFooterHint() {
 
   if (root === 'home') {
     playSound('focus');
-    enhancements?.promptSectionChoice();
+    ensureEnhancements()?.promptSectionChoice();
     return;
   }
 
@@ -349,6 +389,14 @@ async function beginExperience() {
   // automatisch wie vor der zusätzlichen Audiofreigabe-Sperre.
   primeSounds();
 
+  bootLimitTimer = window.setTimeout(() => {
+    // A slow optional asset must not keep the boot overlay visible.
+    stage?.releaseModelReveal();
+    boot?.classList.add('is-done');
+    stage?.settleQuality?.();
+    scheduleEnhancements(0);
+  }, BOOT_HARD_LIMIT);
+
   let gateTimer = 0;
   await Promise.race([
     stage?.ready ?? Promise.resolve('fallback'),
@@ -362,8 +410,13 @@ async function beginExperience() {
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   await new Promise((resolve) => { window.setTimeout(resolve, 260); });
 
-  boot.classList.add('is-done');
-  if (wantIntro) {
+  window.clearTimeout(bootLimitTimer);
+  bootLimitTimer = 0;
+  boot?.classList.add('is-done');
+  stage?.settleQuality?.();
+  // GPU-intensive extras start only after the usable scene is on screen.
+  scheduleEnhancements();
+  if (introRunning) {
     playIntro({
       stage,
       onDone() {
@@ -378,7 +431,20 @@ async function beginExperience() {
     stopHeaderSymbols = startHeaderSymbols();
   }
 }
-beginExperience();
+
+beginExperience().catch((error) => {
+  window.clearTimeout(bootLimitTimer);
+  bootLimitTimer = 0;
+  // A failed optional asset or intro step must never leave the boot overlay
+  // in front of an otherwise usable WebGL scene.
+  console.error('Initialisierung wurde mit Fallback abgeschlossen:', error);
+  boot?.classList.add('is-done');
+  document.documentElement.classList.remove('pre-intro');
+  introRunning = false;
+  try { stage?.intro?.finish?.(); } catch {}
+  stage?.settleQuality?.();
+  scheduleEnhancements(0);
+});
 
 // Ressourcen freigeben, wenn der Tab in den Hintergrund geht
 function onVisibilityChange() {
@@ -398,6 +464,8 @@ if (import.meta.hot) {
     unsubscribeLanguage();
     stopBrandGlitch?.();
     stopHeaderSymbols?.();
+    window.clearTimeout(bootLimitTimer);
+    window.clearTimeout(enhancementTimer);
     enhancements?.dispose();
     reader?.dispose();
     download?.dispose();

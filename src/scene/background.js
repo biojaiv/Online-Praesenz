@@ -423,11 +423,17 @@ export function createBackground({ camera = null, layers = 3, tracesPerLayer = 1
   let documentOpen = false;
   let symbolOnly = false;
 
+  // HYBRID_ORRERY_STARTUP_V5_1
   function syncEndpointSuppression() {
-    const suspended = !effectsEnabled || symbolOnly || documentOpen;
-    endpointBurst.setSuspended(suspended);
-    proceduralOrrery.setSuspended(suspended);
-    upperRightTelemetry.setSuspended(suspended);
+    // Motherboard bursts and telemetry stay out of the CV text field.
+    const localEffectsSuspended = !effectsEnabled || symbolOnly || documentOpen;
+    endpointBurst.setSuspended(localEffectsSuspended);
+    upperRightTelemetry.setSuspended(localEffectsSuspended);
+
+    // The mechanical background is part of the world, not of the text layer.
+    // It is hidden only for the intro/effect lock and therefore keeps moving
+    // behind the CV when the camera is close to the projection.
+    proceduralOrrery.setSuspended(!effectsEnabled || symbolOnly);
   }
   const tracePoint = new THREE.Vector3();
 

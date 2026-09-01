@@ -58,111 +58,6 @@ function makeTransparentTexture() {
   return texture;
 }
 
-function luma(data, offset) {
-  return (
-    data[offset] * 0.2126
-    + data[offset + 1] * 0.7152
-    + data[offset + 2] * 0.0722
-  ) / 255;
-}
-
-/**
- * Builds the cut-out only in memory. The checked-in source image remains
- * byte-identical; no mask or derivative image is written to disk.
- */
-function makeRuntimeCutout(image) {
-  const width = Math.max(1, image.naturalWidth || image.width || 1);
-  const height = Math.max(1, image.naturalHeight || image.height || 1);
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) return null;
-
-  context.drawImage(image, 0, 0, width, height);
-  const frame = context.getImageData(0, 0, width, height);
-  const source = frame.data;
-  const alpha = new Uint8Array(width * height);
-  const expanded = new Uint8Array(alpha.length);
-
-  for (let y = 0; y < height; y += 1) {
-    const up = Math.max(0, y - 1);
-    const down = Math.min(height - 1, y + 1);
-    for (let x = 0; x < width; x += 1) {
-      const left = Math.max(0, x - 1);
-      const right = Math.min(width - 1, x + 1);
-      const pixel = y * width + x;
-      const offset = pixel * 4;
-      const red = source[offset] / 255;
-      const green = source[offset + 1] / 255;
-      const blue = source[offset + 2] / 255;
-      const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
-      const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
-      const horizontal = Math.abs(
-        luma(source, (y * width + right) * 4)
-        - luma(source, (y * width + left) * 4),
-      );
-      const vertical = Math.abs(
-        luma(source, (down * width + x) * 4)
-        - luma(source, (up * width + x) * 4),
-      );
-      const edge = Math.max(horizontal, vertical);
-      const darkSignal = smoothstep(0.035, 0.56, 0.92 - luminance);
-      const edgeSignal = smoothstep(0.018, 0.155, edge);
-      const colourSignal = smoothstep(0.025, 0.19, chroma);
-      const warmHighlight = smoothstep(0.02, 0.16, red - blue)
-        * smoothstep(0.46, 0.96, luminance);
-      let signal = Math.max(
-        Math.pow(darkSignal, 0.78),
-        edgeSignal * 0.98,
-        colourSignal * 0.78,
-        warmHighlight * 0.92,
-      );
-
-      // Smooth, bright background remains transparent. Fine bright metal is
-      // retained by the edge and colour terms above.
-      if (luminance > 0.78 && chroma < 0.055 && edge < 0.025) {
-        signal *= 0.055;
-      }
-      alpha[pixel] = Math.round(clamp01(signal) * 255);
-    }
-  }
-
-  // A one-pixel maximum filter protects hairline struts and gear teeth from
-  // disappearing because of antialiasing in the source image.
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      let strongest = alpha[y * width + x];
-      for (let oy = -1; oy <= 1; oy += 1) {
-        const sy = y + oy;
-        if (sy < 0 || sy >= height) continue;
-        for (let ox = -1; ox <= 1; ox += 1) {
-          const sx = x + ox;
-          if (sx < 0 || sx >= width) continue;
-          const candidate = alpha[sy * width + sx];
-          if (candidate > strongest) strongest = candidate;
-        }
-      }
-      expanded[y * width + x] = strongest;
-    }
-  }
-
-  for (let index = 0; index < expanded.length; index += 1) {
-    source[index * 4 + 3] = expanded[index];
-  }
-  context.putImageData(frame, 0, 0);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = true;
-  texture.anisotropy = 4;
-  texture.needsUpdate = true;
-  texture.userData.runtimeOnly = true;
-  return texture;
-}
-
 function paletteVector(index) {
   const names = ['fiberBlue', 'violet', 'amber', 'signal'];
   return lightColor(names[index % names.length]).clone();
@@ -308,8 +203,27 @@ function makeDetailMaterial(texture, spec) {
           * (1.0 - smoothstep(6.8, 9.4, cycle));
       }
 
+      float sourceStructure(vec3 colour) {
+        float luminance = dot(colour, vec3(0.2126, 0.7152, 0.0722));
+        float chroma = max(colour.r, max(colour.g, colour.b))
+          - min(colour.r, min(colour.g, colour.b));
+        float derivativeEdge = fwidth(luminance);
+        float darkMetal = smoothstep(0.035, 0.56, 0.92 - luminance);
+        float colouredMetal = smoothstep(0.022, 0.17, chroma);
+        float fineEdge = smoothstep(0.004, 0.055, derivativeEdge);
+        float warmHighlight = smoothstep(0.018, 0.14, colour.r - colour.b)
+          * smoothstep(0.42, 0.95, luminance);
+        float structure = max(
+          pow(darkMetal, 0.78),
+          max(colouredMetal * 0.82, max(fineEdge, warmHighlight * 0.92))
+        );
+        float flatPaper = smoothstep(0.78, 0.98, luminance)
+          * (1.0 - smoothstep(0.025, 0.09, chroma))
+          * (1.0 - smoothstep(0.004, 0.026, derivativeEdge));
+        return clamp(structure * (1.0 - flatPaper * 0.98), 0.0, 1.0);
+      }
+
       void main() {
-        vec4 source = texture2D(uMap, vUv);
         vec2 p = vUv - vec2(0.505, 0.515);
         float radius = length(p);
         float angle = atan(p.y, p.x);
@@ -319,7 +233,12 @@ function makeDetailMaterial(texture, spec) {
         float sector = uSectorWidth > 6.0
           ? 1.0
           : 1.0 - smoothstep(uSectorWidth * 0.48, uSectorWidth * 0.56, sectorDistance);
-        float mask = radial * sector * source.a;
+        float geometryMask = radial * sector;
+        if (geometryMask < 0.008) discard;
+
+        vec4 source = texture2D(uMap, vUv);
+        float structure = sourceStructure(source.rgb) * source.a;
+        float mask = geometryMask * structure;
         if (mask < 0.008) discard;
 
         float event = eventEnvelope(uTime, uPhase);
@@ -536,6 +455,7 @@ export function createProceduralOrreryField({ camera = null } = {}) {
   const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(54, 54), backdropMaterial);
   backdrop.position.set(0, 1.2, -36.8);
   backdrop.renderOrder = -12;
+  backdrop.visible = false;
   group.add(backdrop);
 
   const detailStates = [];
@@ -546,8 +466,11 @@ export function createProceduralOrreryField({ camera = null } = {}) {
     mesh.scale.setScalar(spec.scale);
     mesh.rotation.z = spec.phase * 0.012;
     mesh.renderOrder = -10;
+    mesh.visible = false;
     group.add(mesh);
-    detailStates.push({ mesh, material, spec, baseRotation: mesh.rotation.z });
+    detailStates.push({
+      mesh, material, spec, baseRotation: mesh.rotation.z, reveal: 0,
+    });
   }
 
   const fragmentStates = [];
@@ -566,16 +489,19 @@ export function createProceduralOrreryField({ camera = null } = {}) {
     mesh.rotation.z = spec.rotation;
     mesh.rotation.y = spec.x < 0 ? 0.13 : -0.13;
     mesh.renderOrder = -11;
+    mesh.visible = false;
     group.add(mesh);
-    fragmentStates.push({ mesh, material, spec });
+    fragmentStates.push({ mesh, material, spec, reveal: 0 });
   }
 
   const skeleton = createMechanicalSkeleton();
   group.add(skeleton.group);
 
   let sourceTexture = placeholder;
-  let cutoutTexture = placeholder;
+  let sourceReady = false;
+  let activationAge = 0;
   let effectsEnabled = true;
+  let suspended = false;
   let visibility = 1;
   let visibilityTarget = 1;
   let compact = false;
@@ -598,13 +524,15 @@ export function createProceduralOrreryField({ camera = null } = {}) {
       texture.anisotropy = 4;
       texture.needsUpdate = true;
       sourceTexture = texture;
-      cutoutTexture = makeRuntimeCutout(texture.image) || texture;
       backdropMaterial.uniforms.uMap.value = sourceTexture;
       const width = texture.image?.naturalWidth || texture.image?.width || 1024;
       const height = texture.image?.naturalHeight || texture.image?.height || 1024;
       backdropMaterial.uniforms.uTexel.value.set(1 / width, 1 / height);
-      for (const state of detailStates) state.material.uniforms.uMap.value = cutoutTexture;
-      for (const state of fragmentStates) state.material.uniforms.uMap.value = cutoutTexture;
+      for (const state of detailStates) state.material.uniforms.uMap.value = sourceTexture;
+      for (const state of fragmentStates) state.material.uniforms.uMap.value = sourceTexture;
+      sourceReady = true;
+      activationAge = 0;
+      backdrop.visible = true;
       placeholder.dispose();
     },
     undefined,
@@ -615,24 +543,30 @@ export function createProceduralOrreryField({ camera = null } = {}) {
 
   function syncCommonUniforms(elapsed) {
     backdropMaterial.uniforms.uTime.value = elapsed;
-    backdropMaterial.uniforms.uVisibility.value = visibility;
+    backdropMaterial.uniforms.uVisibility.value = sourceReady ? visibility : 0;
     backdropMaterial.uniforms.uCompact.value = compact ? 1 : 0;
     backdropMaterial.uniforms.uPointer.value.copy(pointer);
     backdropMaterial.uniforms.uPointerActive.value = pointerActive ? 1 : 0;
     for (const state of detailStates) {
       state.material.uniforms.uTime.value = elapsed;
-      state.material.uniforms.uVisibility.value = visibility;
+      state.material.uniforms.uVisibility.value = visibility * state.reveal;
       state.material.uniforms.uCompact.value = compact ? 1 : 0;
       state.material.uniforms.uPointer.value.copy(pointer);
       state.material.uniforms.uPointerActive.value = pointerActive ? 1 : 0;
     }
     for (const state of fragmentStates) {
       state.material.uniforms.uTime.value = elapsed;
-      state.material.uniforms.uVisibility.value = visibility;
+      state.material.uniforms.uVisibility.value = visibility * state.reveal;
       state.material.uniforms.uCompact.value = compact ? 1 : 0;
       state.material.uniforms.uPointer.value.copy(pointer);
       state.material.uniforms.uPointerActive.value = pointerActive ? 1 : 0;
     }
+  }
+
+  function syncVisibilityTarget() {
+    const active = effectsEnabled && !suspended;
+    visibilityTarget = active ? 1 : 0;
+    if (active) group.visible = true;
   }
 
   return {
@@ -640,13 +574,23 @@ export function createProceduralOrreryField({ camera = null } = {}) {
 
     setEffectsEnabled(value) {
       effectsEnabled = Boolean(value);
-      visibilityTarget = effectsEnabled ? 1 : 0;
       if (!effectsEnabled) {
         visibility = 0;
         group.visible = false;
-      } else {
-        group.visible = true;
       }
+      syncVisibilityTarget();
+    },
+
+    setSuspended(value) {
+      // background.js historically combines intro and CV suppression in one
+      // flag. During normal operation (effects enabled) the CV must not hide
+      // the mechanical world; only the global intro/effect lock may suspend it.
+      suspended = Boolean(value) && !effectsEnabled;
+      if (suspended) {
+        visibility = 0;
+        group.visible = false;
+      }
+      syncVisibilityTarget();
     },
 
     setCompact(value) {
@@ -654,7 +598,9 @@ export function createProceduralOrreryField({ camera = null } = {}) {
       // The central construction remains. Peripheral repetitions are removed
       // on narrow screens so the CV and pedestals retain visual priority.
       fragmentStates.forEach((state, index) => {
-        state.mesh.visible = !compact || index < 2;
+        state.mesh.visible = sourceReady
+          && state.reveal > 0.002
+          && (!compact || index < 2);
       });
     },
 
@@ -667,11 +613,31 @@ export function createProceduralOrreryField({ camera = null } = {}) {
       const dt = Math.min(0.1, Math.max(0, delta || 0));
       const response = 1 - Math.pow(0.002, dt);
       visibility += (visibilityTarget - visibility) * response;
-      if (!effectsEnabled && visibility < 0.003) {
+      if ((!effectsEnabled || suspended) && visibility < 0.003) {
         group.visible = false;
         return;
       }
       group.visible = true;
+
+      // The source texture is shared by every layer. Layers are admitted in a
+      // short sequence so the browser does not compile all material variants
+      // in the first visible frame.
+      if (sourceReady) {
+        activationAge += dt;
+        detailStates.forEach((state, index) => {
+          const target = smoothstep(index * 0.12, index * 0.12 + 0.58, activationAge);
+          state.reveal += (target - state.reveal) * response;
+          state.mesh.visible = state.reveal > 0.002;
+        });
+        fragmentStates.forEach((state, index) => {
+          const start = 0.78 + index * 0.16;
+          const target = smoothstep(start, start + 0.62, activationAge);
+          state.reveal += (target - state.reveal) * response;
+          state.mesh.visible = state.reveal > 0.002
+            && (!compact || index < 2);
+        });
+      }
+
       syncCommonUniforms(elapsed);
 
       backdrop.position.x = Math.sin(elapsed * 0.008) * 0.34;
@@ -710,9 +676,6 @@ export function createProceduralOrreryField({ camera = null } = {}) {
       for (const state of detailStates) state.material.dispose();
       for (const state of fragmentStates) state.material.dispose();
       skeleton.dispose();
-      if (cutoutTexture && cutoutTexture !== sourceTexture && cutoutTexture !== placeholder) {
-        cutoutTexture.dispose();
-      }
       if (sourceTexture && sourceTexture !== placeholder) sourceTexture.dispose();
       if (placeholder && placeholder !== sourceTexture) placeholder.dispose();
       group.clear();

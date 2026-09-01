@@ -61,7 +61,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     powerPreference: 'high-performance',
     stencil: false,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  // STARTUP_DPR_RAMP_V5_1_1: first usable frame at DPR 1.
+  const targetPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  let currentPixelRatio = Math.min(targetPixelRatio, 1);
+  renderer.setPixelRatio(currentPixelRatio);
   renderer.setClearColor(0x03060a, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.38;
@@ -182,6 +185,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let docHalfWidth = 1;
   let viewMoving = false;
   let viewMoveTicket = 0;
+  let qualityUpgradeTimer = 0;
 
   const guideHost = canvas.parentElement;
   const dollyGuide = document.createElement('div');
@@ -716,6 +720,16 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (opened && !viewMoving) focusCard(opened, 0.65);
   }
 
+  function settleQuality() {
+    if (qualityUpgradeTimer || currentPixelRatio >= targetPixelRatio - 0.001) return;
+    qualityUpgradeTimer = window.setTimeout(() => {
+      qualityUpgradeTimer = 0;
+      currentPixelRatio = targetPixelRatio;
+      renderer.setPixelRatio(currentPixelRatio);
+      resize();
+    }, 1100);
+  }
+
   // ResizeObserver feuert waehrend CSS-Uebergaengen mehrfach je Bild.
   // Ein rAF-Sammelpunkt haelt Kamera und Composer davon unbeeindruckt.
   const ro = new ResizeObserver(() => {
@@ -817,6 +831,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     scene, camera, renderer, composer, cards, background,
     ready: cards.ready,
     releaseModelReveal: () => cards.releaseModelReveal(),
+    settleQuality,
 
     /** cb(event, key) mit event = 'hover' | 'select' */
     on(cb) { listener = cb; },
@@ -935,6 +950,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       unsubscribeDocumentLanguage();
       gsap.killTweensOf([camPos, look, cards.group.position, cards.group.scale]);
       window.clearTimeout(dollyGuideTimer);
+      window.clearTimeout(qualityUpgradeTimer);
       dollyGuide.remove();
       timer.dispose();
       cards.dispose();
