@@ -1,12 +1,13 @@
+import cvDe from '../data/cv.de.json';
+import cvEn from '../data/cv.en.json';
+import { getLanguage, onLanguageChange, t } from '../i18n.js';
+
 /**
- * Die Lesefassung des Lebenslaufs.
+ * Native HTML reading version of the CV.
  *
- * Im Raum steht die Projektion des gestalteten Dokuments. Der Inhalt selbst
- * bleibt daneben echtes HTML aus `cv.json`: markierbar, durchsuchbar,
- * indexierbar und mit Screenreader bedienbar. Frueher lag dieselbe Fassung
- * unsichtbar per CSS3D im 3D-Raum ueber der Projektion — zwei Darstellungen
- * desselben Inhalts an derselben Stelle, eine davon mit `opacity: 0`. Die
- * Ebene rendert jetzt flach, nur auf Wunsch, und kostet im Ruhezustand nichts.
+ * The semantic content is kept as two reviewed data sets. Switching language
+ * swaps only the active data object and the translated UI chrome; route,
+ * camera, open state and document geometry remain untouched.
  */
 
 const ROOT = 'lebenslauf';
@@ -18,8 +19,11 @@ const ANCHORS = {
   faehigkeiten: '#cv-skills',
   kontakt: '#cv-contact',
 };
-const CV_URL = '/data/cv.json';
-const REQUEST_TIMEOUT = 8000;
+const CV_DATA = Object.freeze({ de: cvDe, en: cvEn });
+
+function activeData() {
+  return CV_DATA[getLanguage()] ?? CV_DATA.en;
+}
 
 function escapeHTML(value) {
   return String(value ?? '')
@@ -85,11 +89,6 @@ function timeline(items = [], extraClass = '') {
     </ol>`;
 }
 
-/**
- * Signaturzeile und Verfuegbarkeit — dieselbe Setzung wie im gestalteten
- * Blatt, nur als markierbarer Text: eine knappe Reihe der Leitwerkzeuge, eine
- * Haarlinie, darunter der Zeitpunkt.
- */
 function signature(data) {
   const tools = (data.signatur || []).filter(Boolean);
   if (!tools.length && !data.verfuegbar) return '';
@@ -108,17 +107,17 @@ function overview(data) {
     <section class="cv-section cv-section--overview" id="cv-overview" aria-labelledby="cv-overview-title">
       <div class="cv-id">
         <div class="cv-id__meta">
-          <p class="cv-kicker">Systemprofil · 2026</p>
+          <p class="cv-kicker">${escapeHTML(t('reader.kickerProfile'))}</p>
           <h2 id="cv-overview-title">${escapeHTML(data.name)}</h2>
           <p class="cv-lead">${escapeHTML(data.title)}</p>
         </div>
         <span class="cv-id__stamp">VL<br><small>CV // 01</small></span>
       </div>
-      <p class="cv-focus"><strong>Mein Fokus</strong> ${escapeHTML(data.fokus)}</p>
+      <p class="cv-focus"><strong>${escapeHTML(t('reader.focusLabel'))}</strong> ${escapeHTML(data.fokus)}</p>
       ${signature(data)}
       <dl class="cv-facts">
-        <div><dt>Schwerpunkt</dt><dd>${escapeHTML(data.interessensschwerpunkte)}</dd></div>
-        <div><dt>Standort</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
+        <div><dt>${escapeHTML(t('reader.factFocus'))}</dt><dd>${escapeHTML(data.interessensschwerpunkte)}</dd></div>
+        <div><dt>${escapeHTML(t('reader.factLocation'))}</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
       </dl>
     </section>`;
 }
@@ -126,8 +125,8 @@ function overview(data) {
 function education(data) {
   return `
     <section class="cv-section" id="cv-education" aria-labelledby="cv-education-title">
-      <p class="cv-kicker">Qualifikation</p>
-      <h2 id="cv-education-title">Ausbildung & Praxis</h2>
+      <p class="cv-kicker">${escapeHTML(t('reader.kickerQualification'))}</p>
+      <h2 id="cv-education-title">${escapeHTML(t('reader.educationTitle'))}</h2>
       ${timeline(data.bildungsweg)}
     </section>`;
 }
@@ -135,22 +134,22 @@ function education(data) {
 function work(data) {
   return `
     <section class="cv-section cv-section--work" id="cv-work" aria-labelledby="cv-work-title">
-      <p class="cv-kicker cv-kicker--amber">Erfahrung</p>
-      <h2 id="cv-work-title">Beruflicher Werdegang</h2>
+      <p class="cv-kicker cv-kicker--amber">${escapeHTML(t('reader.kickerExperience'))}</p>
+      <h2 id="cv-work-title">${escapeHTML(t('reader.careerTitle'))}</h2>
       ${timeline(data.beruflicherWerdegang, 'cv-timeline--work')}
     </section>`;
 }
 
 function skills(data) {
   const groups = [
-    ['Technische Kompetenzen', data.skills || []],
-    ['Sprachen & Arbeitsweise', data.soft || []],
+    [t('reader.technicalSkills'), data.skills || []],
+    [t('reader.languagesWorkingStyle'), data.soft || []],
   ];
 
   return `
     <section class="cv-section" id="cv-skills" aria-labelledby="cv-skills-title">
-      <p class="cv-kicker">Kompetenzen</p>
-      <h2 id="cv-skills-title">Technik & Arbeitsweise</h2>
+      <p class="cv-kicker">${escapeHTML(t('reader.kickerSkills'))}</p>
+      <h2 id="cv-skills-title">${escapeHTML(t('reader.skillsTitle'))}</h2>
       <div class="cv-lower-grid cv-lower-grid--skills">
         <div class="cv-skill-groups">
           ${groups.map(([title, rows]) => `
@@ -161,10 +160,10 @@ function skills(data) {
               </ul>
             </div>`).join('')}
         </div>
-        <aside class="cv-skill-side" aria-label="Interessen">
+        <aside class="cv-skill-side" aria-label="${escapeHTML(t('reader.interestsAria'))}">
           <div class="cv-side-block">
-            <p class="cv-kicker">Ausgleich</p>
-            <h3>Interessen</h3>
+            <p class="cv-kicker">${escapeHTML(t('reader.interestsKicker'))}</p>
+            <h3>${escapeHTML(t('reader.interestsTitle'))}</h3>
             <ul class="cv-interests-list">${(data.interessen || [])
               .map((interest) => `<li>${escapeHTML(interest)}</li>`)
               .join('')}</ul>
@@ -182,21 +181,20 @@ function contact(data) {
     <section class="cv-section cv-section--contact" id="cv-contact" aria-labelledby="cv-contact-title">
       <div class="cv-contact-grid">
         <div>
-          <p class="cv-kicker">Erreichbarkeit</p>
-          <h2 id="cv-contact-title">Kontakt</h2>
+          <p class="cv-kicker">${escapeHTML(t('reader.kickerContact'))}</p>
+          <h2 id="cv-contact-title">${escapeHTML(t('reader.contact'))}</h2>
         </div>
         <dl class="cv-contact-list">
-          <div><dt>E-Mail</dt><dd><a href="mailto:${email}">${email}</a></dd></div>
-          <div><dt>Standort</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
-          <div><dt>Verfügbarkeit</dt><dd>${escapeHTML(data.verfuegbar)}</dd></div>
-          <div><dt>Geburtsdatum</dt><dd>${escapeHTML(personal.geburtsdatum)}</dd></div>
+          <div><dt>${escapeHTML(t('reader.email'))}</dt><dd><a href="mailto:${email}">${email}</a></dd></div>
+          <div><dt>${escapeHTML(t('reader.location'))}</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
+          <div><dt>${escapeHTML(t('reader.availability'))}</dt><dd>${escapeHTML(data.verfuegbar)}</dd></div>
+          <div><dt>${escapeHTML(t('reader.birthDate'))}</dt><dd>${escapeHTML(personal.geburtsdatum)}</dd></div>
         </dl>
       </div>
-      <a class="cv-primary-action" href="mailto:${email}">E-Mail schreiben</a>
+      <a class="cv-primary-action" href="mailto:${email}">${escapeHTML(t('reader.emailAction'))}</a>
     </section>`;
 }
 
-/** Wartet auf das Ende einer CSS-Animation, notfalls auf die Uhr. */
 function afterAnimation(element, fallback) {
   return new Promise((resolve) => {
     let settled = false;
@@ -218,22 +216,20 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   panel.className = 'cv-reader';
   panel.hidden = true;
   panel.innerHTML = `
-    <article class="cv-hologram" aria-label="Lebenslauf von Vladimir Leicht" tabindex="-1">
+    <article class="cv-hologram" tabindex="-1">
       <header class="cv-hologram__header">
-        <button class="cv-back" type="button" data-cv-close aria-label="Lesefassung schließen">←</button>
-        <div><span>Curriculum Vitæ</span><small>Lesefassung · Live-Datensatz</small></div>
-        <span class="cv-status">Synchron</span>
+        <button class="cv-back" type="button" data-cv-close>←</button>
+        <div><span>Curriculum Vitæ</span><small data-cv-live></small></div>
+        <span class="cv-status" data-cv-status></span>
       </header>
-      <nav class="cv-nav" aria-label="Lebenslaufabschnitte">
-        <button type="button" data-cv-target="lebenslauf">Profil</button>
-        <button type="button" data-cv-target="lebenslauf/faehigkeiten">Kompetenzen</button>
-        <button type="button" data-cv-target="lebenslauf/bildungsweg">Ausbildung</button>
-        <button type="button" data-cv-target="lebenslauf/arbeitsleben">Werdegang</button>
-        <button type="button" data-cv-target="lebenslauf/kontakt">Kontakt</button>
+      <nav class="cv-nav">
+        <button type="button" data-cv-target="lebenslauf" data-cv-label="reader.profile"></button>
+        <button type="button" data-cv-target="lebenslauf/faehigkeiten" data-cv-label="reader.skills"></button>
+        <button type="button" data-cv-target="lebenslauf/bildungsweg" data-cv-label="reader.education"></button>
+        <button type="button" data-cv-target="lebenslauf/arbeitsleben" data-cv-label="reader.career"></button>
+        <button type="button" data-cv-target="lebenslauf/kontakt" data-cv-label="reader.contact"></button>
       </nav>
-      <div class="cv-hologram__body" tabindex="0" aria-label="Scrollbarer Lebenslaufinhalt">
-        <p class="cv-state">Lebenslaufdaten werden entschlüsselt …</p>
-      </div>
+      <div class="cv-hologram__body" tabindex="0"></div>
       <footer class="cv-hologram__footer"><span>VL // PERSONNEL FILE</span><div class="cv-hologram__actions"></div></footer>
     </article>`;
 
@@ -242,25 +238,37 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   toggle.className = 'cv-action cv-reader-toggle';
   toggle.hidden = true;
   toggle.setAttribute('aria-expanded', 'false');
-  toggle.textContent = 'Lesefassung';
 
   container.append(toggle, panel);
 
   const article = panel.querySelector('.cv-hologram');
   const body = panel.querySelector('.cv-hologram__body');
   const nav = panel.querySelector('.cv-nav');
-  // Solange die Lesefassung offen steht, sitzen Umschalter und Download in
-  // der Fusszeile des Blattes; ueber der Projektion stehen sie frei auf der
-  // Buehne. So ueberdeckt nie ein Knopf den Text.
+  const closeButton = panel.querySelector('[data-cv-close]');
+  const liveLabel = panel.querySelector('[data-cv-live]');
+  const statusLabel = panel.querySelector('[data-cv-status]');
   const actionSlot = panel.querySelector('.cv-hologram__actions');
 
   let route = ROOT;
-  let data = null;
-  let error = null;
+  let data = activeData();
   let open = false;
   let switching = false;
-  let controller = null;
   let lastFocus = null;
+
+  function applyChromeTranslations() {
+    article?.setAttribute('aria-label', t('reader.articleAria'));
+    closeButton?.setAttribute('aria-label', t('reader.closeAria'));
+    if (liveLabel) liveLabel.textContent = t('reader.live');
+    if (statusLabel) statusLabel.textContent = t('reader.sync');
+    nav?.setAttribute('aria-label', t('reader.navAria'));
+    body?.setAttribute('aria-label', t('reader.bodyAria'));
+    for (const button of nav?.querySelectorAll('[data-cv-label]') || []) {
+      button.textContent = t(button.dataset.cvLabel);
+    }
+    toggle.textContent = open ? t('reader.projection') : t('reader.readable');
+    toggle.setAttribute('aria-label', toggle.textContent);
+    toggle.title = toggle.textContent;
+  }
 
   function markActive() {
     for (const button of nav.querySelectorAll('[data-cv-target]')) {
@@ -271,15 +279,9 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     }
   }
 
-  /** Inhalt entsteht genau einmal; Routenwechsel bewegen nur den Anker. */
   function renderContent() {
-    if (error) {
-      body.innerHTML = `<div class="cv-state cv-state--error"><strong>Datenkanal unterbrochen</strong><span>${escapeHTML(error.message)}</span><button type="button" data-cv-retry>Erneut laden</button></div>`;
-      body.querySelector('[data-cv-retry]')?.addEventListener('click', load);
-      return;
-    }
     if (!data) {
-      body.innerHTML = '<p class="cv-state">Lebenslaufdaten werden entschlüsselt …</p>';
+      body.innerHTML = `<p class="cv-state">${escapeHTML(t('reader.invalidData'))}</p>`;
       return;
     }
     body.innerHTML = [
@@ -300,37 +302,17 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     body.scrollTo({ top, behavior });
   }
 
-  async function load() {
-    controller?.abort();
-    controller = new AbortController();
-    error = null;
-    data = null;
+  function refreshLanguage() {
+    data = activeData();
+    applyChromeTranslations();
     renderContent();
-    try {
-      const signals = [controller.signal];
-      if (AbortSignal.timeout) signals.push(AbortSignal.timeout(REQUEST_TIMEOUT));
-      const response = await fetch(CV_URL, {
-        signal: AbortSignal.any && signals.length > 1 ? AbortSignal.any(signals) : controller.signal,
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      data = await response.json();
-    } catch (cause) {
-      if (cause?.name === 'AbortError') return;      // bewusst verworfen
-      if (cause?.name === 'TimeoutError') error = new Error('Zeitüberschreitung beim Laden');
-      else if (cause instanceof SyntaxError) error = new Error('Ungültiges Datenformat');
-      else error = new Error(cause?.message || 'Netzwerkverbindung fehlgeschlagen');
+    markActive();
+    if (open) {
+      scrollToSection('auto');
+      requestAnimationFrame(() => scrollToSection('auto'));
     }
-    renderContent();
-    if (open) scrollToSection('auto');
   }
 
-  /**
-   * Der Wechsel zwischen Projektion und Lesefassung.
-   *
-   * Beide nehmen dieselbe Flaeche ein. Die Buehne blendet zuerst die
-   * Projektion ab; anschliessend tritt die Lesefassung ruhig an ihre Stelle.
-   * Waehrend der Sequenz bleibt der Umschalter gesperrt.
-   */
   async function setOpen(next) {
     const value = Boolean(next) && route.split('/')[0] === ROOT;
     if (value === open || switching) return;
@@ -338,14 +320,14 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     open = value;
     toggle.disabled = true;
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    toggle.textContent = open ? 'Projektion' : 'Lesefassung';
     toggle.classList.toggle('is-docked', open);
+    applyChromeTranslations();
 
     try {
       if (open) {
         lastFocus = document.activeElement;
         await onTransition?.(true);
-        if (!open) return;                       // zwischenzeitlich abgebrochen
+        if (!open) return;
         article.classList.remove('is-fading');
         panel.classList.remove('is-fading');
         article.classList.add('is-emerging');
@@ -376,11 +358,14 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     } finally {
       switching = false;
       toggle.disabled = false;
+      applyChromeTranslations();
     }
   }
 
   panel.addEventListener('click', (event) => {
-    const target = event.target.closest('[data-cv-target], [data-cv-close]');
+    const target = event.target instanceof Element
+      ? event.target.closest('[data-cv-target], [data-cv-close]')
+      : null;
     if (!target) return;
     if (target.dataset.cvClose !== undefined) {
       setOpen(false);
@@ -403,7 +388,6 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
 
   toggle.addEventListener('click', () => setOpen(!open));
 
-  // Escape schliesst zuerst die Lesefassung und erst danach den Bereich.
   function onKeydown(event) {
     if (event.key !== 'Escape' || !open) return;
     event.stopPropagation();
@@ -412,19 +396,16 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   }
   window.addEventListener('keydown', onKeydown, true);
 
-  load();
+  const unsubscribeLanguage = onLanguageChange(refreshLanguage);
+  refreshLanguage();
 
   return {
     element: panel,
     get isOpen() { return open; },
     close() { return setOpen(false); },
-    /** Ablage in der Fusszeile fuer weitere Knoepfe der offenen Lesefassung. */
     get actionSlot() { return actionSlot; },
+    refreshLanguage,
 
-    /**
-     * Flaeche der Projektion, in CSS-Pixeln: die Lesefassung nimmt genau
-     * dieselbe ein und steht an derselben Stelle.
-     */
     setRect(rect) {
       if (!rect?.width || !rect?.height) return;
       article.style.setProperty('--cv-doc-width', `${Math.round(rect.width)}px`);
@@ -444,7 +425,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
     },
 
     dispose() {
-      controller?.abort();
+      unsubscribeLanguage();
       window.removeEventListener('keydown', onKeydown, true);
       panel.remove();
       toggle.remove();

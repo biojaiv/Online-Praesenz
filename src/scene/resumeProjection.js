@@ -1,10 +1,19 @@
 import * as THREE from 'three';
+import { getLanguage, onLanguageChange } from '../i18n.js';
 
+// BILINGUAL_PROJECTION_V3
 export const CV_SVG_URL = new URL(
   '../../Elemente/lebenslauf.svg',
   import.meta.url,
 ).href;
 
+export const CV_EN_PROJECTION_URL = new URL(
+  '../../Elemente/lebenslauf.en.svg',
+  import.meta.url,
+).href;
+
+// German compatibility exports are kept for modules outside this patch. The
+// active projection geometry is resolved per language through the getters.
 export const CV_PAGE_COUNT = 2;
 export const CV_PAGE_ASPECT = 1241 / (3786 / CV_PAGE_COUNT);
 
@@ -15,6 +24,49 @@ export const CV_ANCHORS = Object.freeze({
   kontakt: 0.415,
   arbeitsleben: 0.525,
 });
+
+const CV_ANCHORS_EN = Object.freeze({ // EN_CV_MASTER_PARITY_V4_4
+  uebersicht: 0,
+  bildungsweg: 0.18,
+  faehigkeiten: 0.35,
+  kontakt: 0.43,
+  arbeitsleben: 0.51,
+});
+
+const CV_SOURCES = Object.freeze({
+  de: Object.freeze({
+    url: CV_SVG_URL,
+    pageCount: CV_PAGE_COUNT,
+    pageAspect: CV_PAGE_ASPECT,
+    webTransform: true,
+    anchors: CV_ANCHORS,
+  }),
+  en: Object.freeze({ // EN_HOLOGRAM_PARITY_V4_3
+    url: CV_EN_PROJECTION_URL,
+    pageCount: 2,
+    pageAspect: 1241 / (3786 / 2),
+    webTransform: false,
+    anchors: CV_ANCHORS_EN,
+  }),
+});
+
+function cvSource(language = getLanguage()) {
+  const source = CV_SOURCES[language];
+  if (!source) throw new Error(`No CV projection source is registered for language: ${language}`);
+  return source;
+}
+
+export function getCvPageCount(language = getLanguage()) {
+  return cvSource(language).pageCount;
+}
+
+export function getCvPageAspect(language = getLanguage()) {
+  return cvSource(language).pageAspect;
+}
+
+export function getCvAnchor(section, language = getLanguage()) {
+  return cvSource(language).anchors[section] ?? 0;
+}
 
 const DESKTOP_MAX_WIDTH = 1241;
 const COMPACT_MAX_WIDTH = 820;
@@ -1125,6 +1177,45 @@ function createWebProjectionCanvas(image, size) {
   return output;
 }
 
+
+// PROJECTION_LUMINANCE_CONTROL_V4_2
+// The English reading-version PNG is a normal white-page render. For the 3D
+// hologram only, remove neutral near-white paper pixels while retaining dark
+// text, cyan/blue rules and coloured accents. PDF/DOCX bytes remain untouched.
+function suppressLightPaper(context, width, height) {
+  const image = context.getImageData(0, 0, width, height);
+  const pixels = image.data;
+  for (let offset = 0; offset < pixels.length; offset += 4) {
+    const red = pixels[offset];
+    const green = pixels[offset + 1];
+    const blue = pixels[offset + 2];
+    const alpha = pixels[offset + 3];
+    if (alpha <= 0) continue;
+
+    const luma = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+    const chroma = Math.max(red, green, blue) - Math.min(red, green, blue);
+    const paper = smoothUnit(218, 250, luma)
+      * (1 - smoothUnit(10, 42, chroma));
+    pixels[offset + 3] = Math.round(alpha * (1 - paper * 0.995));
+  }
+  context.putImageData(image, 0, 0);
+}
+
+function createDirectProjectionCanvas(image, size) {
+  const output = document.createElement('canvas');
+  output.width = size.width;
+  output.height = size.height;
+  const context = output.getContext('2d', { willReadFrequently: true });
+  if (!context) {
+    throw new Error('The CV projection canvas is not available.');
+  }
+  context.clearRect(0, 0, size.width, size.height);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, 0, 0, size.width, size.height);
+  return output;
+}
+
 export function createResumeProjection({
   renderer,
   compact = false,
@@ -1139,7 +1230,7 @@ export function createResumeProjection({
     uOffset: { value: 0 },
     uOpacity: { value: 0 },
     uFade: { value: new THREE.Vector2(0.085, 0.055) },
-    uGlow: { value: 1.5 },
+    uGlow: { value: 1.05 },
     uBias: { value: -0.65 },
   };
 
@@ -1177,8 +1268,8 @@ export function createResumeProjection({
         float alpha = texel.a * fade * uOpacity;
         if (alpha < 0.004) discard;
 
-        vec3 lifted = pow(clamp(texel.rgb, 0.0, 1.0), vec3(0.78));
-        gl_FragColor = vec4(lifted * uGlow, alpha);
+        vec3 lifted = pow(clamp(texel.rgb, 0.0, 1.0), vec3(0.90));
+        gl_FragColor = vec4(clamp(lifted * uGlow, 0.0, 1.0), alpha);
       }
     `,
   });
@@ -1196,6 +1287,9 @@ export function createResumeProjection({
   let open = false;
   let loadError = null;
   let loading = null;
+  let sourceLanguage = getLanguage();
+  let pageCount = getCvPageCount(sourceLanguage);
+  let loadRevision = 0;
   let scrollTarget = 0;
   let scroll = 0;
   let baseFraction = 1;
@@ -1224,19 +1318,29 @@ export function createResumeProjection({
     applyScroll(scroll);
   }
 
-  async function load() {
-    if (loading) return loading;
+  async function load(language = getLanguage()) {
+    const source = cvSource(language);
+    // White-page English raster needs less shader gain than the already
+    // transparency-processed German web projection.
+    uniforms.uGlow.value = language === 'en' ? 1.02 : 1.05;
+    const revision = ++loadRevision;
+    sourceLanguage = language;
+    pageCount = source.pageCount;
+    ready = false;
+    loadError = null;
+    mesh.visible = false;
+    uniforms.uOpacity.value = 0;
 
     loading = (async () => {
       try {
-        const image = await loadImage(CV_SVG_URL);
+        const image = await loadImage(source.url);
         await image.decode?.().catch(() => {});
-        if (disposed) return false;
+        if (disposed || revision !== loadRevision) return false;
 
         const width = image.naturalWidth || image.width;
         const height = image.naturalHeight || image.height;
         if (!width || !height) {
-          throw new Error('Die Lebenslauf-Vorlage hat keine nutzbaren Abmessungen.');
+          throw new Error('The CV projection source has no usable dimensions.');
         }
 
         const size = chooseRasterSize(
@@ -1245,28 +1349,44 @@ export function createResumeProjection({
           renderer?.capabilities?.maxTextureSize,
           compact,
         );
-        const source = createWebProjectionCanvas(image, size);
-        if (disposed) return false;
+        const canvas = source.webTransform
+          ? createWebProjectionCanvas(image, size)
+          : createDirectProjectionCanvas(image, size);
+        if (disposed || revision !== loadRevision) return false;
 
-        texture = new THREE.Texture(source);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        texture.generateMipmaps = true;
-        texture.anisotropy =
+        const nextTexture = new THREE.Texture(canvas);
+        nextTexture.colorSpace = THREE.SRGBColorSpace;
+        nextTexture.wrapS = nextTexture.wrapT = THREE.ClampToEdgeWrapping;
+        nextTexture.minFilter = THREE.LinearMipmapLinearFilter;
+        nextTexture.magFilter = THREE.LinearFilter;
+        nextTexture.generateMipmaps = true;
+        nextTexture.anisotropy =
           renderer?.capabilities?.getMaxAnisotropy?.() || 1;
-        texture.needsUpdate = true;
-        uniforms.uMap.value = texture;
+        nextTexture.needsUpdate = true;
 
+        texture?.dispose();
+        texture = nextTexture;
+        uniforms.uMap.value = texture;
         aspect = width / height;
+        pageCount = source.pageCount;
+        sourceLanguage = language;
         ready = true;
-        mesh.visible = !hidden && (open || idle > 0);
-        onReady?.({ aspect, texture });
+        applyScroll(scroll);
+        onReady?.({
+          aspect,
+          texture,
+          pageCount,
+          language: sourceLanguage,
+        });
+        applyOpacityTarget();
         return true;
       } catch (error) {
-        loadError = error;
-        if (!disposed) onError?.(error);
+        if (revision === loadRevision) {
+          loadError = error;
+          ready = false;
+          mesh.visible = false;
+          if (!disposed) onError?.(error);
+        }
         return false;
       }
     })();
@@ -1274,13 +1394,25 @@ export function createResumeProjection({
     return loading;
   }
 
-  load();
+  // Hide the old-language texture immediately. The other-language projection
+  // is never used as a fallback, so a language switch cannot expose a mixed
+  // DE/EN document state even for one rendered frame.
+  const unsubscribeLanguage = onLanguageChange((nextLanguage) => {
+    if (disposed || nextLanguage === sourceLanguage) return;
+    load(nextLanguage);
+  });
+
+  load(sourceLanguage);
 
   return {
     mesh,
     get ready() { return ready; },
     get aspect() { return aspect; },
-    get pageAspect() { return aspect ? aspect * CV_PAGE_COUNT : null; },
+    get language() { return sourceLanguage; },
+    get pageCount() { return pageCount; },
+    get pageAspect() {
+      return aspect ? aspect * pageCount : getCvPageAspect(sourceLanguage);
+    },
     get error() { return loadError; },
     get scroll() { return scrollTarget; },
 
@@ -1352,6 +1484,8 @@ export function createResumeProjection({
     dispose() {
       if (disposed) return;
       disposed = true;
+      loadRevision += 1;
+      unsubscribeLanguage();
       geometry.dispose();
       material.dispose();
       texture?.dispose();

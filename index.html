@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vladimir Leicht — Fachinformatiker für Systemintegration</title>
-  <meta name="description" content="Portfolio von Vladimir Leicht, Fachinformatiker für Systemintegration. Abschlussprojekt, private IT-Projekte und Lebenslauf." />
+  <title>Vladimir Leicht — Information Technology Specialist - Systems Integration</title>
+  <meta name="description" content="Portfolio of Vladimir Leicht, Information Technology Specialist - Systems Integration. Final project, private IT projects and CV." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -18,7 +18,6 @@
   </script>
 </head>
 <body>
-  <!-- Der Rahmen: alles spielt sich hierin ab -->
   <div class="frame" id="frame">
     <div class="frame__edge frame__edge--tl"></div>
     <div class="frame__edge frame__edge--tr"></div>
@@ -27,20 +26,18 @@
 
     <header class="head">
       <a class="head__brand" href="#" data-target="home">
-        <!-- Drei Quadrate als echte SVG-Knoten, damit das Intro sie
-             einzeln drehen kann (aussen links, mitte rechts, Kern pulsiert) -->
         <svg class="head__sigil" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
           <rect class="sigil__outer" x="0.5" y="0.5" width="33" height="33" />
           <rect class="sigil__mid" x="7.5" y="7.5" width="19" height="19" />
           <rect class="sigil__core" x="13.6" y="13.6" width="6.8" height="6.8" />
         </svg>
         <span class="head__name">Vladimir Leicht</span>
-        <span class="head__role">Fachinformatiker für Systemintegration</span>
+        <span class="head__role" data-i18n="brand.role">Information Technology Specialist - Systems Integration</span>
       </a>
 
       <nav class="nav" id="nav">
         <div class="nav__group">
-          <button class="nav__link" data-target="abschluss">Abschlussprojekt</button>
+          <button class="nav__link" data-target="abschluss" data-i18n="nav.finalProject">Final Project</button>
           <div class="nav__sub">
             <button data-target="abschluss/server">Server</button>
             <button data-target="abschluss/uem">UEM</button>
@@ -50,22 +47,24 @@
         </div>
 
         <div class="nav__group">
-          <button class="nav__link" data-target="projekte">Private IT&#8209;Projekte</button>
+          <button class="nav__link" data-target="projekte" data-i18n="nav.privateProjects">Private IT Projects</button>
           <div class="nav__sub">
             <button data-target="projekte/homelab">Homelab</button>
-            <button data-target="projekte/automation">Automatisierung</button>
+            <button data-target="projekte/automation" data-i18n="nav.automation">Automation</button>
             <button data-target="projekte/web">Web</button>
           </div>
         </div>
 
         <div class="nav__group">
-          <button class="nav__link" data-target="lebenslauf">Lebenslauf</button>
+          <button class="nav__link" data-target="lebenslauf" data-i18n="nav.cv">CV</button>
           <div class="nav__sub">
-            <button data-target="lebenslauf/bildungsweg">Bildungsweg</button>
-            <button data-target="lebenslauf/faehigkeiten">Fähigkeiten</button>
-            <button data-target="lebenslauf/kontakt">Kontakt</button>
+            <button data-target="lebenslauf/bildungsweg" data-i18n="nav.education">Education</button>
+            <button data-target="lebenslauf/faehigkeiten" data-i18n="nav.skills">Skills</button>
+            <button data-target="lebenslauf/kontakt" data-i18n="nav.contact">Contact</button>
           </div>
         </div>
+
+        <button class="nav__link" id="language-switch" type="button" aria-label="Switch to German" title="Switch to German">DE</button>
       </nav>
     </header>
 
@@ -74,19 +73,19 @@
 
       <div class="boot" id="boot">
         <div class="boot__ring"></div>
-        <span class="boot__text">Initialisiere</span>
+        <span class="boot__text" data-i18n="boot.initialising">Initialising</span>
       </div>
     </main>
 
     <footer class="foot">
-      <button class="foot__hint" id="hint" type="button" disabled>Bereich wählen</button>
-      <span class="foot__crumb" id="crumb">home</span>
+      <button class="foot__hint" id="hint" type="button" disabled data-i18n="footer.chooseArea">Choose section</button>
+      <span class="foot__crumb" id="crumb">Home</span>
     </footer>
   </div>
 
   <noscript>
     <div class="noscript">
-      Diese Seite nutzt WebGL. Bitte JavaScript aktivieren.
+      This site uses WebGL. Please enable JavaScript.
     </div>
   </noscript>
 

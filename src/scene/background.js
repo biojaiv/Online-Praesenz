@@ -1,27 +1,33 @@
 import * as THREE from 'three';
-import { RUNES, PRIMARY, SECONDARY, SYSTEM_SIGNS } from './runes.js';
-import { SACRED_FIGURES } from './sacredGeometry.js';
+import { createProceduralOrreryField } from './proceduralOrreryField.js'; // PROCEDURAL_ORRERY_FIELD_V4_8
 import { lightColor } from './palette.js';
+import { createMotherboardSignalRoutes } from './motherboardSignalRoutes.js';
+import { createEndpointBurstCode } from './endpointBurstCode.js';
+import { createUpperRightTelemetry } from './upperRightTelemetry.js'; // UPPER_RIGHT_TELEMETRY_V4_5
+
+const MOTHERBOARD_URL = new URL(
+  '../../Elemente/Motherboard/motherboard-universe.jpg',
+  import.meta.url,
+).href;
 
 /**
- * Hintergrund-Szenerie.
+ * Hintergrund-Szenerie: architektonische Circuit-Tiefe.
  *
- * Ruhendes Bild: ein weit entferntes Leiterbahnengeflecht im Universum.
- * Darauf laufen hoechstens ein bis zwei Impulse gleichzeitig.
+ * Das gelieferte quadratische Motiv bleibt die einzige Bildvorlage. Sichtbare
+ * Impulse laufen ausschliesslich auf fest nachgezeichneten Boden- und
+ * Fluchtlinien dieses Motivs. Die Bahnen beginnen im nahen Vordergrund und
+ * ziehen zum zentralen Fluchtpunkt in die Raumtiefe; freie Bildflaechen werden
+ * nicht mit erfundenen Zufallsrouten ueberquert.
  *
- * Ablauf eines Impulses:
- *   1. Impuls startet am Anfang einer Bahn
- *   2. waehrend er laeuft, glimmt die ihm zugeordnete Rune auf
- *   3. am Ende schlaegt er auf: die Chipstruktur am Bahnende blitzt
- *      kurz in derselben Farbe auf, die Rune erreicht ihr Maximum
- *   4. alles klingt ab, es bleibt wieder still
- *
- * Alle Zustaende liegen in einer kleinen Datentextur (eine Spalte je Bahn),
- * dadurch bleibt es bei drei Draw Calls fuer beliebig viele Bahnen.
- *   R = Kopfposition 0..1   (-1 = ruht)
+ * Der Zustand der Impulsbahnen bleibt GPU-seitig in einer kleinen DataTexture.
+ * Ein fester Pool aus Reveal-Stempeln bildet den nachleuchtenden Schweif auf
+ * der Motherboard-Ebene ab. Die Stempel werden kamera-projiziert, damit der
+ * sichtbare Reveal auch bei Tiefenstaffelung und Kamerafahrten direkt unter
+ * dem Impuls liegt.
+ *   R = Kopfposition 0..1   (-1 = Bahn ruht)
  *   G = Impulslaenge
- *   B = Farbton 0 = blaugruen, 1 = bernstein
- *   A = Aufprallblitz 0..1
+ *   B = Farbton (0 = blaugruen, 1 = bernstein)
+ *   A = perspektivische Impulsskalierung
  */
 
 const FIB = [3, 5, 8, 13, 21, 34, 55];
@@ -29,17 +35,30 @@ const FIB = [3, 5, 8, 13, 21, 34, 55];
 const MAX_ACTIVE   = 1;
 const SPAWN_MIN    = 4.2;
 const SPAWN_MAX    = 9.5;
-const IMPACT_DECAY = 1.1;   // Sekunden bis der Aufprall verglommen ist
-const MAX_SACRED_ACTIVE = 2;
-// Die Erscheinungshaeufigkeit der heiligen Geometrie liegt bewusst niedrig:
-// gegenueber der ersten Fassung um rund 45 Prozent gestreckt.
-const SACRED_SPAWN_MIN = 8.0;
-const SACRED_SPAWN_MAX = 16.7;
-// Anteil der Impuls-Aufprallstellen, die zusaetzlich eine Figur entzuenden.
-const SACRED_IMPACT_CHANCE = 0.34;
-// Letzte Lebensphase: die Figur blinkt schnell, bevor sie verschwindet.
-const SACRED_BLINK_DUR = 1.63;
-const SACRED_BLINK_HZ  = 6.5;
+
+const BOARD_ASPECT = 1;
+const BOARD_WIDTH = 1040;
+const BOARD_HEIGHT = BOARD_WIDTH / BOARD_ASPECT;
+const BOARD_Y = 0;
+const BOARD_Z = -1120;
+const TRACE_DOMAIN_X = 160;
+const TRACE_DOMAIN_Y = 96;
+const BOARD_REVEAL_SLOTS = 52;
+const BOARD_REVEAL_RADIUS = 0.052;
+const BOARD_REVEAL_DECAY = 3.12;
+
+// LOCAL_ARCHITECTURE_REVEAL_V4_2
+// Architectural contours never pulse as a full-image layer. They are revealed
+// only underneath the same short-lived stamps written by travelling signals.
+
+// MOTHERBOARD_DEPTH_PERSPECTIVE_V1_9
+// One-point perspective for the complete image-guided layer.
+// The lower edge remains nearer while the routed floor lines recede physically.
+const BOARD_PERSPECTIVE_TILT = -0.235;
+const BOARD_PERSPECTIVE_Y_COMPENSATION =
+  BOARD_Z * Math.sin(BOARD_PERSPECTIVE_TILT);
+const BOARD_PERSPECTIVE_Z_COMPENSATION =
+  BOARD_Z * (1 - Math.cos(BOARD_PERSPECTIVE_TILT));
 
 function makeRng(seed) {
   let s = seed >>> 0;
@@ -54,11 +73,20 @@ function makeRng(seed) {
 /** Leiterbahn: achsenparallel mit gelegentlichen 45-Grad-Schraegen. */
 function routeTrace(rng, origin, layer) {
   const pts = [origin.clone()];
-  const segments = 3 + Math.floor(rng() * 4);
+  // Roughly one route in four becomes a long-distance signal corridor.
+  // It uses more segments and slightly larger Fibonacci-derived steps, but
+  // preserves the same orthogonal/45-degree visual language.
+  const longRoute = rng() < 0.24;
+  const segments = longRoute
+    ? 8 + Math.floor(rng() * 5)
+    : 3 + Math.floor(rng() * 4);
+  const lengthScale = longRoute ? 1.48 : 1;
   const dir = new THREE.Vector2(rng() < 0.5 ? 1 : -1, 0);
 
   for (let i = 0; i < segments; i++) {
-    const len = (FIB[1 + Math.floor(rng() * 4)] / 7) * (1 + layer * 0.3);
+    const len = (FIB[1 + Math.floor(rng() * 4)] / 7)
+      * (1 + layer * 0.3)
+      * lengthScale;
     const last = pts[pts.length - 1];
     pts.push(new THREE.Vector3(last.x + dir.x * len, last.y + dir.y * len, last.z));
 
@@ -74,49 +102,27 @@ function routeTrace(rng, origin, layer) {
   return pts;
 }
 
-/** Chipgehaeuse als Strichzeichnung: Rahmen, Kern, Beinchen, Innenleitungen. */
-function chipStrokes(rng) {
-  const w = 0.85 + rng() * 0.5;
-  const h = 0.62 + rng() * 0.45;
-  const s = [];
-  const rect = (x0, y0, x1, y1) => {
-    s.push([x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]);
-  };
-
-  rect(-w, -h, w, h);
-  rect(-w * 0.58, -h * 0.58, w * 0.58, h * 0.58);
-
-  const pins = 4 + Math.floor(rng() * 4);
-  for (let i = 0; i < pins; i++) {
-    const y = -h + ((i + 0.5) / pins) * h * 2;
-    s.push([-w, y, -w - 0.3, y], [w, y, w + 0.3, y]);
-  }
-  const top = 3 + Math.floor(rng() * 3);
-  for (let i = 0; i < top; i++) {
-    const x = -w + ((i + 0.5) / top) * w * 2;
-    s.push([x, h, x, h + 0.26], [x, -h, x, -h - 0.26]);
-  }
-  for (let i = 0; i < 3; i++) {
-    const y = (rng() - 0.5) * h;
-    s.push([-w * 0.5, y, w * 0.5 * (rng() < 0.5 ? -0.2 : 1), y]);
-  }
-  return s;
-}
-
-export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260802 } = {}) {
+export function createBackground({ camera = null, layers = 3, tracesPerLayer = 10, seed = 20260802 } = {}) {
   const group = new THREE.Group();
-  // Leiterbahnen, Chips, Runen und sakrale Geometrie liegen zusammen: sie
-  // treten hinter dem geoeffneten Lebenslauf zurueck. Sterne und Nebel
-  // bleiben dagegen immer stehen — der Raum verschwindet nie.
+  const proceduralOrrery = createProceduralOrreryField({ camera });
+  group.add(proceduralOrrery.group);
+  // Motherboard und Impulsbahnen bilden die nahe Ebene. Sie tritt hinter
+  // dem geoeffneten Lebenslauf zurueck. Sterne und Nebel bleiben dagegen
+  // immer stehen — der Raum verschwindet nie.
   const traceGroup = new THREE.Group();
   group.add(traceGroup);
+
+  // Rotate the whole motherboard subsystem, not only the board mesh.
+  // This keeps board, fixed signal routes, terminals and code aligned.
+  traceGroup.rotation.x = BOARD_PERSPECTIVE_TILT;
+  traceGroup.position.y = BOARD_PERSPECTIVE_Y_COMPENSATION;
+  traceGroup.position.z = BOARD_PERSPECTIVE_Z_COMPENSATION;
+
   const rng = makeRng(seed);
 
   const traces = [];
   const linePos = [], lineDist = [], lineId = [], lineDim = [];
-  const chipPos = [], chipId = [], chipDim = [];
-  const runePos = [], runeId = [], runeDim = [], runeKind = [];
-  let runeCursor = 0;
+
 
   for (let l = 0; l < layers; l++) {
     const depth = -22 - l * 15;
@@ -138,7 +144,7 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
       const total = cum[cum.length - 1];
       if (total < 1) continue;
 
-      traces.push({ id, total, dim });
+      traces.push({ id, total, dim, pts, cum, longRoute: pts.length >= 9 });
 
       for (let i = 0; i < pts.length - 1; i++) {
         const a = pts[i], b = pts[i + 1];
@@ -148,39 +154,6 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
         lineDim.push(dim, dim);
       }
 
-      // Chip am Bahnende
-      const end = pts[pts.length - 1];
-      const scale = 0.8 + l * 0.32;
-      for (const [x0, y0, x1, y1] of chipStrokes(rng)) {
-        chipPos.push(end.x + x0 * scale, end.y + y0 * scale, end.z,
-                     end.x + x1 * scale, end.y + y1 * scale, end.z);
-        chipId.push(id, id);
-        chipDim.push(dim, dim);
-      }
-
-      // Rune, hinter der Bahnmitte
-      const mid = pts[Math.floor(pts.length / 2)];
-      const family = runeCursor % 4;
-      const isPrimary = family < 2;
-      const key = isPrimary
-        ? PRIMARY[runeCursor % PRIMARY.length]
-        : family === 2
-          ? SYSTEM_SIGNS[Math.floor(runeCursor / 4) % SYSTEM_SIGNS.length]
-          : SECONDARY[Math.floor(rng() * SECONDARY.length)];
-      runeCursor++;
-
-      const rs = 1.6 + l * 0.7 + rng() * 0.8;
-      const rx = mid.x + (rng() - 0.5) * 7;
-      const ry = mid.y + (rng() - 0.5) * 5;
-      const rz = origin.z - 7 - rng() * 5;
-      const kind = isPrimary ? 1 : 0;
-
-      for (const [x0, y0, x1, y1] of RUNES[key].strokes) {
-        runePos.push(rx + x0 * rs, ry + y0 * rs, rz, rx + x1 * rs, ry + y1 * rs, rz);
-        runeId.push(id, id);
-        runeDim.push(dim, dim);
-        runeKind.push(kind, kind);
-      }
     }
   }
 
@@ -198,7 +171,7 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
     uState: { value: stateTex },
     uCount: { value: count },
     uTime:  { value: 0 },
-    uAmbient: { value: 0.18 },   // Staerke des Runen-Grundglimmers, im Intro auf 1
+    uAmbient: { value: 0.18 },   // Kompatibilitaet fuer die bestehende Intro-Schnittstelle.
     uAmber: { value: lightColor('amber') },
     uCyan:  { value: lightColor('fiber') },
     uBase:  { value: lightColor('base') },
@@ -220,7 +193,7 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
   lineGeo.setAttribute('aId',      new THREE.Float32BufferAttribute(lineId, 1));
   lineGeo.setAttribute('aDim',     new THREE.Float32BufferAttribute(lineDim, 1));
 
-  traceGroup.add(new THREE.LineSegments(lineGeo, new THREE.ShaderMaterial({
+  const legacyTraceLines = new THREE.LineSegments(lineGeo, new THREE.ShaderMaterial({
     uniforms: shared,
     transparent: true,
     depthWrite: false,
@@ -239,7 +212,7 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
       uniform vec3 uAmber, uCyan, uBase;
       varying float vDist, vHead, vPulse, vDim, vTint;
       void main() {
-        float base = 0.18 * vDim;
+        float base = 0.012 * vDim;
         float energy = 0.0;
         if (vHead >= 0.0) {
           float behind = vHead - vDist;
@@ -253,211 +226,300 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
         gl_FragColor = vec4(uBase * base + hot * energy, a);
       }
     `,
-  })));
+  }));
+  // v1.8: the old procedural paths remain allocated only for compatibility
+  // with the existing state texture, but they are never rendered. Visible
+  // signal energy now exists exclusively on motherboardSignalRoutes.js lanes.
+  legacyTraceLines.visible = false;
+  traceGroup.add(legacyTraceLines);
 
-  /* ---------- Chipstrukturen ---------- */
+  /* ---------- Motherboard-Universum ---------- */
 
-  const chipGeo = new THREE.BufferGeometry();
-  chipGeo.setAttribute('position', new THREE.Float32BufferAttribute(chipPos, 3));
-  chipGeo.setAttribute('aId',      new THREE.Float32BufferAttribute(chipId, 1));
-  chipGeo.setAttribute('aDim',     new THREE.Float32BufferAttribute(chipDim, 1));
+  // Die gelieferte Motherboard-Grafik ist keine sichtbare Tapete. Sie liegt
+  // als dunkle Struktur im Raum und wird nur dort lesbar, wo ein bestehender
+  // Leiterbahnimpuls vorbeizieht. Mehrere kurzlebige Reveal-Stempel bilden
+  // den Schweif; danach faellt der Bereich wieder vollstaendig ins Dunkel.
+  const boardTexture = new THREE.TextureLoader().load(
+    MOTHERBOARD_URL,
+    (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+      texture.needsUpdate = true;
+    },
+    undefined,
+    (error) => console.warn('Architektur-Hintergrund konnte nicht geladen werden:', error),
+  );
+  boardTexture.colorSpace = THREE.SRGBColorSpace;
+  boardTexture.minFilter = THREE.LinearFilter;
+  boardTexture.magFilter = THREE.LinearFilter;
+  boardTexture.generateMipmaps = false;
 
-  traceGroup.add(new THREE.LineSegments(chipGeo, new THREE.ShaderMaterial({
-    uniforms: shared,
+  const boardRevealUniforms = Array.from(
+    { length: BOARD_REVEAL_SLOTS },
+    () => new THREE.Vector4(-2, -2, 0, 0),
+  );
+  const boardUniforms = {
+    uBoard: { value: boardTexture },
+    uReveal: { value: boardRevealUniforms },
+    uCompact: { value: 0 },
+    uAmber: shared.uAmber,
+    uCyan: shared.uCyan,
+    uPointerScan: { value: new THREE.Vector4(-2, -2, 0, 0) },
+  };
+
+  const boardMaterial = new THREE.ShaderMaterial({
+    uniforms: boardUniforms,
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      ${SAMPLE}
-      attribute float aId, aDim;
-      varying float vFlash, vTint, vDim;
+      varying vec2 vUv;
       void main() {
-        vec4 st = fetchState(aId);
-        vFlash = st.a; vTint = st.b; vDim = aDim;
+        vUv = uv;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: /* glsl */`
-      uniform vec3 uAmber, uCyan, uBase;
-      varying float vFlash, vTint, vDim;
-      void main() {
-        float base = 0.08 * vDim;
-        float a = base + vFlash * 0.9 * vDim;
-        if (a < 0.005) discard;
-        vec3 hot = mix(uCyan, uAmber, vTint);
-        gl_FragColor = vec4(uBase * base + hot * vFlash * 1.15, a);
-      }
-    `,
-  })));
-
-  /* ---------- Runen ---------- */
-
-  const runeGeo = new THREE.BufferGeometry();
-  runeGeo.setAttribute('position', new THREE.Float32BufferAttribute(runePos, 3));
-  runeGeo.setAttribute('aId',      new THREE.Float32BufferAttribute(runeId, 1));
-  runeGeo.setAttribute('aDim',     new THREE.Float32BufferAttribute(runeDim, 1));
-  runeGeo.setAttribute('aKind',    new THREE.Float32BufferAttribute(runeKind, 1));
-
-  traceGroup.add(new THREE.LineSegments(runeGeo, new THREE.ShaderMaterial({
-    uniforms: shared,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: /* glsl */`
-      ${SAMPLE}
-      uniform float uTime, uAmbient;
-      attribute float aId, aDim, aKind;
-      varying float vGlow, vTint, vDim, vKind;
-      void main() {
-        vec4 st = fetchState(aId);
-        vDim = aDim; vKind = aKind;
-        float travel = st.r >= 0.0 ? smoothstep(0.0, 0.85, st.r) * 0.45 : 0.0;
-
-        // Grundglimmer im goldenen Takt: die Phase je Bahn ist Bahnnummer mal
-        // goldener Schnitt. Das verteilt die Aufleuchtmomente maximal
-        // gleichmaessig, ohne dass je zwei Runen synchron laufen. Der hohe
-        // Exponent macht aus der Welle kurze Glimmer statt Dauerwabern.
-        float phase = fract(aId * 0.6180339887) * 6.2831853;
-        float amb = pow(0.5 + 0.5 * sin(uTime * 0.35 - phase), 6.0)
-                  * uAmbient * mix(0.35, 1.0, aKind);
-        float amberMoment = pow(max(0.0, sin(uTime * 0.43 + phase * 1.71)), 20.0);
-        vTint = max(st.b, amberMoment);
-
-        vGlow = max(max(travel, st.a), amb);
-        vec3 p = position;
-        p.x += sin(uTime * 0.19 + phase) * mix(0.018, 0.065, aDim);
-        p.y += cos(uTime * 0.16 + phase * 1.37) * mix(0.014, 0.052, aDim);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-      }
-    `,
-    fragmentShader: /* glsl */`
+      uniform sampler2D uBoard;
+      uniform vec4 uReveal[${BOARD_REVEAL_SLOTS}];
       uniform vec3 uAmber, uCyan;
-      varying float vGlow, vTint, vDim, vKind;
+      uniform float uCompact;
+      uniform vec4 uPointerScan;
+      varying vec2 vUv;
+
+      float luma(vec3 color) {
+        return dot(color, vec3(0.2126, 0.7152, 0.0722));
+      }
+
       void main() {
-        float strength = mix(0.34, 1.0, vKind);
-        float a = (0.035 + vGlow * 0.72) * strength * vDim * 0.62;
-        if (a < 0.004) discard;
-        vec3 hot = mix(uCyan, uAmber, vTint);
-        gl_FragColor = vec4(hot * (0.42 + vGlow * 0.7), a);
+        vec3 source = texture2D(uBoard, vUv).rgb;
+        float detail = max(source.r, max(source.g, source.b));
+
+        // Image-space edge detector only. It never creates a global sweep.
+        // The edge energy is multiplied by the local signal reveal below, so
+        // a building/circuit contour can brighten only where an impulse is
+        // actually travelling across that element.
+        vec2 texel = vec2(1.0 / 1024.0, 1.0 / 1024.0);
+        float lumL = luma(texture2D(uBoard, clamp(vUv - vec2(texel.x, 0.0), 0.0, 1.0)).rgb);
+        float lumR = luma(texture2D(uBoard, clamp(vUv + vec2(texel.x, 0.0), 0.0, 1.0)).rgb);
+        float lumD = luma(texture2D(uBoard, clamp(vUv - vec2(0.0, texel.y), 0.0, 1.0)).rgb);
+        float lumU = luma(texture2D(uBoard, clamp(vUv + vec2(0.0, texel.y), 0.0, 1.0)).rgb);
+        float edge = smoothstep(0.018, 0.115, abs(lumR - lumL) + abs(lumU - lumD));
+        float architectureZone = smoothstep(0.34, 0.52, vUv.y);
+
+        float reveal = 0.0;
+        float tint = 0.0;
+        vec2 aspect = vec2(${BOARD_ASPECT.toFixed(6)}, 1.0);
+        const float innerRadius2 = 0.000036;
+        const float outerRadius2 = ${(BOARD_REVEAL_RADIUS * BOARD_REVEAL_RADIUS).toFixed(6)};
+
+        for (int i = 0; i < ${BOARD_REVEAL_SLOTS}; i++) {
+          vec4 stamp = uReveal[i];
+          if (stamp.z <= 0.001) continue;
+
+          vec2 delta = (vUv - stamp.xy) * aspect;
+          float distance2 = dot(delta, delta);
+          float local = (1.0 - smoothstep(innerRadius2, outerRadius2, distance2))
+                      * stamp.z;
+          if (local > reveal) {
+            reveal = local;
+            tint = stamp.w;
+          }
+        }
+
+        // POINTER_DWELL_SCAN_V4_3: stationary cursor -> local charge only.
+        vec2 pointerDelta = (vUv - uPointerScan.xy) * aspect;
+        float pointerDistance = length(pointerDelta);
+        float pointerRingRadius = mix(0.010, 0.105, clamp(uPointerScan.w, 0.0, 1.0));
+        float pointerRing = (1.0 - smoothstep(0.004, 0.015, abs(pointerDistance - pointerRingRadius)))
+          * clamp(uPointerScan.z, 0.0, 1.0);
+        float pointerCore = (1.0 - smoothstep(0.0, 0.030, pointerDistance))
+          * clamp(uPointerScan.z, 0.0, 1.0) * 0.28;
+        float ghost = 0.00072 * mix(1.0, 0.52, uCompact);
+        float signal = smoothstep(0.10, 0.95, detail);
+        vec3 impulse = mix(uCyan, uAmber, tint);
+
+        // Local contour reinforcement. No timer, no full-frame architecture
+        // envelope: outline exists only inside a travelling reveal stamp.
+        float outline = edge
+          * architectureZone
+          * smoothstep(0.08, 0.78, reveal)
+          * mix(1.0, 0.58, uCompact);
+        float pointerOutline = edge * (pointerRing + pointerCore)
+          * mix(1.0, 0.52, uCompact);
+
+        if (detail < 0.025 && reveal < 0.002 && outline < 0.002 && pointerOutline < 0.002) discard;
+
+        vec3 color = source * (0.048 + reveal * 0.86)
+                   + impulse * signal * reveal * 0.18
+                   + impulse * outline * 0.72
+                   + source * outline * 0.24
+                   + mix(uCyan, uAmber, 0.22) * pointerOutline * 0.54
+                   + source * pointerOutline * 0.18;
+        float alpha = detail * (ghost + reveal * 0.39) + outline * 0.16 + pointerOutline * 0.11;
+        if (alpha < 0.002) discard;
+        gl_FragColor = vec4(color, alpha);
       }
     `,
-  })));
-
-  /* ---------- Heilige Geometrie ---------- */
-
-  // Die Bildvorlage im Ordner Heiligegeometrie ist ein Referenzatlas. Die
-  // zwölf Motive liegen als Vektoren vor, damit sie ohne Bildrahmen, Text und
-  // feste Positionen frei im Raum materialisieren koennen.
-  const sacredGroup = new THREE.Group();
-  traceGroup.add(sacredGroup);
-
-  const sacredPool = SACRED_FIGURES.map((figure) => {
-    const positions = [];
-    for (const [x0, y0, x1, y1] of figure.strokes) {
-      positions.push(x0, y0, 0, x1, y1, 0);
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    const uniforms = {
-      uIntensity: { value: 0 },
-      uTint: { value: 0 },
-      uAmber: shared.uAmber,
-      uCyan: shared.uCyan,
-    };
-    const mesh = new THREE.LineSegments(geometry, new THREE.ShaderMaterial({
-      uniforms,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      vertexShader: /* glsl */`
-        void main() {
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: /* glsl */`
-        uniform vec3 uAmber, uCyan;
-        uniform float uIntensity, uTint;
-        void main() {
-          float a = uIntensity * 0.55;
-          if (a < 0.004) discard;
-          vec3 color = mix(uCyan, uAmber, uTint) * (0.55 + uIntensity * 0.95);
-          gl_FragColor = vec4(color, a);
-        }
-      `,
-    }));
-    mesh.visible = false;
-    mesh.frustumCulled = false;
-    sacredGroup.add(mesh);
-    return {
-      mesh,
-      uniforms,
-      name: figure.name,
-      round: Boolean(figure.round),
-      life: -1,
-      dur: 1,
-      spin: 0,
-      tiltSpin: 0,
-      yawSpin: 0,
-      drift: new THREE.Vector3(),
-    };
   });
 
-  let sacredActive = 0;
-  let sacredNextSpawn = 5.0 + rng() * 5.2;
-  let symbolOnly = false;
-  let documentOpen = false;
+  const boardMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(BOARD_WIDTH, BOARD_HEIGHT),
+    boardMaterial,
+  );
+  boardMesh.position.set(0, BOARD_Y, BOARD_Z);
+  boardMesh.renderOrder = -2;
+  traceGroup.add(boardMesh);
 
-  function syncSacredVisibility() {
-    sacredGroup.visible = !symbolOnly && !documentOpen;
+  // The supplied background itself is the path atlas. A fixed image-space
+  // route set follows its connected floor traces toward the central vanishing
+  // zone. At each terminal point the shrinking signal resolves into a short,
+  // local light-particle burst; the code fragment rises out of that burst and
+  // is gone again within the same compact event.
+  const endpointBurst = createEndpointBurstCode();
+  traceGroup.add(endpointBurst.group);
+
+  // UPPER_RIGHT_TELEMETRY_V4_5
+  // Sparse network telemetry occupies the visually quiet upper-right depth
+  // field. It is deliberately technical (not sacred geometry) and reacts to
+  // actual signal terminations plus deliberate pointer focus.
+  const upperRightTelemetry = createUpperRightTelemetry({
+    boardWidth: BOARD_WIDTH,
+    boardHeight: BOARD_HEIGHT,
+    boardZ: BOARD_Z,
+  });
+  traceGroup.add(upperRightTelemetry.group);
+
+  const boardSignals = createMotherboardSignalRoutes({
+    boardWidth: BOARD_WIDTH,
+    boardHeight: BOARD_HEIGHT,
+    boardY: BOARD_Y,
+    boardZ: BOARD_Z,
+    onReveal: stampBoardReveal,
+    onTerminate(point, tint, meta) {
+      endpointBurst.trigger({
+        point,
+        tint,
+        routeId: meta?.routeId ?? -1,
+      });
+      upperRightTelemetry.trigger({
+        tint,
+        routeId: meta?.routeId ?? -1,
+      });
+    },
+  });
+  traceGroup.add(boardSignals.group);
+  let effectsEnabled = true;
+
+  const boardTrail = Array.from({ length: BOARD_REVEAL_SLOTS }, () => ({
+    u: -2,
+    v: -2,
+    strength: 0,
+    tint: 0,
+  }));
+  let boardTrailCursor = 0;
+  let documentOpen = false;
+  let symbolOnly = false;
+
+  function syncEndpointSuppression() {
+    const suspended = !effectsEnabled || symbolOnly || documentOpen;
+    endpointBurst.setSuspended(suspended);
+    proceduralOrrery.setSuspended(suspended);
+    upperRightTelemetry.setSuspended(suspended);
+  }
+  const tracePoint = new THREE.Vector3();
+
+  // Projection helpers: the pulse can live on a much nearer/farther Z layer
+  // than the motherboard plane. Projecting through the active camera and
+  // ray-intersecting the actual board plane keeps the revealed image area
+  // visually under the pulse during home view, parallax and card focus.
+  const boardRaycaster = new THREE.Raycaster();
+  const boardNdc = new THREE.Vector2();
+  const boardWorldPoint = new THREE.Vector3();
+  const boardHit = new THREE.Vector3();
+  const boardLocal = new THREE.Vector3();
+  const boardWorldPosition = new THREE.Vector3();
+  const boardNormal = new THREE.Vector3(0, 0, 1);
+  const boardWorldQuaternion = new THREE.Quaternion();
+  const boardPlane = new THREE.Plane();
+  const boardWorldInverse = new THREE.Matrix4();
+  let boardProjectionReady = false;
+
+  function pointOnTrace(trace, progress, out = tracePoint) {
+    const target = THREE.MathUtils.clamp(progress, 0, 1) * trace.total;
+    const pts = trace.pts;
+    const cum = trace.cum;
+    let segment = 0;
+    while (segment < cum.length - 2 && cum[segment + 1] < target) segment++;
+    const start = cum[segment];
+    const end = cum[segment + 1];
+    const local = end > start ? (target - start) / (end - start) : 0;
+    return out.copy(pts[segment]).lerp(pts[segment + 1], local);
   }
 
-  /**
-   * Setzt eine Vorlage an eine neue Stelle. Der Pool verhindert, dass die
-   * Geometrien den ruhigen Hintergrund mit mehr als zwei Lichtzeichen fuellen.
-   *
-   * Die Figuren stehen weit hinten und streuen ueber die gesamte Bildflaeche.
-   * Alle driften langsam durch den Raum; nur die kreisbasierten Motive drehen
-   * sich zusaetzlich um die eigene Achse, im oder gegen den Uhrzeigersinn.
-   */
-  function igniteSacred(tint) {
-    if (!sacredGroup.visible || sacredActive >= MAX_SACRED_ACTIVE) return false;
-    const idle = sacredPool.filter((entry) => entry.life < 0);
-    if (!idle.length) return false;
+  function prepareBoardProjection() {
+    if (!camera) {
+      boardProjectionReady = false;
+      return;
+    }
 
-    const entry = idle[Math.floor(rng() * idle.length)];
-    const depth = -72 - rng() * 128;
-    const depthScale = (Math.abs(depth) - 72) / 128;
-    entry.mesh.position.set(
-      (rng() - 0.5) * (150 + depthScale * 140),
-      (rng() - 0.5) * (62 + depthScale * 76),
-      depth,
-    );
-    entry.mesh.scale.setScalar((3.8 + rng() * 5.2) * (1 + depthScale * 0.7));
-    entry.mesh.rotation.set(
-      (rng() - 0.5) * 0.34,
-      (rng() - 0.5) * 0.5,
-      rng() * Math.PI * 2,
-    );
+    camera.updateMatrixWorld();
+    group.updateMatrixWorld(true);
+    boardMesh.updateWorldMatrix(true, false);
+    boardWorldInverse.copy(boardMesh.matrixWorld).invert();
+    boardMesh.getWorldPosition(boardWorldPosition);
+    boardMesh.getWorldQuaternion(boardWorldQuaternion);
+    boardNormal.set(0, 0, 1).applyQuaternion(boardWorldQuaternion).normalize();
+    boardPlane.setFromNormalAndCoplanarPoint(boardNormal, boardWorldPosition);
+    boardProjectionReady = true;
+  }
 
-    // Kreisbasierte Motive rotieren, eckige bleiben in ihrer Lage stehen.
-    const turn = rng() < 0.5 ? -1 : 1;
-    entry.spin     = entry.round ? turn * (0.045 + rng() * 0.085) : 0;
-    entry.tiltSpin = entry.round ? turn * (0.006 + rng() * 0.012) : 0;
-    entry.yawSpin  = entry.round ? turn * (0.005 + rng() * 0.011) : 0;
+  const projectedUv = new THREE.Vector2();
 
-    // Alle Figuren treiben durch den Raum, bevor sie wieder vergehen.
-    entry.drift.set(
-      (rng() - 0.5) * 3.1,
-      (rng() - 0.5) * 1.9,
-      (rng() - 0.5) * 1.4,
-    );
+  function projectPointToBoardUv(point, out = projectedUv) {
+    let u;
+    let v;
 
-    entry.dur = 9.5 + rng() * 6.5;
-    entry.life = 0;
-    entry.uniforms.uTint.value = tint;
-    entry.mesh.visible = true;
-    sacredActive++;
-    return true;
+    if (boardProjectionReady && camera) {
+      boardWorldPoint.copy(point).applyMatrix4(traceGroup.matrixWorld);
+      boardWorldPoint.project(camera);
+      boardNdc.set(boardWorldPoint.x, boardWorldPoint.y);
+
+      if (Math.abs(boardNdc.x) > 1.08 || Math.abs(boardNdc.y) > 1.08) return null;
+
+      boardRaycaster.setFromCamera(boardNdc, camera);
+      if (!boardRaycaster.ray.intersectPlane(boardPlane, boardHit)) return null;
+      boardLocal.copy(boardHit).applyMatrix4(boardWorldInverse);
+      u = boardLocal.x / BOARD_WIDTH + 0.5;
+      v = boardLocal.y / BOARD_HEIGHT + 0.5;
+    } else {
+      u = point.x / TRACE_DOMAIN_X + 0.5;
+      v = point.y / TRACE_DOMAIN_Y + 0.5;
+    }
+
+    if (u < -0.04 || u > 1.04 || v < -0.04 || v > 1.04) return null;
+    return out.set(u, v);
+  }
+
+  function stampBoardReveal(point, tint, strength = 1) {
+    const uv = projectPointToBoardUv(point);
+    if (!uv) return;
+
+    const slot = boardTrail[boardTrailCursor];
+    boardTrailCursor = (boardTrailCursor + 1) % BOARD_REVEAL_SLOTS;
+    slot.u = uv.x;
+    slot.v = uv.y;
+    slot.strength = strength;
+    slot.tint = tint;
+  }
+
+  function syncBoardRevealUniforms() {
+    for (let i = 0; i < BOARD_REVEAL_SLOTS; i++) {
+      const slot = boardTrail[i];
+      boardRevealUniforms[i].set(slot.u, slot.v, slot.strength, slot.tint);
+    }
   }
 
   /* ---------- Sternenstaub ---------- */
@@ -611,62 +673,99 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
     group.add(mesh);
   }
 
-  /* ---------- Ablaufsteuerung ---------- */
-
-  const runtime = traces.map((t) => ({
-    head: -1, speed: 0, pulse: 0, tint: 0, impact: 0, total: t.total,
-  }));
-  let active = 0;
-  let nextSpawn = 1.4;
-  let compactFactor = 1;
-
-  function spawn() {
-    const idle = [];
-    for (let i = 0; i < runtime.length; i++) if (runtime[i].head < 0) idle.push(i);
-    if (!idle.length) return;
-
-    const r = runtime[idle[Math.floor(rng() * idle.length)]];
-    const velocity = 4.5 + rng() * 5.5;        // Einheiten je Sekunde
-    r.head = 0;
-    r.speed = velocity / r.total;
-    r.pulse = 0.1 + rng() * 0.26;
-    r.tint = rng() < 0.3 ? 1 : 0;
-    active++;
+  /* ---------- Pointer / scene-lock interaction ---------- */
+  const pointerNdc = new THREE.Vector2(-2, -2);
+  const previousPointerNdc = new THREE.Vector2(-2, -2);
+  const pointerUv = new THREE.Vector2(-2, -2);
+  let pointerActive = false, pointerStill = 0, pointerScan = 0, pointerScanAge = 0, pointerCooldown = 0;
+  function updatePointerScan(dt) {
+    pointerCooldown = Math.max(0, pointerCooldown - dt);
+    if (!pointerActive || documentOpen || symbolOnly || !effectsEnabled || !camera) {
+      pointerStill = 0; pointerScan = Math.max(0, pointerScan - dt * 2.8);
+      boardUniforms.uPointerScan.value.z = pointerScan; return;
+    }
+    prepareBoardProjection();
+    boardRaycaster.setFromCamera(pointerNdc, camera);
+    if (!boardRaycaster.ray.intersectPlane(boardPlane, boardHit)) return;
+    boardLocal.copy(boardHit).applyMatrix4(boardWorldInverse);
+    pointerUv.set(boardLocal.x / BOARD_WIDTH + 0.5, boardLocal.y / BOARD_HEIGHT + 0.5);
+    if (pointerUv.x < 0 || pointerUv.x > 1 || pointerUv.y < 0 || pointerUv.y > 1) return;
+    const movement = pointerNdc.distanceTo(previousPointerNdc); previousPointerNdc.copy(pointerNdc);
+    pointerStill = movement < 0.0028 ? pointerStill + dt : 0;
+    if (pointerStill >= 0.68 && pointerCooldown <= 0 && pointerScan <= 0.02) {
+      pointerScan = 1; pointerScanAge = 0; pointerCooldown = 2.8;
+      const world = boardHit.clone(); traceGroup.worldToLocal(world);
+      endpointBurst.trigger({ point: world, tint: 0, routeId: 97 });
+      if (pointerUv.x > 0.56 && pointerUv.y > 0.43) {
+        upperRightTelemetry.trigger({ routeId: 97, tint: 0, pointer: true });
+      }
+    }
+    if (pointerScan > 0) { pointerScanAge += dt; pointerScan = Math.max(0, 1 - pointerScanAge / 1.35); }
+    boardUniforms.uPointerScan.value.set(pointerUv.x, pointerUv.y, pointerScan, Math.min(1, pointerScanAge / 1.05));
   }
+
+  /* ---------- Ablaufsteuerung ---------- */
 
   return {
     group,
     traceCount: count,
 
-    /** Uniform des Runen-Grundglimmers; das Intro dreht ihn auf und wieder ab. */
+    /** Kompatibilitaets-Uniform fuer die bestehende Intro-Schnittstelle. */
     ambient: shared.uAmbient,
 
-    /** Intro blendet den zufaelligen Symbol-Pool kurz aus. */
-    setSymbolOnly(active) {
-      symbolOnly = Boolean(active);
-      syncSacredVisibility();
+    setEffectsEnabled(value) {
+      effectsEnabled = Boolean(value);
+      boardSignals.setEnabled(effectsEnabled);
+      proceduralOrrery.setEffectsEnabled(effectsEnabled);
+      if (!effectsEnabled) {
+        for (const slot of boardTrail) slot.strength = 0;
+        syncBoardRevealUniforms();
+        endpointBurst.clear();
+      }
+      syncEndpointSuppression();
     },
 
-    /** Keep the geometric background out of the transparent CV text field. */
+    /** Intro suppression also keeps endpoint fireworks/code out of the opening shot. */
+    setSymbolOnly(active) {
+      symbolOnly = Boolean(active);
+      syncEndpointSuppression();
+    },
+
+    /** Keep the motherboard effects out of the transparent CV text field. */
     setDocumentOpen(active) {
       documentOpen = Boolean(active);
-      // Die Projektion ist die Buehne: das nahe Leiterbahnfeld tritt ab,
-      // damit keine Rune mit der Schrift konkurriert. Sterne und Nebel
-      // bleiben, sonst staende der Lebenslauf im Nichts.
+      syncEndpointSuppression();
+      // Die Projektion ist die Buehne: Motherboard und Impulsbahnen treten
+      // ab, damit die Schrift frei bleibt. Sterne und Nebel bleiben bestehen.
       traceGroup.visible = !documentOpen;
-      syncSacredVisibility();
     },
 
     setCompact(active) {
-      compactFactor = active ? 0.07 : 1;
       starUniforms.uCompact.value = active ? 1 : 0;
+      proceduralOrrery.setCompact(active);
+      boardUniforms.uCompact.value = active ? 1 : 0;
+      endpointBurst.setCompact(active);
+      upperRightTelemetry.setCompact(active);
+      boardSignals.setCompact(active);
       for (const material of nebulaMaterials) material.uniforms.uCompact.value = active ? 1 : 0;
     },
 
-    setPixelRatio(pr) { starUniforms.uPixelRatio.value = pr; },
+    setPointerNdc(x, y, active = true) {
+      pointerNdc.set(Number(x) || 0, Number(y) || 0); pointerActive = Boolean(active);
+      proceduralOrrery.setPointerNdc(x, y, active);
+      upperRightTelemetry.setPointerNdc(x, y, active);
+      if (!pointerActive) { pointerStill = 0; pointerScan = 0; boardUniforms.uPointerScan.value.set(-2, -2, 0, 0); }
+    },
+
+    setPixelRatio(pr) {
+      starUniforms.uPixelRatio.value = pr;
+      boardSignals.setPixelRatio(pr);
+      endpointBurst.setPixelRatio(pr);
+    },
 
     update(elapsed, delta) {
       const dt = Math.min(delta, 0.1);
+      proceduralOrrery.update(elapsed, dt);
       starUniforms.uTime.value = elapsed;
       shared.uTime.value = elapsed;
       nebulaTime.value = elapsed;
@@ -680,79 +779,33 @@ export function createBackground({ layers = 3, tracesPerLayer = 10, seed = 20260
       }
       group.rotation.z = Math.sin(elapsed * 0.017) * 0.01;
 
-      nextSpawn -= dt;
-      if (nextSpawn <= 0) {
-        if (active < MAX_ACTIVE) spawn();
-        nextSpawn = SPAWN_MIN + rng() * (SPAWN_MAX - SPAWN_MIN);
+      updatePointerScan(dt);
+
+      // Signal energy travels only on fixed lanes traced against the supplied
+      // motherboard image. Projection is prepared before route updates so each
+      // travelling head reveals the exact board area underneath it.
+      prepareBoardProjection();
+      boardSignals.update(elapsed, dt);
+
+      // Jeder Reveal-Stempel bleibt noch einige Augenblicke stehen und
+      // verglimmt dann. Damit wird nicht die ganze Platine sichtbar, sondern
+      // nur der Bereich, den der Impuls gerade durchlaufen hat.
+      for (const slot of boardTrail) {
+        if (slot.strength <= 0) continue;
+        slot.strength = Math.max(0, slot.strength - dt / BOARD_REVEAL_DECAY);
       }
-
-      sacredNextSpawn -= dt;
-      if (sacredNextSpawn <= 0) {
-        igniteSacred(rng() < 0.26 ? 1 : 0);
-        sacredNextSpawn = SACRED_SPAWN_MIN
-          + rng() * (SACRED_SPAWN_MAX - SACRED_SPAWN_MIN);
-      }
-
-      for (let i = 0; i < runtime.length; i++) {
-        const r = runtime[i];
-        if (r.head >= 0) {
-          r.head += r.speed * dt;
-          if (r.head >= 1) {
-            r.head = -1;
-            r.impact = 1;      // Aufprall auf den Chip
-            // Nur ein Teil der Aufprallstellen entzuendet zusaetzlich eine
-            // Figur; sonst waere der Hintergrund zu belebt.
-            if (rng() < SACRED_IMPACT_CHANCE) igniteSacred(r.tint);
-            active--;
-          }
-        }
-        if (r.impact > 0) r.impact = Math.max(0, r.impact - dt / IMPACT_DECAY);
-
-        const o = i * 4;
-        stateData[o]     = r.head;
-        stateData[o + 1] = r.pulse;
-        stateData[o + 2] = r.tint;
-        stateData[o + 3] = r.impact * r.impact;   // schneller Abfall
-      }
-      stateTex.needsUpdate = true;
-
-      // Aufleuchtende Geometrie: schneller Anstieg, ruhige Wanderung durch den
-      // Raum, langes Verglimmen und zum Schluss ein schnelles Blinken.
-      for (const entry of sacredPool) {
-        if (entry.life < 0) continue;
-        entry.life += dt;
-        const t = entry.life / entry.dur;
-        if (t >= 1) {
-          entry.life = -1;
-          entry.uniforms.uIntensity.value = 0;
-          entry.mesh.visible = false;
-          sacredActive--;
-          continue;
-        }
-        const attack = Math.min(1, entry.life / 0.55);
-        const decay = Math.pow(1 - t, 1.7);
-        const remaining = entry.dur - entry.life;
-        let envelope = attack * decay;
-        if (remaining <= SACRED_BLINK_DUR) {
-          // Waehrend der Blinkphase haelt eine Untergrenze die Figur sichtbar,
-          // damit das Flackern nicht im Verglimmen untergeht.
-          const phase = (SACRED_BLINK_DUR - remaining) * SACRED_BLINK_HZ;
-          const on = Math.sin(phase * Math.PI * 2) > 0 ? 1 : 0.06;
-          envelope = attack * Math.max(0.45, decay) * on;
-        }
-        entry.uniforms.uIntensity.value = envelope * compactFactor;
-
-        entry.mesh.position.addScaledVector(entry.drift, dt);
-        if (entry.round) {
-          entry.mesh.rotation.z += entry.spin * dt;
-          entry.mesh.rotation.x += entry.tiltSpin * dt;
-          entry.mesh.rotation.y += entry.yawSpin * dt;
-        }
-      }
+      syncBoardRevealUniforms();
+      endpointBurst.update(elapsed, dt);
+      upperRightTelemetry.update(elapsed, dt);
     },
 
     dispose() {
       group.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
+      endpointBurst.dispose();
+      upperRightTelemetry.dispose();
+      boardSignals.dispose();
+      proceduralOrrery.dispose();
+      boardTexture.dispose();
       stateTex.dispose();
     },
   };

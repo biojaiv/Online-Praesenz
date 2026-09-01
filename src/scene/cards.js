@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LIGHT_PALETTE, lightColor } from './palette.js';
-import { createResumeProjection, CV_ANCHORS, CV_PAGE_COUNT } from './resumeProjection.js';
+import { createResumeProjection, getCvAnchor } from './resumeProjection.js'; // DYNAMIC_CV_LANGUAGE_GEOMETRY_V3
 
 /**
  * Die drei interaktiven Bereichssockel.
@@ -51,7 +51,9 @@ const DOC_LIFT = JET_HEIGHT - 0.13;
 const DOC_FRONT = 0.4;
 const RESUME_KEY = 'lebenslauf';
 // Ruhehelligkeit der Lebenslauf-Vorschau, solange der Sockel nicht offen ist.
-const RESUME_IDLE_OPACITY = 0.85;
+// SACRED_CARD_LAYOUT_V4_2
+// The landing-page projection should be readable light, not a luminous plate.
+const RESUME_IDLE_OPACITY = 0.62;
 // Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
 // Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
 const RESUME_IDLE_SCALE = 1;
@@ -64,6 +66,14 @@ const RESUME_WORLD_SCALE = 0.88;
 // gedreht werden. Die Werte steuern Empfindlichkeit und Auslauf.
 const RESUME_ROTATION_SPEED = 0.0105;
 const RESUME_ROTATION_DAMPING = 0.055;
+
+// Golden-ratio/Fibonacci layout. The middle pedestal is the symmetry axis;
+// the two side pedestals share the same radius and vertical level, forming a
+// shallow, deliberately constructed triad instead of three arbitrary offsets.
+const LAYOUT_PHI = (1 + Math.sqrt(5)) / 2;
+const LAYOUT_SIDE_FACTOR = Math.sqrt(5) / 2;
+const LAYOUT_CENTER_RISE_DIVISOR = 55;
+const LAYOUT_OUTER_DROP_DIVISOR = 34;
 
 const MODEL_URL = new URL(
   '../../Elemente/Sockel/Sockel_V2_web.glb',
@@ -922,7 +932,12 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     const accentRing = makeAccentRing(def.accent);
     accentRing.position.y = BASE_TOP + 0.035;
-    const rimLight = new THREE.PointLight(LIGHT_PALETTE.fiber, 24, 18, 2);
+    const rimLight = new THREE.PointLight(
+      LIGHT_PALETTE.fiber,
+      isResume ? 12 : 24,
+      18,
+      2,
+    );
     rimLight.position.set(0, BASE_TOP + 1.5, 1.4);
 
     const hit = new THREE.Mesh(
@@ -1065,11 +1080,12 @@ export function createCards({ renderer, reduced = false } = {}) {
     setDocumentSection(section, immediate = false) {
       const projection = resumeCard?.resumeProjection;
       if (!projection) return;
-      const anchor = CV_ANCHORS[section] ?? 0;
-      // Ein Fenster ist genau eine Seite hoch: der Sprung faengt am Kopf der
-      // Seite an, die den Abschnitt traegt, statt halb dazwischen.
-      const page = Math.min(CV_PAGE_COUNT - 1, Math.floor(anchor * CV_PAGE_COUNT));
-      projection.scrollToFraction(page / CV_PAGE_COUNT, immediate);
+      const pageCount = Math.max(1, projection.pageCount || 1);
+      const anchor = getCvAnchor(section);
+      // The active language owns both anchor data and page count. No German
+      // geometry is reused for the English document (or vice versa).
+      const page = Math.min(pageCount - 1, Math.floor(anchor * pageCount));
+      projection.scrollToFraction(page / pageCount, immediate);
     },
 
     get documentScroll() { return resumeCard?.resumeProjection?.scroll ?? 0; },
@@ -1125,12 +1141,18 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     setLayout({ spacing = 7.8, scale = 1, compact = false, stagger = 0 } = {}) {
       layoutScale = scale;
+      const sideRadius = spacing * LAYOUT_SIDE_FACTOR;
+      const centerRise = spacing / LAYOUT_CENTER_RISE_DIVISOR;
+      const outerDrop = spacing / LAYOUT_OUTER_DROP_DIVISOR + stagger;
 
       for (const card of cards) {
-        card.holder.position.x = (card.layoutIndex - 1) * spacing;
+        const axis = card.layoutIndex - 1;
+        card.holder.position.x = axis * sideRadius;
 
+        // Mirror symmetry plus Fibonacci-derived shallow arc: centre is the
+        // apex, both outer pedestals sit at the exact same level.
         card.layoutY = HOME_ROW_DROP
-          + (card.layoutIndex === 1 ? 0 : -stagger);
+          + (card.layoutIndex === 1 ? centerRise : -outerDrop);
 
         // Die Grundskalierung bleibt beim Anflug stabil.
         // Die Kamera uebernimmt das Heranfahren.
@@ -1141,7 +1163,9 @@ export function createCards({ renderer, reduced = false } = {}) {
         }
 
         card.resumeFrame?.setCompact(compact);
-        card.rimLight.intensity = compact ? 15 : 24;
+        card.rimLight.intensity = card.key === RESUME_KEY
+          ? (compact ? 8 : 12)
+          : (compact ? 15 : 24);
 
         if (card.ringJet) {
           card.ringJet.uniforms.uCompact.value =
@@ -1219,7 +1243,9 @@ export function createCards({ renderer, reduced = false } = {}) {
         card.resumeFrame?.update(delta);
         card.resumeProjection?.update(delta);
 
-        const phase = card.key.length;
+        // Mirrored side elements also breathe in phase; the centre uses
+        // the complementary golden-ratio phase instead of a key-length accident.
+        const phase = card.layoutIndex === 1 ? Math.PI / LAYOUT_PHI : 0;
         card.holder.position.y = card.layoutY
           + Math.sin(elapsed * 0.18 + phase) * 0.11
           + card.hover * 0.16;

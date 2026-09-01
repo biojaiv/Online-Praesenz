@@ -1,0 +1,255 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1241" height="3786" viewBox="0 0 1241 3786" role="img" aria-labelledby="title desc">
+<title id="title">Vladimir Leicht — English CV hologram projection</title>
+<desc id="desc">Two-page English vector CV for the interactive portfolio hologram.</desc>
+<defs>
+  <linearGradient id="cyanLine" x1="0" x2="1"><stop offset="0" stop-color="#58eaff" stop-opacity=".14"/><stop offset=".18" stop-color="#58eaff" stop-opacity=".72"/><stop offset=".82" stop-color="#58eaff" stop-opacity=".72"/><stop offset="1" stop-color="#58eaff" stop-opacity=".14"/></linearGradient>
+  <style>
+    .name{font-family:Inter,Arial,sans-serif;font-size:54px;font-weight:700;letter-spacing:1.4px;fill:#eafcff}
+    .role{font-family:Inter,Arial,sans-serif;font-size:25px;font-weight:600;letter-spacing:.5px;fill:#8cf2ff}
+    .eyebrow{font-family:Inter,Arial,sans-serif;font-size:15px;font-weight:700;letter-spacing:3.1px;fill:#78dce8}
+    .section{font-family:Inter,Arial,sans-serif;font-size:29px;font-weight:700;letter-spacing:1.1px;fill:#eafcff}
+    .body{font-family:Inter,Arial,sans-serif;font-size:21px;font-weight:400;fill:#d7f5f8}
+    .bodyStrong{font-family:Inter,Arial,sans-serif;font-size:21px;font-weight:650;fill:#f1fdff}
+    .small{font-family:Inter,Arial,sans-serif;font-size:17px;font-weight:400;fill:#afd9de}
+    .date{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:17px;font-weight:600;letter-spacing:.4px;fill:#75e6f4}
+    .skill{font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:500;fill:#d8f7fa}
+    .accent{fill:#f0a55b}
+    .line{stroke:url(#cyanLine);stroke-width:2}
+    .thin{stroke:#58eaff;stroke-opacity:.22;stroke-width:1}
+  </style>
+</defs>
+<g aria-hidden="true" opacity=".9">
+<path d="M42 56 H1199" class="line"/>
+<path d="M42 1837 H1199" class="line"/>
+<path d="M56 42 V1851" class="thin"/>
+<path d="M1185 42 V1851" class="thin"/>
+<circle cx="56" cy="56" r="4" fill="#58eaff"/><circle cx="1185" cy="56" r="4" fill="#58eaff"/>
+</g>
+<g aria-hidden="true" opacity=".9">
+<path d="M42 1949 H1199" class="line"/>
+<path d="M42 3730 H1199" class="line"/>
+<path d="M56 1935 V3744" class="thin"/>
+<path d="M1185 1935 V3744" class="thin"/>
+<circle cx="56" cy="1949" r="4" fill="#58eaff"/><circle cx="1185" cy="1949" r="4" fill="#58eaff"/>
+</g>
+<g id="page-1" data-page="1">
+<text x="82" y="92" class="eyebrow">CURRICULUM VITAE · ENGLISH PROJECTION</text>
+<text x="82" y="160" class="name">Vladimir Leicht</text>
+<text x="82" y="203" class="role">Information Technology Specialist - Systems Integration (IHK)</text>
+<text x="82" y="264" class="small"><tspan class="bodyStrong">Availability:</tspan> Available immediately · Pforzheim · vleicht@keemail.me</text>
+<path d="M82 318 H1159" class="line"/>
+<text x="82" y="366" class="section">PROFILE</text>
+<rect x="62" y="343" width="6" height="27" rx="3" fill="#58eaff"/>
+<text x="82" y="402" class="body">robust, well-engineered IT solutions delivered with persistence, precision and creative</text>
+<text x="82" y="431" class="body">problem-solving.</text>
+<text x="82" y="468" class="body"><tspan class="bodyStrong">Core focus:</tspan> Planning, configuration and administration of complex IT infrastructures</text>
+<text x="82" y="530" class="section">EDUCATION &amp; PRACTICAL EXPERIENCE</text>
+<rect x="62" y="507" width="6" height="27" rx="3" fill="#58eaff"/>
+<text x="82" y="566" class="date">2024–2026</text>
+<text x="312" y="566" class="bodyStrong">Information Technology Specialist - Systems Integration (IHK)</text>
+<text x="312" y="595" class="small">TASys GmbH · IHK qualification completed in 2026</text>
+<text x="312" y="619" class="small">Practical training 01/2026–07/2026 · Office for IT &amp; Digitalisation, Enzkreis District</text>
+<text x="312" y="642" class="small">Administration</text>
+<text x="82" y="682" class="date">2001–2004</text>
+<text x="312" y="682" class="bodyStrong">Heinrich-Wieland-Schule - Technical Gymnasium</text>
+<text x="312" y="711" class="small">Abitur (general higher education entrance qualification) · Advanced courses: IT and</text>
+<text x="312" y="735" class="small">English</text>
+<text x="82" y="794" class="section">TECHNICAL SKILLS</text>
+<rect x="62" y="771" width="6" height="27" rx="3" fill="#58eaff"/>
+<text x="82" y="830" class="skill">Windows Server 2025</text>
+<rect x="342" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="82" y="861" class="skill">Active Directory</text>
+<rect x="342" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="82" y="892" class="skill">Virtualisation</text>
+<rect x="342" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="82" y="923" class="skill">UEM</text>
+<rect x="342" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="82" y="954" class="skill">Microsoft 365 / Cloud Solutions</text>
+<rect x="342" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="82" y="985" class="skill">Linux</text>
+<rect x="342" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="82" y="1016" class="skill">Docker</text>
+<rect x="342" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="367" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="392" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="417" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="442" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="467" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="640" y="830" class="skill">IT Security</text>
+<rect x="900" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1000" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1025" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<text x="640" y="861" class="skill">Python</text>
+<rect x="900" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1000" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1025" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<text x="640" y="892" class="skill">SQL</text>
+<rect x="900" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1000" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1025" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<text x="640" y="923" class="skill">GitHub</text>
+<rect x="900" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1000" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1025" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<text x="640" y="954" class="skill">Visual Studio Code</text>
+<rect x="900" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1000" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1025" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<text x="640" y="985" class="skill">HTML, CSS &amp; PHP</text>
+<rect x="900" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<rect x="1000" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<rect x="1025" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<text x="640" y="1016" class="skill">C#</text>
+<rect x="900" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="925" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="950" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="975" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
+<rect x="1000" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<rect x="1025" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
+<text x="82" y="1070" class="section">LANGUAGES, WORKING STYLE &amp; INTERESTS</text>
+<rect x="62" y="1047" width="6" height="27" rx="3" fill="#58eaff"/>
+<text x="82" y="1106" class="body">English · Russian · Reliability &amp; Work Ethic</text>
+<text x="82" y="1137" class="body"><tspan class="bodyStrong">Interests:</tspan> Martial Arts · Reading · AI-Assisted Development</text>
+<text x="82" y="1168" class="body"><tspan class="bodyStrong">Focus stack:</tspan> Windows Server · Virtualisation · UEM · Cloud Solutions</text>
+<path d="M82 1227 H1159" class="thin"/>
+<text x="82" y="1261" class="small">Date of Birth: 6 March 1985 · Location: Pforzheim · Email: vleicht@keemail.me</text>
+<text x="1159" y="1815" text-anchor="end" class="eyebrow">01 / 02</text>
+</g>
+<g id="page-2" data-page="2">
+<text x="82" y="1985" class="eyebrow">EMPLOYMENT HISTORY · COMPLETE TIMELINE</text>
+<text x="82" y="2049" class="section">EMPLOYMENT HISTORY</text>
+<path d="M82 2089 H1159" class="line"/>
+<text x="82" y="2131" class="date">03/2023–12/2024</text>
+<text x="312" y="2131" class="bodyStrong">Service Station Attendant</text>
+<text x="312" y="2158" class="small">Esso Service Station · Pforzheim, Germany</text>
+<circle cx="280" cy="2144" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2150 V2196" class="thin"/>
+<text x="82" y="2204" class="date">11/2023–01/2024</text>
+<text x="312" y="2204" class="bodyStrong">Warehouse Associate / Inventory Control</text>
+<text x="312" y="2231" class="small">Kaufhof · Pforzheim, Germany</text>
+<circle cx="280" cy="2217" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2223 V2269" class="thin"/>
+<text x="82" y="2277" class="date">02/2022–01/2023</text>
+<text x="312" y="2277" class="bodyStrong">Order Picker / Warehouse Associate</text>
+<text x="312" y="2304" class="small">gastromatic Aldinger · Pforzheim, Germany</text>
+<circle cx="280" cy="2290" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2296 V2342" class="thin"/>
+<text x="82" y="2350" class="date">04/2021–02/2022</text>
+<text x="312" y="2350" class="bodyStrong">Job Search</text>
+<text x="312" y="2377" class="small">Job search during challenging economic conditions</text>
+<circle cx="280" cy="2363" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2369 V2415" class="thin"/>
+<text x="82" y="2423" class="date">07/2019–09/2020</text>
+<text x="312" y="2423" class="bodyStrong">Order Picker / Warehouse Associate</text>
+<text x="312" y="2450" class="small">gastromatic Aldinger · Pforzheim, Germany</text>
+<circle cx="280" cy="2436" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2442 V2488" class="thin"/>
+<text x="82" y="2496" class="date">02/2019–06/2019</text>
+<text x="312" y="2496" class="bodyStrong">Construction Assistant</text>
+<text x="312" y="2523" class="small">Pfirmann · Pforzheim, Germany</text>
+<circle cx="280" cy="2509" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2515 V2561" class="thin"/>
+<text x="82" y="2569" class="date">09/2018–01/2019</text>
+<text x="312" y="2569" class="bodyStrong">Shipping Associate</text>
+<text x="312" y="2596" class="small">Klingel · Pforzheim, Germany</text>
+<circle cx="280" cy="2582" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2588 V2634" class="thin"/>
+<text x="82" y="2642" class="date">02/2018–08/2018</text>
+<text x="312" y="2642" class="bodyStrong">Electroplater</text>
+<text x="312" y="2669" class="small">Dudaco · Pforzheim, Germany</text>
+<circle cx="280" cy="2655" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2661 V2707" class="thin"/>
+<text x="82" y="2715" class="date">08/2017–01/2018</text>
+<text x="312" y="2715" class="bodyStrong">Job Search</text>
+<circle cx="280" cy="2705" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2711 V2757" class="thin"/>
+<text x="82" y="2765" class="date">11/2011–07/2017</text>
+<text x="312" y="2765" class="bodyStrong">Care Assistant</text>
+<text x="312" y="2792" class="small">ISB, Helfende Hand and Mobilee · Karlsruhe, Germany</text>
+<circle cx="280" cy="2778" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2784 V2830" class="thin"/>
+<text x="82" y="2838" class="date">10/2010–09/2011</text>
+<text x="312" y="2838" class="bodyStrong">Various Part-Time Roles</text>
+<circle cx="280" cy="2828" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2834 V2880" class="thin"/>
+<text x="82" y="2888" class="date">04/2010–09/2010</text>
+<text x="312" y="2888" class="bodyStrong">Health-related Career Break</text>
+<text x="312" y="2915" class="small accent">Stable health since then</text>
+<circle cx="280" cy="2901" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2907 V2953" class="thin"/>
+<text x="82" y="2961" class="date">02/2010–04/2010</text>
+<text x="312" y="2961" class="bodyStrong">Warehouse Assistant</text>
+<text x="312" y="2988" class="small">DEKRA Arbeit GmbH · Pforzheim, Germany</text>
+<circle cx="280" cy="2974" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 2980 V3026" class="thin"/>
+<text x="82" y="3034" class="date">08/2008–01/2010</text>
+<text x="312" y="3034" class="bodyStrong">Health-related Career Break</text>
+<circle cx="280" cy="3024" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 3030 V3076" class="thin"/>
+<text x="82" y="3084" class="date">07/2008–09/2008</text>
+<text x="312" y="3084" class="bodyStrong">Production Worker</text>
+<text x="312" y="3111" class="small">Witzenmann · Pforzheim, Germany</text>
+<circle cx="280" cy="3097" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 3103 V3149" class="thin"/>
+<text x="82" y="3157" class="date">02/2008–05/2008</text>
+<text x="312" y="3157" class="bodyStrong">Delivery Driver</text>
+<text x="312" y="3184" class="small">City Briefkurier · Pforzheim, Germany</text>
+<circle cx="280" cy="3170" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M280 3176 V3222" class="thin"/>
+<text x="82" y="3230" class="date">06/2007–09/2007</text>
+<text x="312" y="3230" class="bodyStrong">Internship in Journalism &amp; Culture</text>
+<text x="312" y="3257" class="small">M.D. · Magdeburg, Germany</text>
+<circle cx="280" cy="3243" r="4.5" fill="#58eaff" opacity=".9"/>
+<path d="M82 3303 H1159" class="thin"/>
+<text x="82" y="3338" class="small">Technical profile: Windows Server · Virtualisation · UEM · Cloud Solutions</text>
+<text x="1159" y="3708" text-anchor="end" class="eyebrow">02 / 02</text>
+</g>
+</svg>

@@ -7,3 +7,7 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Local patch snapshots
+.patch-backups/
+apply-online-praesenz-*.py

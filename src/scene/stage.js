@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { traceExecution } from '../state/runtimeTrace.js';
+import { onLanguageChange } from '../i18n.js';
 import {
   EffectComposer, RenderPass, EffectPass,
   BloomEffect, VignetteEffect, NoiseEffect, SMAAEffect,
@@ -7,7 +9,7 @@ import {
 } from 'postprocessing';
 import { createBackground } from './background.js';
 import { createCards } from './cards.js';
-import { CV_PAGE_ASPECT } from './resumeProjection.js';
+import { getCvPageAspect } from './resumeProjection.js';
 import { LIGHT_PALETTE } from './palette.js';
 
 /**
@@ -67,10 +69,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x03060a, 0.0055);
 
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1800);
   camera.position.copy(HOME.cam);
 
-  const background = createBackground();
+  const background = createBackground({ camera });
   background.setPixelRatio(renderer.getPixelRatio());
   scene.add(background.group);
 
@@ -289,13 +291,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * nicht in die Buehne, wird das Fenster niedriger und das Dokument laeuft
    * hindurch. Projektion und Lesefassung teilen genau dieses Rechteck.
    */
-  const docRect = { width: DOC_MAX_PX, height: DOC_MAX_PX / CV_PAGE_ASPECT };
+  const docRect = { width: DOC_MAX_PX, height: DOC_MAX_PX / getCvPageAspect() };
 
   function measureDocumentRect() {
     const availableWidth = Math.max(220, view.width - DOC_GUTTER_X * 2);
     const availableHeight = Math.max(220, view.height - DOC_GUTTER_Y * 2);
     const width = Math.min(DOC_MAX_PX, availableWidth);
-    const height = Math.min(width / CV_PAGE_ASPECT, availableHeight);
+    const pageAspect = getCvPageAspect();
+    const height = Math.min(width / pageAspect, availableHeight);
     if (Math.abs(width - docRect.width) < 0.5 && Math.abs(height - docRect.height) < 0.5) {
       return docRect;
     }
@@ -312,6 +315,13 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     return rect;
   }
 
+  // Language changes can change the physical page aspect (the English web
+  // projection has three native pages). Keep the HTML reader rectangle and
+  // the 3D projection tied to the same language-specific page geometry.
+  const unsubscribeDocumentLanguage = onLanguageChange(() => {
+    syncDocumentAspect();
+  });
+
   function updateDocumentLift() {
     const overflow = Math.max(0, documentHeight - visibleHeight * 0.9);
     scrollLiftTarget = (0.5 - cards.documentScroll) * overflow;
@@ -319,6 +329,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   /** Ruhezustand: alle drei Karten im Blick. */
   function toHome(duration = 0.95) {
+    traceExecution({
+      source: 'src/scene/stage.js',
+      code: `toHome(${Number(duration).toFixed(2)})`,
+    });
     opened = null;
     cards.setOpened(null);
     background.setDocumentOpen?.(false);
@@ -342,6 +356,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * Sockel selbst als Motiv.
    */
   function focusCard(key, duration = 1.8) {
+    traceExecution({
+      source: 'src/scene/stage.js',
+      code: `focusCard(${JSON.stringify(key)}, ${Number(duration).toFixed(2)})`,
+    });
     opened = key;
     cards.setOpened(key, true);
     const isDocument = key === 'lebenslauf';
@@ -554,11 +572,13 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }
 
     if (!reduced && !opened) pointer.set(nx, ny);
+    background.setPointerNdc?.(nx, ny, !opened);
   }
 
   function onPointerLeave() {
     ndc.set(-2, -2);
     pointer.set(0, 0);
+    background.setPointerNdc?.(0, 0, false);
   }
 
   function onPointerDown(event) {
@@ -651,8 +671,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function applyBloom() {
     if (!bloom) return;
     const base = view.compact ? 1.22 : 1.62;
+    // CV_BLOOM_CONTROL_V4_2
+    // The document carries its own luminous ink. Global bloom must not turn
+    // the page into a white light panel when the camera moves into CV focus.
     bloomBaseTarget = opened === 'lebenslauf'
-      ? base * 0.45
+      ? base * 0.24
       : base;
   }
 
@@ -780,8 +803,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     else drift.lerp(pointer, 0.018);
     scrollLift += (scrollLiftTarget - scrollLift) * (1 - Math.pow(0.01, Math.min(dt, 0.1)));
     camera.position.set(
-      camPos.x + drift.x * 1.7,
-      camPos.y + drift.y * 1.0 + scrollLift,
+      camPos.x + drift.x * 1.35,
+      camPos.y + drift.y * 0.82 + scrollLift,
       camPos.z,
     );
     camera.lookAt(look.x, look.y + scrollLift, look.z);
@@ -851,6 +874,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       begin() {
         camPos.set(HOME.cam.x, -1.3, 8.6);
         background.ambient.value = 1;
+        background.setEffectsEnabled?.(false);
         background.setSymbolOnly(true);
         cards.setHologramReveal(0, true);
         cards.group.visible = false;
@@ -879,6 +903,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       finish() {
         gsap.killTweensOf([cards.group.position, cards.group.scale]);
         background.setSymbolOnly(false);
+        background.setEffectsEnabled?.(true);
         cards.setHologramReveal(1, true);
         cards.group.visible = true;
         cards.group.position.z = 0;
@@ -907,6 +932,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       canvas.removeEventListener('wheel', onWheel);
       window.removeEventListener('blur', onWindowBlur);
       window.removeEventListener('keydown', onKeydown);
+      unsubscribeDocumentLanguage();
       gsap.killTweensOf([camPos, look, cards.group.position, cards.group.scale]);
       window.clearTimeout(dollyGuideTimer);
       dollyGuide.remove();
