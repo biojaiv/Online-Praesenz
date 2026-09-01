@@ -1,7 +1,9 @@
 import './style.css';
 import './effects.css';
+import './experienceEnhancements.css';
 import { applyStaticTranslations, onLanguageChange, setLanguage, t } from './i18n.js';
 import { createStage } from './scene/stage.js';
+import { createExperienceEnhancements } from './scene/experienceEnhancements.js';
 import { createRouter } from './ui/router.js';
 import { igniteTitle } from './ui/title.js';
 import { shouldPlayIntro, playIntro } from './ui/intro.js';
@@ -52,20 +54,39 @@ let currentRoute = 'home';
 let readerIsOpen = false;
 
 function routeParts(target, { includeReader = false } = {}) {
-  const segments = String(target || 'home')
+  const routeSegments = String(target || 'home')
     .split('/')
     .filter(Boolean);
-  const parts = segments.map((segment, index) => ({
-    key: segment,
-    label: routeLabel(segment),
-    route: segments.slice(0, index + 1).join('/'),
-    action: 'route',
-  }));
+  const segments = routeSegments.length ? routeSegments : ['home'];
+  const parts = [];
+
+  // Every deeper route has one stable origin. Home is therefore always the
+  // first breadcrumb and never disappears behind a section-specific label.
+  if (segments[0] !== 'home') {
+    parts.push({
+      key: 'home',
+      label: routeLabel('home'),
+      route: 'home',
+      action: 'route',
+    });
+  }
+
+  segments.forEach((segment, index) => {
+    parts.push({
+      key: segment,
+      label: routeLabel(segment),
+      route: segment === 'home'
+        ? 'home'
+        : segments.slice(0, index + 1).join('/'),
+      action: 'route',
+    });
+  });
 
   if (includeReader && segments[0] === 'lebenslauf') {
     // Lesefassung ist ein aufklappbarer Darstellungsmodus. Der Eintrag bleibt
     // deshalb als eigene, anklickbare Ebene im Pfad erhalten.
-    parts.splice(1, 0, {
+    const cvIndex = parts.findIndex((part) => part.key === 'lebenslauf');
+    parts.splice(cvIndex + 1, 0, {
       key: 'lesefassung',
       label: t('route.readable'),
       route: 'lebenslauf',
@@ -112,6 +133,10 @@ function renderBreadcrumb() {
     const item = document.createElement(current ? 'span' : 'button');
     item.className = 'foot__crumb-item';
     item.textContent = part.label;
+    if (part.key === 'home') {
+      item.classList.add('is-distortion-target');
+      item.dataset.distortLabel = part.label;
+    }
 
     if (current) {
       item.classList.add('is-current');
@@ -139,7 +164,7 @@ function updateFooter() {
         ? readerIsOpen
           ? t('footer.readerLead')
           : t('footer.resumeLead')
-        : '';
+        : t('footer.selectSection');
     const escapeLabel = escapable
       ? readerIsOpen
         ? t('footer.escProjection')
@@ -150,20 +175,23 @@ function updateFooter() {
       lead ? `<span class="foot__hint-lead">${lead}</span>` : '',
       escapeLabel ? `<span class="foot__esc-label">${escapeLabel}</span>` : '',
     ].filter(Boolean).join(' ');
-    hint.disabled = !escapable;
+    hint.disabled = false;
+    const leadNode = hint.querySelector('.foot__hint-lead');
+    if (leadNode instanceof HTMLElement) leadNode.dataset.distortLabel = lead;
     hint.setAttribute(
       'aria-label',
-      readerIsOpen
-        ? t('footer.ariaProjection')
-        : escapable
-          ? t('footer.ariaMain')
-          : t('footer.ariaNone'),
+      root === 'home'
+        ? t('footer.selectSection')
+        : readerIsOpen
+          ? t('footer.ariaProjection')
+          : t('footer.ariaMain'),
     );
   }
 
   foot?.classList.toggle('is-contextual', escapable);
   foot?.classList.toggle('is-reader-open', readerIsOpen);
   foot?.classList.toggle('is-esc-actionable', escapable);
+  foot?.classList.toggle('is-home', root === 'home');
   if (foot) foot.dataset.section = root;
 }
 
@@ -171,6 +199,7 @@ function updateFooter() {
 const MODEL_GATE = 4000;
 
 let stage = null;
+let enhancements = null;
 let stopBrandGlitch = null;
 let stopHeaderSymbols = null;
 // Die Buehne meldet die Flaeche des Dokuments, bevor die Lesefassung existiert.
@@ -179,6 +208,12 @@ let readerRef = null;
 try {
   stage = createStage(canvas, {
     onDocumentRect: (rect) => readerRef?.setRect(rect),
+  });
+  enhancements = createExperienceEnhancements({
+    stage,
+    canvas,
+    getRoute: () => currentRoute,
+    isReaderOpen: () => readerIsOpen,
   });
 } catch (err) {
   console.error('WebGL konnte nicht initialisiert werden:', err);
@@ -208,6 +243,7 @@ const reader = createReader({
     readerIsOpen = open;
     updateFooter();
     stage?.setReaderOpen(open);
+    enhancements?.setReaderOpen(open);
     download?.dock(open ? reader.actionSlot : null);
   },
 });
@@ -236,13 +272,19 @@ const router = createRouter({
 
     currentRoute = target;
     if (root !== 'lebenslauf') readerIsOpen = false;
+    enhancements?.setRoute(target);
     updateFooter();
   },
 });
 
 async function activateFooterHint() {
   const root = currentRoute.split('/')[0] || 'home';
-  if (root === 'home') return;
+
+  if (root === 'home') {
+    playSound('focus');
+    enhancements?.promptSectionChoice();
+    return;
+  }
 
   if (readerIsOpen) {
     await reader?.close();
@@ -277,10 +319,10 @@ async function activateBreadcrumb(event) {
   const action = control.dataset.crumbAction;
   const target = control.dataset.crumbRoute || 'home';
 
-  // Klick auf die Lebenslauf-Ebene klappt eine geoeffnete Lesefassung ein.
-  // Klick auf "Lesefassung" selbst bleibt in der Lesefassung und springt
-  // lediglich zu deren Profilanfang.
-  if (action === 'route' && readerIsOpen && target === 'lebenslauf') {
+  // Leaving a reading view always folds it back into the projection before
+  // the route changes. This prevents HTML reader and 3D camera states from
+  // diverging when Home is selected directly from the breadcrumb.
+  if (action === 'route' && readerIsOpen) {
     await reader?.close();
   }
 
@@ -356,6 +398,7 @@ if (import.meta.hot) {
     unsubscribeLanguage();
     stopBrandGlitch?.();
     stopHeaderSymbols?.();
+    enhancements?.dispose();
     reader?.dispose();
     download?.dispose();
     stage?.dispose();

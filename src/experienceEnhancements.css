@@ -1,0 +1,214 @@
+/* Hybrid orrery / pedestal / navigation interaction additions. */
+
+.camera-dolly-guide__right-button {
+  fill: rgba(255, 255, 255, 0.025);
+  stroke: currentColor;
+  stroke-width: 1.35;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 180ms ease,
+    stroke 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.camera-dolly-guide__sign {
+  fill: currentColor;
+  font: 600 16px/1 "Barlow Condensed", "Arial Narrow", sans-serif;
+  opacity: 0.42;
+  transition:
+    fill 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.camera-dolly-guide.is-right-held .camera-dolly-guide__right-button,
+.camera-dolly-guide.is-active .camera-dolly-guide__right-button,
+.camera-dolly-guide.is-demo-near .camera-dolly-guide__right-button,
+.camera-dolly-guide.is-demo-far .camera-dolly-guide__right-button {
+  fill: rgba(255, 144, 48, 0.22);
+  stroke: #ff9838;
+  filter: drop-shadow(0 0 5px rgba(255, 139, 39, 0.9));
+  opacity: 1;
+}
+
+.camera-dolly-guide.is-near .camera-dolly-guide__arrow--near,
+.camera-dolly-guide.is-demo-near .camera-dolly-guide__arrow--near,
+.camera-dolly-guide.is-near .camera-dolly-guide__sign--plus,
+.camera-dolly-guide.is-demo-near .camera-dolly-guide__sign--plus {
+  color: #ff9838;
+  fill: #ff9838;
+  stroke: #ff9838;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 139, 39, 0.95));
+}
+
+.camera-dolly-guide.is-far .camera-dolly-guide__arrow--far,
+.camera-dolly-guide.is-demo-far .camera-dolly-guide__arrow--far,
+.camera-dolly-guide.is-far .camera-dolly-guide__sign--minus,
+.camera-dolly-guide.is-demo-far .camera-dolly-guide__sign--minus {
+  color: #ff9838;
+  fill: #ff9838;
+  stroke: #ff9838;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 139, 39, 0.95));
+}
+
+.camera-dolly-guide.is-demo-near .camera-dolly-guide__sign--plus,
+.camera-dolly-guide.is-near .camera-dolly-guide__sign--plus {
+  transform: translateY(-1px) scale(1.08);
+}
+
+.camera-dolly-guide.is-demo-far .camera-dolly-guide__sign--minus,
+.camera-dolly-guide.is-far .camera-dolly-guide__sign--minus {
+  transform: translateY(1px) scale(1.08);
+}
+
+.camera-dolly-guide.is-demo-near .camera-dolly-guide__wheel-mark--upper,
+.camera-dolly-guide.is-demo-far .camera-dolly-guide__wheel-mark--lower {
+  stroke: #ffb56d;
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 139, 39, 0.85));
+}
+
+/* Home and Choose section share one restrained signal-distortion language. */
+.foot__hint-lead,
+.foot__crumb-item.is-distortion-target {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.foot__hint-lead::after,
+.foot__crumb-item.is-distortion-target::before {
+  content: attr(data-distort-label);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  pointer-events: none;
+  opacity: 0;
+  text-shadow:
+    -2px 0 rgba(84, 221, 255, 0.8),
+    2px 0 rgba(255, 145, 48, 0.68);
+  transform: translateX(0);
+  clip-path: inset(0 0 100% 0);
+  animation: footer-signal-distortion 10.8s steps(1, end) infinite;
+}
+
+.foot__hint:hover .foot__hint-lead::after,
+.foot__hint:focus-visible .foot__hint-lead::after,
+.foot__crumb-item.is-distortion-target:hover::before,
+.foot__crumb-item.is-distortion-target:focus-visible::before,
+.frame.is-section-prompt .foot__hint-lead::after,
+.frame.is-section-prompt .foot__crumb-item.is-distortion-target::before {
+  animation: footer-signal-distortion-active 640ms steps(1, end) 1;
+}
+
+.foot__hint:not(:disabled) {
+  cursor: pointer;
+}
+
+.foot__hint:focus-visible,
+.foot__crumb-item:focus-visible {
+  outline: 1px solid rgba(105, 223, 255, 0.72);
+  outline-offset: 5px;
+}
+
+.frame.is-section-prompt .nav__link[data-target] {
+  animation: section-choice-signal 1.26s ease-in-out 1;
+}
+
+@keyframes footer-signal-distortion {
+  0%, 91%, 100% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transform: translateX(0);
+  }
+  92% {
+    opacity: 0.42;
+    clip-path: inset(13% 0 69% 0);
+    transform: translateX(-2px);
+  }
+  93% {
+    opacity: 0.22;
+    clip-path: inset(59% 0 19% 0);
+    transform: translateX(2px);
+  }
+  94% {
+    opacity: 0.38;
+    clip-path: inset(34% 0 47% 0);
+    transform: translateX(-1px);
+  }
+  95% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes footer-signal-distortion-active {
+  0%, 100% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transform: translateX(0);
+  }
+  17% {
+    opacity: 0.7;
+    clip-path: inset(9% 0 70% 0);
+    transform: translateX(-3px);
+  }
+  34% {
+    opacity: 0.34;
+    clip-path: inset(56% 0 20% 0);
+    transform: translateX(3px);
+  }
+  52% {
+    opacity: 0.62;
+    clip-path: inset(31% 0 45% 0);
+    transform: translateX(-2px);
+  }
+  70% {
+    opacity: 0.28;
+    clip-path: inset(72% 0 8% 0);
+    transform: translateX(2px);
+  }
+}
+
+@keyframes section-choice-signal {
+  0%, 100% {
+    text-shadow: none;
+    filter: none;
+  }
+  24% {
+    text-shadow:
+      -2px 0 rgba(84, 221, 255, 0.8),
+      2px 0 rgba(255, 145, 48, 0.64);
+    filter: brightness(1.24);
+  }
+  52% {
+    text-shadow: 0 0 9px rgba(107, 221, 255, 0.62);
+    filter: brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foot__hint-lead::after,
+  .foot__crumb-item.is-distortion-target::before,
+  .frame.is-section-prompt .nav__link[data-target] {
+    animation: none;
+  }
+
+  .foot__hint:hover .foot__hint-lead::after,
+  .foot__hint:focus-visible .foot__hint-lead::after,
+  .foot__crumb-item.is-distortion-target:hover::before,
+  .foot__crumb-item.is-distortion-target:focus-visible::before {
+    opacity: 0.28;
+    clip-path: inset(42% 0 38% 0);
+  }
+}
