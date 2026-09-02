@@ -25,12 +25,12 @@ export const CV_ANCHORS = Object.freeze({
   arbeitsleben: 0.525,
 });
 
-const CV_ANCHORS_EN = Object.freeze({ // EN_CV_MASTER_PARITY_V4_4
+const CV_ANCHORS_EN = Object.freeze({ // EXACT_EN_CV_MASTER_V5_4
   uebersicht: 0,
-  bildungsweg: 0.18,
-  faehigkeiten: 0.35,
-  kontakt: 0.43,
-  arbeitsleben: 0.51,
+  bildungsweg: 0.184,
+  faehigkeiten: 0.354,
+  kontakt: 0.417,
+  arbeitsleben: 0.514,
 });
 
 const CV_SOURCES = Object.freeze({
@@ -44,7 +44,7 @@ const CV_SOURCES = Object.freeze({
   en: Object.freeze({ // EN_HOLOGRAM_PARITY_V4_3
     url: CV_EN_PROJECTION_URL,
     pageCount: 2,
-    pageAspect: 1241 / (3786 / 2),
+    pageAspect: 1258 / 1920,
     webTransform: false,
     anchors: CV_ANCHORS_EN,
   }),

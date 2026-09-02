@@ -41,9 +41,9 @@ const DOC_GUTTER_Y = 42;
 // Mausrad ohne Zusatztaste blaettert. Linke Maustaste halten plus Mausrad
 // faehrt die Kamera entlang ihrer festen Blickachse vor und zurueck.
 const DOCUMENT_ZOOM_DEFAULT = 1.08;
-const DOCUMENT_ZOOM_MIN = 0.001;
-const DOCUMENT_ZOOM_MAX = 2.1;
-const DOCUMENT_WHEEL_SENSITIVITY = 1.65;
+const DOCUMENT_ZOOM_MIN = 0.12;
+const DOCUMENT_ZOOM_MAX = 3.2;
+const DOCUMENT_WHEEL_SENSITIVITY = 1.25;
 // Abstand zur Projektion bei frontaler Sicht. Der Wert liegt nur wenig ueber
 // der Nah-Clippingebene; beim Drehen kommt automatisch die nach vorn ragende
 // halbe Blattbreite hinzu, damit die Kamera nie im Blatt steckt.
@@ -186,6 +186,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let viewMoving = false;
   let viewMoveTicket = 0;
   let qualityUpgradeTimer = 0;
+  // RESPONSIVE_CV_ZOOM_V5_4
+  const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)').matches
+    || navigator.maxTouchPoints > 0;
+  const touchPoints = new Map();
+  let pinchGesture = null;
 
   const guideHost = canvas.parentElement;
   const dollyGuide = document.createElement('div');
@@ -221,6 +226,43 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         cx="38" cy="114" r="2" />
     </svg>`;
   guideHost?.append(dollyGuide);
+
+  const keyboardZoomHint = document.createElement('div');
+  keyboardZoomHint.className = 'cv-keyboard-zoom-hint';
+  keyboardZoomHint.setAttribute('aria-hidden', 'true');
+  keyboardZoomHint.innerHTML = '<kbd>↑</kbd><span>Zoom</span><kbd>↓</kbd>';
+
+  const mobileZoom = document.createElement('div');
+  mobileZoom.className = 'cv-mobile-zoom';
+  mobileZoom.setAttribute('aria-label', 'CV zoom controls');
+  mobileZoom.innerHTML = `
+    <button class="cv-mobile-zoom__button" type="button" data-cv-zoom="in" aria-label="Zoom in">+</button>
+    <button class="cv-mobile-zoom__button" type="button" data-cv-zoom="out" aria-label="Zoom out">−</button>
+    <span class="cv-mobile-zoom__label">Pinch / + −</span>`;
+  guideHost?.append(keyboardZoomHint, mobileZoom);
+
+  function syncDocumentInputHints() {
+    const active = opened === 'lebenslauf' && !readerOpen;
+    if (!active) {
+      pinchGesture = null;
+      touchPoints.clear();
+    }
+    keyboardZoomHint.classList.toggle('is-visible', active && !coarsePointer);
+    mobileZoom.classList.toggle('is-visible', active && coarsePointer);
+    canvas.style.touchAction = active && coarsePointer ? 'none' : '';
+  }
+
+  function onMobileZoomClick(event) {
+    const control = event.target instanceof Element
+      ? event.target.closest('[data-cv-zoom]')
+      : null;
+    if (!(control instanceof HTMLButtonElement)) return;
+    event.preventDefault();
+    const zoomIn = control.dataset.cvZoom === 'in';
+    zoomDocument(zoomIn ? -0.18 : 0.18);
+    pulseDollyGuide(zoomIn ? 'near' : 'far');
+  }
+  mobileZoom.addEventListener('click', onMobileZoomClick);
 
   function setDollyGuide(visible, active = false, direction = null) {
     dollyGuide.classList.toggle('is-visible', Boolean(visible));
@@ -345,6 +387,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     docZoomTarget = DOCUMENT_ZOOM_DEFAULT;
     zoomHold = false;
     setDollyGuide(false);
+    syncDocumentInputHints();
     scrollLiftTarget = 0;
     pointer.set(0, 0);
     moveView(HOME.cam, HOME.look, duration);
@@ -368,6 +411,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     cards.setOpened(key, true);
     const isDocument = key === 'lebenslauf';
     setDollyGuide(isDocument && !readerOpen);
+    syncDocumentInputHints();
     background.setDocumentOpen?.(isDocument);
     applyBloom();
 
@@ -506,8 +550,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
 
     switch (event.key) {
-      case 'ArrowDown': scrollDocument(0.14); break;
-      case 'ArrowUp': scrollDocument(-0.14); break;
+      case 'ArrowDown':
+        zoomDocument(0.14);
+        pulseDollyGuide('far');
+        break;
+      case 'ArrowUp':
+        zoomDocument(-0.14);
+        pulseDollyGuide('near');
+        break;
       case 'PageDown': case ' ': scrollDocument(0.82); break;
       case 'PageUp': scrollDocument(-0.82); break;
       case 'Home': cards.setDocumentScroll(0); break;
@@ -529,6 +579,36 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function onPointerMove(event) {
     const { nx, ny } = updatePointerFromEvent(event);
+
+    if (event.pointerType === 'touch' && touchPoints.has(event.pointerId)) {
+      touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+
+    if (
+      event.pointerType === 'touch'
+      && pinchGesture
+      && touchPoints.size >= 2
+      && opened === 'lebenslauf'
+      && !readerOpen
+    ) {
+      event.preventDefault();
+      const points = Array.from(touchPoints.values()).slice(0, 2);
+      const distance = Math.max(
+        1,
+        Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y),
+      );
+      const previousTarget = docZoomTarget;
+      docZoomTarget = THREE.MathUtils.clamp(
+        pinchGesture.startZoom * pinchGesture.startDistance / distance,
+        DOCUMENT_ZOOM_MIN,
+        DOCUMENT_ZOOM_MAX,
+      );
+      if (Math.abs(previousTarget - docZoomTarget) > 0.002) {
+        pulseDollyGuide(docZoomTarget < previousTarget ? 'near' : 'far');
+      }
+      pinchGesture.lastDistance = distance;
+      return;
+    }
 
     if (drag && drag.id === event.pointerId) {
       const dx = event.clientX - drag.x;
@@ -556,8 +636,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
           } else if (drag.pointerType === 'touch') {
             drag.axis = 'y';
           } else {
-            // Bei der Maus bleibt die senkrechte Bewegung frei, weil die
-            // Kamerafahrt ausschliesslich ueber das Mausrad erfolgt.
             drag.axis = 'hold';
           }
         }
@@ -570,6 +648,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
             pulseDollyGuide(dx < 0 ? 'left' : 'right');
           }
         } else if (drag.axis === 'y' && drag.pointerType === 'touch') {
+          event.preventDefault();
           scrollDocument(-dy / view.height);
         }
       }
@@ -589,6 +668,33 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
 
     updatePointerFromEvent(event);
+
+    if (
+      event.pointerType === 'touch'
+      && opened === 'lebenslauf'
+      && !readerOpen
+    ) {
+      touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touchPoints.size >= 2) {
+        event.preventDefault();
+        const points = Array.from(touchPoints.values()).slice(0, 2);
+        const distance = Math.max(
+          1,
+          Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y),
+        );
+        takeOverDocumentCamera();
+        pinchGesture = {
+          startDistance: distance,
+          lastDistance: distance,
+          startZoom: docZoomTarget,
+        };
+        drag = null;
+        cards.endResumeRotation();
+        canvas.setPointerCapture?.(event.pointerId);
+        return;
+      }
+    }
+
     const onDocument = opened === 'lebenslauf' && hitsDocument();
     const canWheelZoom = event.button === 0
       && event.pointerType !== 'touch'
@@ -609,11 +715,21 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     };
 
     if (canWheelZoom) beginDocumentWheelZoom();
-
     canvas.setPointerCapture?.(event.pointerId);
   }
 
   function onPointerUp(event) {
+    if (event.pointerType === 'touch') {
+      touchPoints.delete(event.pointerId);
+      if (pinchGesture) {
+        if (touchPoints.size < 2) pinchGesture = null;
+        drag = null;
+        cards.endResumeRotation();
+        setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+        return;
+      }
+    }
+
     if (!drag || drag.id !== event.pointerId) return;
     const { moved, wheelUsed, onDocument } = drag;
     drag = null;
@@ -623,17 +739,18 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     if (moved || wheelUsed) return;
     if (hovered) listener?.('select', hovered);
-    // Ein Klick neben das Dokument fuehrt zurueck, ein Klick darauf nicht.
     else if (opened && !onDocument) listener?.('select', 'home');
   }
 
   function onWindowBlur() {
     if (zoomHold) endDocumentWheelZoom();
     drag = null;
+    pinchGesture = null;
+    touchPoints.clear();
     cards.endResumeRotation();
   }
 
-  canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+  canvas.addEventListener('pointermove', onPointerMove, { passive: false });
   canvas.addEventListener('pointerleave', onPointerLeave, { passive: true });
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
@@ -697,6 +814,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     camera.aspect = view.aspect;
     camera.updateProjectionMatrix();
     view.compact = view.aspect < 0.72;
+    syncDocumentInputHints();
     // Die Lesefassung erfaehrt jede Groessenaenderung, auch wenn der
     // Lebenslauf gerade nicht im Bild steht.
     syncDocumentAspect();
@@ -851,6 +969,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       readerOpen = Boolean(value);
       if (zoomHold) endDocumentWheelZoom();
       setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+      syncDocumentInputHints();
       if (readerOpen) cards.endResumeRotation();
     },
 
@@ -951,6 +1070,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       gsap.killTweensOf([camPos, look, cards.group.position, cards.group.scale]);
       window.clearTimeout(dollyGuideTimer);
       window.clearTimeout(qualityUpgradeTimer);
+      mobileZoom.removeEventListener('click', onMobileZoomClick);
+      mobileZoom.remove();
+      keyboardZoomHint.remove();
+      canvas.style.touchAction = '';
       dollyGuide.remove();
       timer.dispose();
       cards.dispose();

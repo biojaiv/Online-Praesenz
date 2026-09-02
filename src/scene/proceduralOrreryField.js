@@ -6,85 +6,105 @@ const SOURCE_URL = new URL(
   import.meta.url,
 ).href;
 
-const TWO_PI = Math.PI * 2;
-const SOURCE_CENTER = new THREE.Vector2(0.505, 0.515);
-const Y_AXIS = new THREE.Vector3(0, 1, 0);
-const TEMP_START = new THREE.Vector3();
-const TEMP_END = new THREE.Vector3();
-const TEMP_MID = new THREE.Vector3();
-const TEMP_DIR = new THREE.Vector3();
-const TEMP_SCALE = new THREE.Vector3();
-const TEMP_QUAT = new THREE.Quaternion();
-const TEMP_MATRIX = new THREE.Matrix4();
+const X_AXIS = new THREE.Vector3(1, 0, 0);
+const TMP_A = new THREE.Vector3();
+const TMP_B = new THREE.Vector3();
+const TMP_MID = new THREE.Vector3();
+const TMP_DIR = new THREE.Vector3();
+const TMP_SCALE = new THREE.Vector3();
+const TMP_QUAT = new THREE.Quaternion();
+const TMP_MATRIX = new THREE.Matrix4();
+const TMP_COLOUR = new THREE.Color();
 
 const PALETTE = Object.freeze({
-  blue: lightColor('fiberBlue'),
+  ice: new THREE.Color(0xccefff),
+  steel: lightColor('fiberBlue'),
   cyan: lightColor('fiber'),
-  violet: lightColor('violet'),
   amber: lightColor('amber'),
+  violet: lightColor('violet'),
   red: lightColor('signal'),
 });
 
-// The image remains the detailed visual source. These masks only split the
-// same texture into spatially separated rings and sectors; no derivative image
-// or mask file is generated.
-const DETAIL_LAYERS = Object.freeze([
+const CLUSTERS = Object.freeze([
   {
-    name: 'core', inner: 0.00, outer: 0.195,
-    sector: 0, sectorWidth: TWO_PI, z: -31.0,
-    size: 47, speed: 0.0038, phase: 1.4,
-    tintA: 'amber', tintB: 'cyan', baseAlpha: 0.030,
+    name: 'left-envelope',
+    position: [-31, -1, -42],
+    rotation: [-0.08, 0.18, -0.20],
+    scale: 1.18,
+    speed: 0.0034,
+    drift: 0.018,
+    arcs: [
+      [19, -1.36, 1.24, -1.2, 0.13],
+      [22, -1.18, 0.78, 0.3, 0.09],
+      [26, -1.05, 0.42, -2.0, 0.08],
+      [15, -0.82, 1.58, 1.1, 0.07],
+    ],
   },
   {
-    name: 'inner-ring', inner: 0.155, outer: 0.335,
-    sector: 0, sectorWidth: TWO_PI, z: -31.7,
-    size: 48, speed: -0.0027, phase: 5.1,
-    tintA: 'blue', tintB: 'amber', baseAlpha: 0.026,
+    name: 'right-envelope',
+    position: [31, -2, -45],
+    rotation: [0.06, -0.20, 2.92],
+    scale: 1.22,
+    speed: -0.0029,
+    drift: 0.023,
+    arcs: [
+      [18, -1.50, 1.10, 0.7, 0.12],
+      [22, -1.06, 0.72, -1.4, 0.09],
+      [27, -0.96, 0.46, 1.8, 0.075],
+      [14, -0.70, 1.68, -0.3, 0.065],
+    ],
   },
   {
-    name: 'mid-ring', inner: 0.295, outer: 0.510,
-    sector: 0, sectorWidth: TWO_PI, z: -32.5,
-    size: 49, speed: 0.0019, phase: 9.8,
-    tintA: 'violet', tintB: 'cyan', baseAlpha: 0.024,
+    name: 'upper-vault',
+    position: [0, 22, -51],
+    rotation: [0.14, 0.02, -0.52],
+    scale: 1.30,
+    speed: 0.0021,
+    drift: 0.014,
+    arcs: [
+      [22, 2.95, 5.80, -0.6, 0.12],
+      [27, 3.25, 5.35, 1.5, 0.085],
+      [32, 3.48, 5.10, -2.1, 0.07],
+      [17, 2.72, 5.65, 2.8, 0.06],
+    ],
   },
   {
-    name: 'outer-ring', inner: 0.465, outer: 0.805,
-    sector: 0, sectorWidth: TWO_PI, z: -33.4,
-    size: 50.5, speed: -0.00105, phase: 14.2,
-    tintA: 'amber', tintB: 'blue', baseAlpha: 0.020,
+    name: 'lower-foundation',
+    position: [0, -22, -58],
+    rotation: [-0.12, 0.05, 0.44],
+    scale: 1.34,
+    speed: -0.0018,
+    drift: 0.011,
+    arcs: [
+      [24, 0.08, 2.70, 0.2, 0.11],
+      [29, 0.34, 2.38, -1.8, 0.08],
+      [35, 0.58, 2.18, 2.3, 0.065],
+      [18, -0.18, 2.85, -3.0, 0.06],
+    ],
+  },
+  {
+    name: 'deep-spine',
+    position: [2, 1, -69],
+    rotation: [0.05, -0.08, 1.18],
+    scale: 1.55,
+    speed: 0.0013,
+    drift: 0.008,
+    arcs: [
+      [25, -0.92, 1.30, -1.0, 0.10],
+      [31, -0.62, 1.02, 1.6, 0.07],
+      [39, -0.38, 0.78, -2.5, 0.055],
+    ],
   },
 ]);
 
-const FRAGMENT_LAYERS = Object.freeze([
-  {
-    name: 'upper-left-world', x: -20.7, y: 8.4, z: -43.0,
-    size: 31, scale: 0.62, rotation: -0.26,
-    inner: 0.16, outer: 0.83, sector: 2.45, sectorWidth: 1.38,
-    speed: 0.00082, phase: 3.7, tintA: 'blue', tintB: 'violet',
-  },
-  {
-    name: 'upper-right-world', x: 21.8, y: 7.0, z: -48.0,
-    size: 32, scale: 0.66, rotation: 0.31,
-    inner: 0.16, outer: 0.84, sector: -0.52, sectorWidth: 1.34,
-    speed: -0.00074, phase: 8.3, tintA: 'amber', tintB: 'violet',
-  },
-  {
-    name: 'lower-left-world', x: -19.4, y: -10.0, z: -55.0,
-    size: 30, scale: 0.54, rotation: 0.37,
-    inner: 0.22, outer: 0.86, sector: -2.34, sectorWidth: 1.46,
-    speed: 0.00061, phase: 13.1, tintA: 'violet', tintB: 'blue',
-  },
-  {
-    name: 'lower-right-world', x: 19.9, y: -10.4, z: -51.5,
-    size: 30, scale: 0.57, rotation: -0.34,
-    inner: 0.20, outer: 0.85, sector: 0.86, sectorWidth: 1.42,
-    speed: -0.00058, phase: 17.6, tintA: 'red', tintB: 'amber',
-  },
+const PATHS = Object.freeze([
+  [[-54, 12, -37], [-28, 16, -44], [-4, 5, -39], [24, -6, -45], [53, -12, -43]],
+  [[49, 21, -52], [25, 12, -39], [4, -2, -43], [-24, -12, -49], [-53, -5, -45]],
+  [[-40, -25, -58], [-16, -11, -43], [6, -2, -36], [22, 13, -47], [42, 27, -58]],
+  [[-19, 31, -61], [-8, 14, -44], [15, 4, -38], [31, -13, -47], [18, -31, -62]],
+  [[47, -24, -55], [24, -16, -42], [0, 4, -37], [-21, 17, -48], [-45, 24, -59]],
+  [[-52, 0, -47], [-25, -3, -38], [0, -13, -43], [27, -3, -40], [52, 4, -49]],
 ]);
-
-const RING_RADII = Object.freeze([4.8, 6.4, 8.3, 10.7, 13.5, 16.4, 19.6]);
-const RING_SPEEDS = Object.freeze([0.031, -0.023, 0.017, -0.012, 0.0082, -0.0054, 0.0034]);
-const EVENT_CYCLE = 21.0;
 
 function clamp01(value) {
   return Math.min(1, Math.max(0, value));
@@ -95,554 +115,345 @@ function smooth01(value) {
   return t * t * (3 - 2 * t);
 }
 
-function setCylinderBetween(instanced, index, start, end, radius = 1) {
-  TEMP_MID.copy(start).add(end).multiplyScalar(0.5);
-  TEMP_DIR.copy(end).sub(start);
-  const length = Math.max(0.001, TEMP_DIR.length());
-  TEMP_DIR.normalize();
-  TEMP_QUAT.setFromUnitVectors(Y_AXIS, TEMP_DIR);
-  TEMP_SCALE.set(radius, length, radius);
-  TEMP_MATRIX.compose(TEMP_MID, TEMP_QUAT, TEMP_SCALE);
-  instanced.setMatrixAt(index, TEMP_MATRIX);
+function makeRng(seed = 0x5f3759df) {
+  let state = seed >>> 0;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    state >>>= 0;
+    return state / 4294967296;
+  };
 }
 
-function makeTransparentTexture() {
-  const data = new Uint8Array([0, 0, 0, 0]);
-  const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
-  texture.needsUpdate = true;
-  return texture;
+function setBoxBetween(target, index, start, end, thickness = 0.1, depth = thickness) {
+  TMP_MID.copy(start).add(end).multiplyScalar(0.5);
+  TMP_DIR.copy(end).sub(start);
+  const length = Math.max(0.001, TMP_DIR.length());
+  TMP_DIR.normalize();
+  TMP_QUAT.setFromUnitVectors(X_AXIS, TMP_DIR);
+  TMP_SCALE.set(length, thickness, depth);
+  TMP_MATRIX.compose(TMP_MID, TMP_QUAT, TMP_SCALE);
+  target.setMatrixAt(index, TMP_MATRIX);
 }
 
-function configureTexture(texture, renderer) {
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = true;
-  texture.anisotropy = Math.min(
-    4,
-    renderer?.capabilities?.getMaxAnisotropy?.() || 4,
-  );
-  texture.needsUpdate = true;
+function makeSharedUniforms() {
+  return {
+    uTime: { value: 0 },
+    uVisible: { value: 1 },
+    uCompact: { value: 0 },
+    uDocumentOpen: { value: 0 },
+    uAmbient: { value: 0.025 },
+    uPulsePosA: { value: new THREE.Vector3(0, 0, -45) },
+    uPulsePosB: { value: new THREE.Vector3(0, 0, -45) },
+    uPulseColourA: { value: PALETTE.ice.clone() },
+    uPulseColourB: { value: PALETTE.steel.clone() },
+    uPulseStrengthA: { value: 0 },
+    uPulseStrengthB: { value: 0 },
+  };
 }
 
-function tint(name) {
-  return PALETTE[name]?.clone?.() || PALETTE.blue.clone();
+function makeStructureMaterial(uniforms) {
+  return new THREE.ShaderMaterial({
+    uniforms,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+    vertexShader: /* glsl */`
+      uniform float uTime;
+      varying vec3 vWorldPosition;
+      varying vec3 vWorldNormal;
+      varying float vMicro;
+
+      void main() {
+        vec4 transformed = vec4(position, 1.0);
+        vec3 transformedNormal = normal;
+        #ifdef USE_INSTANCING
+          transformed = instanceMatrix * transformed;
+          transformedNormal = mat3(instanceMatrix) * transformedNormal;
+        #endif
+        vec4 world = modelMatrix * transformed;
+        vWorldPosition = world.xyz;
+        vWorldNormal = normalize(mat3(modelMatrix) * transformedNormal);
+        vMicro = 0.5 + 0.5 * sin(
+          world.x * 0.37 + world.y * 0.23 + world.z * 0.19 + uTime * 0.16
+        );
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform float uVisible, uCompact, uDocumentOpen, uAmbient;
+      uniform vec3 uPulsePosA, uPulsePosB;
+      uniform vec3 uPulseColourA, uPulseColourB;
+      uniform float uPulseStrengthA, uPulseStrengthB;
+      varying vec3 vWorldPosition;
+      varying vec3 vWorldNormal;
+      varying float vMicro;
+
+      float pulseFalloff(vec3 point, vec3 centre, float radius) {
+        float d = distance(point, centre);
+        float inner = exp(-d * d / (radius * radius));
+        float rim = exp(-abs(d - radius * 0.58) * 0.26) * 0.18;
+        return inner + rim;
+      }
+
+      void main() {
+        vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+        float facing = 0.28 + 0.72 * abs(dot(normalize(vWorldNormal), viewDirection));
+        float fresnel = pow(1.0 - abs(dot(normalize(vWorldNormal), viewDirection)), 3.0);
+
+        float a = pulseFalloff(vWorldPosition, uPulsePosA, 18.0) * uPulseStrengthA;
+        float b = pulseFalloff(vWorldPosition, uPulsePosB, 24.0) * uPulseStrengthB;
+        float lightAmount = a + b;
+
+        vec3 pulseColour = (
+          uPulseColourA * a + uPulseColourB * b
+        ) / max(0.0001, a + b);
+        vec3 darkMetal = vec3(0.004, 0.007, 0.011);
+        vec3 coldMetal = vec3(0.055, 0.075, 0.092);
+        vec3 colour = mix(darkMetal, coldMetal, uAmbient * (0.55 + vMicro * 0.45));
+        colour += pulseColour * lightAmount * (0.46 + facing * 0.62);
+        colour += pulseColour * fresnel * lightAmount * 0.38;
+        colour += vec3(0.14, 0.17, 0.20) * lightAmount * vMicro * 0.12;
+
+        float idleAlpha = uAmbient * mix(0.42, 0.18, uCompact);
+        float alpha = (idleAlpha + lightAmount * 0.88)
+          * uVisible
+          * mix(1.0, 0.93, uDocumentOpen)
+          * (0.55 + facing * 0.45);
+        if (alpha < 0.002) discard;
+        gl_FragColor = vec4(colour, clamp(alpha, 0.0, 0.96));
+      }
+    `,
+  });
 }
 
-function makeImprintMaterial(texture, spec, mode = 0) {
+function buildCluster(spec, material, rng) {
+  const group = new THREE.Group();
+  group.name = `machine-${spec.name}`;
+  group.position.fromArray(spec.position);
+  group.rotation.set(...spec.rotation);
+  group.scale.setScalar(spec.scale);
+
+  const railMatrices = [];
+  const jointMatrices = [];
+  const bracePairs = [];
+
+  for (const [radius, start, end, z, thickness] of spec.arcs) {
+    const arcLength = Math.abs(end - start) * radius;
+    const segments = Math.max(18, Math.ceil(arcLength / 0.62));
+    const anchorPoints = [];
+
+    for (let index = 0; index < segments; index += 1) {
+      const t0 = index / segments;
+      const t1 = (index + 1) / segments;
+      const a0 = THREE.MathUtils.lerp(start, end, t0);
+      const a1 = THREE.MathUtils.lerp(start, end, t1);
+      TMP_A.set(
+        Math.cos(a0) * radius,
+        Math.sin(a0) * radius,
+        z + Math.sin(a0 * 2.7 + radius) * 0.18,
+      );
+      TMP_B.set(
+        Math.cos(a1) * radius,
+        Math.sin(a1) * radius,
+        z + Math.sin(a1 * 2.7 + radius) * 0.18,
+      );
+      TMP_MID.copy(TMP_A).add(TMP_B).multiplyScalar(0.5);
+      TMP_DIR.copy(TMP_B).sub(TMP_A);
+      TMP_QUAT.setFromUnitVectors(X_AXIS, TMP_DIR.clone().normalize());
+      TMP_SCALE.set(TMP_DIR.length() * 1.035, thickness, thickness * 0.72);
+      TMP_MATRIX.compose(TMP_MID, TMP_QUAT, TMP_SCALE);
+      railMatrices.push(TMP_MATRIX.clone());
+
+      if (index % Math.max(4, Math.floor(segments / 11)) === 0) {
+        anchorPoints.push(TMP_MID.clone());
+        TMP_QUAT.setFromEuler(new THREE.Euler(a0 * 0.07, a0 * 0.11, a0));
+        TMP_SCALE.setScalar(0.11 + thickness * 1.9);
+        TMP_MATRIX.compose(TMP_MID, TMP_QUAT, TMP_SCALE);
+        jointMatrices.push(TMP_MATRIX.clone());
+      }
+    }
+
+    for (let i = 0; i < anchorPoints.length - 2; i += 2) {
+      if (rng() < 0.68) {
+        const inward = anchorPoints[i].clone().multiplyScalar(0.54 + rng() * 0.17);
+        inward.z += (rng() - 0.5) * 2.4;
+        bracePairs.push([anchorPoints[i], inward]);
+      }
+    }
+  }
+
+  // Cross-members make the arcs read as one huge machine rather than rings.
+  for (let index = 0; index < 18; index += 1) {
+    const angle = THREE.MathUtils.lerp(-1.45, 1.45, index / 17) + (rng() - 0.5) * 0.11;
+    const inner = 4.2 + rng() * 7.0;
+    const outer = 17.0 + rng() * 12.0;
+    TMP_A.set(Math.cos(angle) * inner, Math.sin(angle) * inner, (rng() - 0.5) * 3.0);
+    TMP_B.set(Math.cos(angle) * outer, Math.sin(angle) * outer, (rng() - 0.5) * 3.8);
+    bracePairs.push([TMP_A.clone(), TMP_B.clone()]);
+  }
+
+  const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const rails = new THREE.InstancedMesh(boxGeometry, material, railMatrices.length + bracePairs.length);
+  let railIndex = 0;
+  for (const matrix of railMatrices) rails.setMatrixAt(railIndex++, matrix);
+  for (const [start, end] of bracePairs) {
+    setBoxBetween(rails, railIndex++, start, end, 0.055 + rng() * 0.055, 0.045 + rng() * 0.04);
+  }
+  rails.instanceMatrix.needsUpdate = true;
+  rails.computeBoundingSphere();
+  rails.frustumCulled = true;
+  group.add(rails);
+
+  const jointGeometry = new THREE.IcosahedronGeometry(1, 1);
+  const jointCount = jointMatrices.length + 24;
+  const joints = new THREE.InstancedMesh(jointGeometry, material, jointCount);
+  let jointIndex = 0;
+  for (const matrix of jointMatrices) joints.setMatrixAt(jointIndex++, matrix);
+  while (jointIndex < jointCount) {
+    const angle = rng() * Math.PI * 2;
+    const radius = 8 + rng() * 22;
+    TMP_MID.set(
+      Math.cos(angle) * radius,
+      Math.sin(angle) * radius,
+      (rng() - 0.5) * 5.5,
+    );
+    TMP_QUAT.setFromEuler(new THREE.Euler(rng() * Math.PI, rng() * Math.PI, angle));
+    TMP_SCALE.setScalar(0.10 + rng() * 0.22);
+    TMP_MATRIX.compose(TMP_MID, TMP_QUAT, TMP_SCALE);
+    joints.setMatrixAt(jointIndex++, TMP_MATRIX);
+  }
+  joints.instanceMatrix.needsUpdate = true;
+  joints.computeBoundingSphere();
+  group.add(joints);
+
+  return {
+    group,
+    boxGeometry,
+    jointGeometry,
+    home: new THREE.Vector3().fromArray(spec.position),
+    rotation: new THREE.Euler(...spec.rotation),
+    speed: spec.speed,
+    drift: spec.drift,
+    phase: rng() * Math.PI * 2,
+    dispose() {
+      boxGeometry.dispose();
+      jointGeometry.dispose();
+    },
+  };
+}
+
+function makeImprintMaterial(texture, uniforms) {
   return new THREE.ShaderMaterial({
     uniforms: {
+      ...uniforms,
       uMap: { value: texture },
       uTexel: { value: new THREE.Vector2(1 / 1024, 1 / 1024) },
-      uTime: { value: 0 },
-      uVisibility: { value: 0 },
-      uLayerReveal: { value: 0 },
-      uCompact: { value: 0 },
-      uFocus: { value: 0 },
-      uManualBurst: { value: 0 },
-      uPointer: { value: new THREE.Vector2(-2, -2) },
-      uPointerActive: { value: 0 },
-      uSourceCenter: { value: SOURCE_CENTER.clone() },
-      uInner: { value: spec.inner ?? 0 },
-      uOuter: { value: spec.outer ?? 0.82 },
-      uSector: { value: spec.sector ?? 0 },
-      uSectorWidth: { value: spec.sectorWidth ?? TWO_PI },
-      uPhase: { value: spec.phase ?? 0 },
-      uBaseAlpha: { value: spec.baseAlpha ?? 0.018 },
-      uTintA: { value: tint(spec.tintA || 'blue') },
-      uTintB: { value: tint(spec.tintB || 'amber') },
-      uMode: { value: mode },
     },
     transparent: true,
     depthWrite: false,
     depthTest: true,
     side: THREE.DoubleSide,
-    blending: THREE.NormalBlending,
     toneMapped: false,
     vertexShader: /* glsl */`
-      uniform float uTime, uPhase, uMode;
+      uniform float uTime;
       varying vec2 vUv;
-      varying float vDepthPulse;
+      varying vec3 vWorldPosition;
 
       void main() {
         vUv = uv;
         vec3 p = position;
-        float wave = sin(uTime * 0.045 + uPhase + position.x * 0.035 + position.y * 0.028);
-        p.z += wave * mix(0.018, 0.055, step(0.5, uMode));
-        vDepthPulse = 0.5 + 0.5 * wave;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        p.z += sin(position.x * 0.055 + position.y * 0.037 + uTime * 0.025) * 0.16;
+        vec4 world = modelMatrix * vec4(p, 1.0);
+        vWorldPosition = world.xyz;
+        gl_Position = projectionMatrix * viewMatrix * world;
       }
     `,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap;
-      uniform vec2 uTexel, uPointer, uSourceCenter;
-      uniform vec3 uTintA, uTintB;
-      uniform float uTime, uVisibility, uLayerReveal, uCompact, uFocus;
-      uniform float uManualBurst, uPointerActive, uInner, uOuter;
-      uniform float uSector, uSectorWidth, uPhase, uBaseAlpha, uMode;
+      uniform vec2 uTexel;
+      uniform float uVisible, uCompact, uDocumentOpen, uAmbient;
+      uniform vec3 uPulsePosA, uPulsePosB;
+      uniform vec3 uPulseColourA, uPulseColourB;
+      uniform float uPulseStrengthA, uPulseStrengthB;
       varying vec2 vUv;
-      varying float vDepthPulse;
+      varying vec3 vWorldPosition;
 
-      float luma(vec3 colour) {
-        return dot(colour, vec3(0.2126, 0.7152, 0.0722));
-      }
-
-      float circularDistance(float a, float b) {
-        return abs(atan(sin(a - b), cos(a - b)));
-      }
-
-      float eventEnvelope(float time, float phase) {
-        float cycle = mod(time + phase, ${EVENT_CYCLE.toFixed(1)});
-        float rise = smoothstep(1.55, 2.85, cycle);
-        float fall = 1.0 - smoothstep(7.25, 10.4, cycle);
-        return rise * fall;
+      float luma(vec3 c) {
+        return dot(c, vec3(0.2126, 0.7152, 0.0722));
       }
 
       void main() {
         vec4 source = texture2D(uMap, vUv);
         float centre = luma(source.rgb);
-        float left = luma(texture2D(uMap, clamp(vUv - vec2(uTexel.x, 0.0), 0.0, 1.0)).rgb);
-        float right = luma(texture2D(uMap, clamp(vUv + vec2(uTexel.x, 0.0), 0.0, 1.0)).rgb);
-        float down = luma(texture2D(uMap, clamp(vUv - vec2(0.0, uTexel.y), 0.0, 1.0)).rgb);
-        float up = luma(texture2D(uMap, clamp(vUv + vec2(0.0, uTexel.y), 0.0, 1.0)).rgb);
+        float left = luma(texture2D(uMap, vUv - vec2(uTexel.x, 0.0)).rgb);
+        float right = luma(texture2D(uMap, vUv + vec2(uTexel.x, 0.0)).rgb);
+        float down = luma(texture2D(uMap, vUv - vec2(0.0, uTexel.y)).rgb);
+        float up = luma(texture2D(uMap, vUv + vec2(0.0, uTexel.y)).rgb);
         float edge = abs(right - left) + abs(up - down);
         float chroma = max(source.r, max(source.g, source.b))
           - min(source.r, min(source.g, source.b));
 
-        // Smooth near-white image background is discarded. Dark mechanics,
-        // coloured metal and bright hairline edges survive entirely on the GPU.
-        float darkStructure = smoothstep(0.035, 0.64, 0.925 - centre);
-        float edgeStructure = smoothstep(0.012, 0.115, edge);
-        float colourStructure = smoothstep(0.018, 0.155, chroma);
-        float warmMetal = smoothstep(0.018, 0.15, source.r - source.b)
-          * smoothstep(0.38, 0.90, centre);
-        float structure = clamp(max(
-          darkStructure * 0.88,
-          max(edgeStructure, max(colourStructure * 0.78, warmMetal * 0.90))
-        ), 0.0, 1.0);
-        if (centre > 0.80 && chroma < 0.052 && edge < 0.022) structure *= 0.035;
+        float darkMetal = smoothstep(0.04, 0.60, 0.91 - centre);
+        float fineEdge = smoothstep(0.014, 0.12, edge);
+        float colouredMetal = smoothstep(0.035, 0.18, chroma);
+        float structure = max(darkMetal * 0.72, max(fineEdge, colouredMetal * 0.72));
+        if (centre > 0.78 && chroma < 0.055 && edge < 0.025) structure *= 0.015;
 
-        vec2 p = vUv - uSourceCenter;
-        float radius = length(p);
-        float angle = atan(p.y, p.x);
-        float radialMask = smoothstep(uInner - 0.022, uInner + 0.014, radius)
-          * (1.0 - smoothstep(uOuter - 0.020, uOuter + 0.018, radius));
-        float sectorMask = uSectorWidth > 6.0
-          ? 1.0
-          : 1.0 - smoothstep(
-              uSectorWidth * 0.47,
-              uSectorWidth * 0.57,
-              circularDistance(angle, uSector)
-            );
-        float mask = structure * radialMask * sectorMask;
-        if (mask < 0.002) discard;
+        float da = distance(vWorldPosition, uPulsePosA);
+        float db = distance(vWorldPosition, uPulsePosB);
+        float a = exp(-da * da / 390.0) * uPulseStrengthA;
+        float b = exp(-db * db / 620.0) * uPulseStrengthB;
+        float reveal = a + b;
+        float grain = 0.86 + 0.14 * sin(vUv.x * 711.0 + vUv.y * 487.0);
+        vec3 pulseColour = (
+          uPulseColourA * a + uPulseColourB * b
+        ) / max(0.0001, a + b);
 
-        float event = eventEnvelope(uTime, uPhase);
-        float direction = mod(uPhase, 2.0) < 1.0 ? 1.0 : -1.0;
-        float head = direction * uTime * (0.080 + mod(uPhase, 4.0) * 0.004) + uPhase * 0.43;
-        float angularHead = 1.0 - smoothstep(0.11, 0.58, circularDistance(angle, head));
-        float radialHeadPosition = mix(
-          max(uInner, 0.035),
-          uOuter,
-          0.5 + 0.5 * sin(uTime * 0.061 + uPhase)
-        );
-        float radialHead = 1.0 - smoothstep(0.032, 0.17, abs(radius - radialHeadPosition));
+        vec3 metal = source.rgb * (0.006 + uAmbient * 0.025);
+        metal += source.rgb * reveal * 0.54;
+        metal += pulseColour * structure * reveal * (0.16 + edge * 1.7);
+        metal *= grain;
 
-        vec2 roamingLight = uSourceCenter + vec2(
-          cos(uTime * 0.053 + uPhase) * 0.29,
-          sin(uTime * 0.041 + uPhase * 1.31) * 0.25
-        );
-        float roamingSpot = exp(-dot(vUv - roamingLight, vUv - roamingLight) * 72.0);
-        float pointerReveal = uPointerActive
-          * exp(-dot(vUv - (uPointer * 0.5 + 0.5), vUv - (uPointer * 0.5 + 0.5)) * 108.0)
-          * 0.28;
-
-        float localReveal = event * max(angularHead, max(radialHead * 0.58, roamingSpot * 0.46));
-        localReveal = clamp(localReveal + pointerReveal + uManualBurst * 0.62, 0.0, 1.0);
-
-        float colourMix = clamp(radius * 1.18 + 0.5 * sin(angle * 2.0 + uPhase), 0.0, 1.0);
-        vec3 eventColour = mix(uTintA, uTintB, colourMix);
-        float microSpark = pow(max(0.0, sin(
-          angle * 53.0 + radius * 119.0 - uTime * 1.7 + uPhase
-        )), 18.0) * localReveal;
-
-        vec3 metal = source.rgb * (0.010 + structure * uBaseAlpha);
-        metal += source.rgb * localReveal * (0.31 + edge * 0.8);
-        metal += eventColour * structure * localReveal * (0.08 + edge * 1.65);
-        metal += mix(uTintA, vec3(1.0, 0.96, 0.86), 0.46)
-          * microSpark * 0.55;
-        metal *= 0.82 + vDepthPulse * 0.18;
-
-        vec2 frame = abs(vUv - 0.5) * 2.0;
-        float vignette = smoothstep(1.07, 0.64, max(frame.x, frame.y));
-        float focusBoost = mix(1.0, 1.16, uFocus);
-        float alpha = mask
-          * vignette
-          * (uBaseAlpha + localReveal * 0.86 + microSpark * 0.18)
-          * uVisibility
-          * uLayerReveal
-          * focusBoost
-          * mix(1.0, 0.60, uCompact);
-        if (alpha < 0.0025) discard;
-        gl_FragColor = vec4(metal, alpha);
-      }
-    `,
-  });
-}
-
-function makeGlowMaterial(colour) {
-  return new THREE.MeshBasicMaterial({
-    color: colour.clone(),
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    depthTest: true,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false,
-  });
-}
-
-function makeMetalMaterial() {
-  return new THREE.MeshStandardMaterial({
-    color: 0x05080d,
-    metalness: 0.96,
-    roughness: 0.29,
-    emissive: 0x07101a,
-    emissiveIntensity: 0.19,
-    transparent: true,
-    opacity: 0.36,
-    depthWrite: false,
-  });
-}
-
-function createMechanicalSkeleton() {
-  const group = new THREE.Group();
-  group.name = 'orrery-mechanical-world';
-  group.position.set(0, 1.0, -30.1);
-  group.rotation.set(-0.034, 0.018, 0);
-
-  const metal = makeMetalMaterial();
-  const geometries = [];
-  const materials = [metal];
-  const ringStates = [];
-
-  RING_RADII.forEach((radius, index) => {
-    const holder = new THREE.Group();
-    holder.rotation.x = (index % 2 ? 1 : -1) * (0.018 + index * 0.0045);
-    holder.rotation.y = (index % 3 - 1) * 0.028;
-    holder.rotation.z = index * 0.21;
-
-    const geometry = new THREE.TorusGeometry(
-      radius,
-      0.052 + index * 0.012,
-      6,
-      128,
-    );
-    geometries.push(geometry);
-    const base = new THREE.Mesh(geometry, metal);
-    const colour = [PALETTE.amber, PALETTE.blue, PALETTE.violet, PALETTE.cyan][index % 4];
-    const glowMaterial = makeGlowMaterial(colour);
-    materials.push(glowMaterial);
-    const glow = new THREE.Mesh(geometry, glowMaterial);
-    glow.scale.setScalar(1.009);
-    holder.add(base, glow);
-    group.add(holder);
-    ringStates.push({
-      holder,
-      glowMaterial,
-      speed: RING_SPEEDS[index],
-      phase: index * 2.71,
-      baseX: holder.rotation.x,
-      baseY: holder.rotation.y,
-    });
-  });
-
-  // Teeth, nodes and braces are instanced. The perceived complexity rises
-  // strongly while draw-call cost remains small.
-  const toothGeometry = new THREE.BoxGeometry(0.13, 0.46, 0.11);
-  geometries.push(toothGeometry);
-  const toothCount = 168;
-  const teeth = new THREE.InstancedMesh(toothGeometry, metal, toothCount);
-  for (let index = 0; index < toothCount; index += 1) {
-    const ringIndex = index % 4;
-    const radius = RING_RADII[ringIndex + 1];
-    const sequenceIndex = Math.floor(index / 4);
-    const angle = (sequenceIndex / Math.ceil(toothCount / 4)) * TWO_PI
-      + ringIndex * 0.17;
-    TEMP_MID.set(Math.cos(angle) * radius, Math.sin(angle) * radius, (ringIndex - 1.5) * 0.08);
-    TEMP_QUAT.setFromEuler(new THREE.Euler(0, 0, angle));
-    TEMP_SCALE.set(0.72 + ringIndex * 0.08, 0.84, 1);
-    TEMP_MATRIX.compose(TEMP_MID, TEMP_QUAT, TEMP_SCALE);
-    teeth.setMatrixAt(index, TEMP_MATRIX);
-  }
-  teeth.instanceMatrix.needsUpdate = true;
-  teeth.computeBoundingSphere();
-  group.add(teeth);
-
-  const nodeGeometry = new THREE.IcosahedronGeometry(0.20, 1);
-  geometries.push(nodeGeometry);
-  const nodes = new THREE.InstancedMesh(nodeGeometry, metal, 72);
-  for (let index = 0; index < 72; index += 1) {
-    const ringIndex = index % RING_RADII.length;
-    const radius = RING_RADII[ringIndex] + ((index % 3) - 1) * 0.35;
-    const angle = (index / 72) * TWO_PI * 6.0 + ringIndex * 0.31;
-    TEMP_MID.set(
-      Math.cos(angle) * radius,
-      Math.sin(angle) * radius,
-      ((index % 7) - 3) * 0.18,
-    );
-    TEMP_QUAT.setFromEuler(new THREE.Euler(angle * 0.18, angle * 0.42, angle));
-    TEMP_SCALE.setScalar(0.62 + (index % 5) * 0.14);
-    TEMP_MATRIX.compose(TEMP_MID, TEMP_QUAT, TEMP_SCALE);
-    nodes.setMatrixAt(index, TEMP_MATRIX);
-  }
-  nodes.instanceMatrix.needsUpdate = true;
-  nodes.computeBoundingSphere();
-  group.add(nodes);
-
-  const strutGeometry = new THREE.CylinderGeometry(0.026, 0.026, 1, 5, 1, true);
-  geometries.push(strutGeometry);
-  const strutCount = 44;
-  const struts = new THREE.InstancedMesh(strutGeometry, metal, strutCount);
-  for (let index = 0; index < strutCount; index += 1) {
-    const angle = (index / strutCount) * TWO_PI;
-    const inner = 1.9 + (index % 5) * 0.62;
-    const outer = 12.8 + (index % 7) * 0.98;
-    TEMP_START.set(
-      Math.cos(angle) * inner,
-      Math.sin(angle) * inner,
-      ((index % 3) - 1) * 0.12,
-    );
-    TEMP_END.set(
-      Math.cos(angle) * outer,
-      Math.sin(angle) * outer,
-      ((index % 7) - 3) * 0.24,
-    );
-    setCylinderBetween(struts, index, TEMP_START, TEMP_END, index % 2 ? 0.72 : 1.0);
-  }
-  struts.instanceMatrix.needsUpdate = true;
-  struts.computeBoundingSphere();
-  group.add(struts);
-
-  const hubGeometry = new THREE.IcosahedronGeometry(0.54, 2);
-  geometries.push(hubGeometry);
-  const hub = new THREE.Mesh(hubGeometry, metal);
-  const hubGlowMaterial = makeGlowMaterial(PALETTE.amber);
-  materials.push(hubGlowMaterial);
-  const hubGlow = new THREE.Mesh(hubGeometry, hubGlowMaterial);
-  hubGlow.scale.setScalar(1.13);
-  group.add(hub, hubGlow);
-
-  const satelliteStates = [];
-  const satelliteRingGeometry = new THREE.TorusGeometry(0.96, 0.045, 5, 64);
-  geometries.push(satelliteRingGeometry);
-  const satelliteCoreGeometry = new THREE.IcosahedronGeometry(0.28, 1);
-  geometries.push(satelliteCoreGeometry);
-  const satellitePositions = [
-    [-15.8, 8.4, -0.8, 1.28], [16.1, 7.6, -1.5, 1.05],
-    [-17.1, -7.5, -2.1, 0.88], [16.7, -8.2, -1.6, 0.94],
-    [-8.4, 12.0, -2.8, 0.78], [9.3, 12.5, -3.1, 0.72],
-    [-4.2, -14.3, -2.5, 0.66], [5.0, -14.8, -3.2, 0.70],
-  ];
-  satellitePositions.forEach((entry, index) => {
-    const holder = new THREE.Group();
-    holder.position.set(entry[0], entry[1], entry[2]);
-    holder.scale.setScalar(entry[3]);
-    holder.rotation.set(0.12 * (index % 2 ? 1 : -1), 0.08, index * 0.41);
-    const base = new THREE.Mesh(satelliteRingGeometry, metal);
-    const colour = [PALETTE.blue, PALETTE.violet, PALETTE.amber, PALETTE.red][index % 4];
-    const glowMaterial = makeGlowMaterial(colour);
-    materials.push(glowMaterial);
-    const glow = new THREE.Mesh(satelliteRingGeometry, glowMaterial);
-    glow.scale.setScalar(1.028);
-    const core = new THREE.Mesh(satelliteCoreGeometry, metal);
-    const coreGlow = new THREE.Mesh(satelliteCoreGeometry, glowMaterial);
-    coreGlow.scale.setScalar(1.16);
-    holder.add(base, glow, core, coreGlow);
-    group.add(holder);
-    satelliteStates.push({ holder, glowMaterial, phase: index * 3.17 });
-  });
-
-  return {
-    group,
-    update(elapsed, visibility, compact, focus, activity, manualBurst) {
-      const compactFactor = compact ? 0.56 : 1;
-      const focusFactor = 1 + focus * 0.20;
-      metal.opacity = (0.30 + focus * 0.055) * visibility * compactFactor;
-      metal.emissiveIntensity = 0.15 + focus * 0.055;
-
-      for (const state of ringStates) {
-        state.holder.rotation.z = elapsed * state.speed * activity + state.phase * 0.071;
-        state.holder.rotation.x = state.baseX
-          + Math.cos(elapsed * 0.009 + state.phase) * 0.008;
-        state.holder.rotation.y = state.baseY
-          + Math.sin(elapsed * 0.011 + state.phase) * 0.012;
-        const cycle = (elapsed + state.phase) % EVENT_CYCLE;
-        const event = smooth01((cycle - 1.6) / 1.4)
-          * (1 - smooth01((cycle - 7.0) / 3.2));
-        state.glowMaterial.opacity = Math.max(event, manualBurst * 0.85)
-          * 0.43 * visibility * compactFactor * focusFactor;
-      }
-
-      for (const state of satelliteStates) {
-        state.holder.rotation.z = elapsed * (0.010 + state.phase * 0.00025) * activity;
-        state.holder.rotation.y = Math.sin(elapsed * 0.057 + state.phase) * 0.19;
-        const cycle = (elapsed + state.phase + 3.8) % EVENT_CYCLE;
-        const event = smooth01((cycle - 1.5) / 1.2)
-          * (1 - smooth01((cycle - 5.8) / 2.8));
-        state.glowMaterial.opacity = Math.max(event, manualBurst * 0.62)
-          * 0.49 * visibility * compactFactor * focusFactor;
-      }
-
-      const hubCycle = (elapsed + 1.1) % EVENT_CYCLE;
-      const hubEvent = smooth01((hubCycle - 1.4) / 1.1)
-        * (1 - smooth01((hubCycle - 6.2) / 3.0));
-      hubGlowMaterial.opacity = Math.max(hubEvent, manualBurst)
-        * 0.76 * visibility * focusFactor;
-
-      group.rotation.z = Math.sin(elapsed * 0.015) * 0.017;
-      group.rotation.y = Math.sin(elapsed * 0.010) * 0.027;
-      group.rotation.x = -0.034 + Math.cos(elapsed * 0.008) * 0.010;
-    },
-    dispose() {
-      for (const geometry of geometries) geometry.dispose();
-      for (const material of new Set(materials)) material.dispose();
-    },
-  };
-}
-
-function createEnergyDust() {
-  const count = 1180;
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
-  const seeds = new Float32Array(count * 4);
-  const sizes = new Float32Array(count);
-  const hues = new Float32Array(count);
-
-  const hash = (value) => {
-    const result = Math.sin(value) * 43758.5453123;
-    return result - Math.floor(result);
-  };
-
-  for (let index = 0; index < count; index += 1) {
-    seeds[index * 4] = hash(index * 1.17 + 0.3);
-    seeds[index * 4 + 1] = hash(index * 2.41 + 4.7);
-    seeds[index * 4 + 2] = hash(index * 4.13 + 9.4);
-    seeds[index * 4 + 3] = hash(index * 7.79 + 15.2);
-    sizes[index] = 0.42 + Math.pow(hash(index * 9.31 + 22.8), 2) * 1.9;
-    hues[index] = hash(index * 13.17 + 31.6);
-  }
-
-  geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 4));
-  geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-  geometry.setAttribute('aHue', new THREE.BufferAttribute(hues, 1));
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, -36), 42);
-
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uVisibility: { value: 0 },
-      uCompact: { value: 0 },
-      uPixelRatio: { value: 1 },
-      uFocus: { value: 0 },
-      uActivity: { value: 1 },
-      uManualBurst: { value: 0 },
-      uBlue: { value: PALETTE.blue.clone() },
-      uViolet: { value: PALETTE.violet.clone() },
-      uAmber: { value: PALETTE.amber.clone() },
-      uRed: { value: PALETTE.red.clone() },
-    },
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    blending: THREE.AdditiveBlending,
-    toneMapped: false,
-    vertexShader: /* glsl */`
-      attribute vec4 aSeed;
-      attribute float aSize, aHue;
-      uniform float uTime, uVisibility, uCompact, uPixelRatio;
-      uniform float uFocus, uActivity, uManualBurst;
-      varying float vLife, vHue, vHeat;
-
-      void main() {
-        float time = uTime * (0.035 + aSeed.w * 0.055) * uActivity;
-        float ring = floor(aSeed.x * 7.0);
-        float radius = mix(4.0, 24.0, sqrt(aSeed.y)) + ring * 0.26;
-        float angle = aSeed.x * 6.2831853 + time * mix(-1.0, 1.0, aSeed.z);
-        float wobble = sin(uTime * 0.19 + aSeed.y * 43.0) * (0.15 + aSeed.w * 0.72);
-        vec3 p;
-        p.x = cos(angle) * radius + wobble;
-        p.y = sin(angle) * radius * mix(0.72, 1.03, aSeed.w) + cos(time * 2.0 + aSeed.x * 19.0) * 0.42;
-        p.z = -33.0 - aSeed.z * 17.0 + sin(time * 1.7 + aSeed.w * 31.0) * 1.8;
-
-        float event = pow(max(0.0, sin(uTime * 0.33 + aSeed.x * 49.0)), 16.0);
-        vHeat = max(event, uManualBurst * smoothstep(0.35, 0.92, aSeed.w));
-        vLife = (0.20 + vHeat * 0.80) * uVisibility * mix(1.0, 0.50, uCompact);
-        vHue = aHue;
-
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = aSize
-          * (0.56 + vHeat * 1.45 + uFocus * 0.16)
-          * uPixelRatio
-          * (31.0 / max(8.0, -mv.z));
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: /* glsl */`
-      uniform vec3 uBlue, uViolet, uAmber, uRed;
-      varying float vLife, vHue, vHeat;
-
-      void main() {
-        vec2 p = gl_PointCoord - 0.5;
-        float distanceToCentre = length(p);
-        if (distanceToCentre > 0.5) discard;
-        float core = smoothstep(0.5, 0.02, distanceToCentre);
-        vec3 cool = mix(uBlue, uViolet, smoothstep(0.10, 0.58, vHue));
-        vec3 warm = mix(uAmber, uRed, smoothstep(0.82, 0.99, vHue));
-        vec3 colour = mix(cool, warm, smoothstep(0.58, 0.88, vHue));
-        colour = mix(colour, vec3(1.0, 0.95, 0.84), vHeat * 0.42);
-        float alpha = core * vLife * (0.050 + vHeat * 0.19);
+        float edgeFade = smoothstep(0.0, 0.08, vUv.x)
+          * smoothstep(0.0, 0.08, vUv.y)
+          * smoothstep(0.0, 0.08, 1.0 - vUv.x)
+          * smoothstep(0.0, 0.08, 1.0 - vUv.y);
+        float alpha = structure
+          * edgeFade
+          * (uAmbient * 0.010 + reveal * 0.87)
+          * uVisible
+          * mix(1.0, 0.62, uCompact)
+          * mix(1.0, 0.92, uDocumentOpen);
         if (alpha < 0.002) discard;
-        gl_FragColor = vec4(colour * (0.72 + vHeat * 1.5), alpha);
+        gl_FragColor = vec4(metal, clamp(alpha, 0.0, 0.92));
       }
     `,
   });
-
-  const points = new THREE.Points(geometry, material);
-  points.name = 'orrery-energy-dust';
-  points.frustumCulled = false;
-  points.renderOrder = -7;
-  return { points, geometry, material };
 }
 
-function createAtmosphericGlows() {
+function createFogVeils(uniforms, rng) {
   const group = new THREE.Group();
-  group.name = 'orrery-atmospheric-glows';
-  const geometry = new THREE.PlaneGeometry(1, 1);
+  group.name = 'machine-world-fog';
+  const geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
   const states = [];
-  const specs = [
-    { x: 0, y: 1.5, z: -34.8, w: 25, h: 25, colour: PALETTE.amber, phase: 0.8, strength: 0.72 },
-    { x: -14.0, y: 4.0, z: -39.0, w: 18, h: 16, colour: PALETTE.blue, phase: 6.1, strength: 0.42 },
-    { x: 13.8, y: -2.0, z: -42.0, w: 17, h: 17, colour: PALETTE.violet, phase: 11.9, strength: 0.44 },
-    { x: 18.4, y: -8.0, z: -49.0, w: 10, h: 10, colour: PALETTE.red, phase: 17.1, strength: 0.26 },
-  ];
 
-  for (const spec of specs) {
+  for (let index = 0; index < 6; index += 1) {
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        uTime: { value: 0 },
-        uVisibility: { value: 0 },
-        uCompact: { value: 0 },
-        uFocus: { value: 0 },
-        uManualBurst: { value: 0 },
-        uPhase: { value: spec.phase },
-        uStrength: { value: spec.strength },
-        uColour: { value: spec.colour.clone() },
+        uTime: uniforms.uTime,
+        uVisible: uniforms.uVisible,
+        uCompact: uniforms.uCompact,
+        uPhase: { value: rng() * 10 },
+        uOpacity: { value: 0.055 + rng() * 0.045 },
       },
       transparent: true,
       depthWrite: false,
       depthTest: true,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       toneMapped: false,
       vertexShader: /* glsl */`
         varying vec2 vUv;
@@ -652,278 +463,433 @@ function createAtmosphericGlows() {
         }
       `,
       fragmentShader: /* glsl */`
-        uniform vec3 uColour;
-        uniform float uTime, uVisibility, uCompact, uFocus;
-        uniform float uManualBurst, uPhase, uStrength;
+        uniform float uTime, uVisible, uCompact, uPhase, uOpacity;
         varying vec2 vUv;
 
         float hash(vec2 p) {
-          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+            f.y
+          );
+        }
+        float fbm(vec2 p) {
+          float value = 0.0;
+          float amplitude = 0.52;
+          for (int i = 0; i < 5; i++) {
+            value += noise(p) * amplitude;
+            p = p * 2.03 + vec2(17.3, 9.1);
+            amplitude *= 0.49;
+          }
+          return value;
         }
 
         void main() {
-          vec2 p = (vUv - 0.5) * 2.0;
-          float radius = length(p);
-          float cycle = mod(uTime + uPhase, ${EVENT_CYCLE.toFixed(1)});
-          float event = smoothstep(1.6, 2.9, cycle)
-            * (1.0 - smoothstep(6.2, 9.2, cycle));
-          event = max(event, uManualBurst);
-          float halo = exp(-radius * radius * 3.2);
-          float core = exp(-radius * radius * 14.0);
-          float filaments = pow(max(0.0, sin(
-            atan(p.y, p.x) * 11.0 + radius * 22.0 - uTime * 0.24 + uPhase
-          )), 12.0) * exp(-radius * 2.8);
-          float grain = 0.86 + hash(floor(vUv * 148.0) + floor(uTime * 5.0)) * 0.14;
-          float alpha = (halo * 0.18 + core * 0.24 + filaments * 0.11)
-            * event * uStrength
-            * uVisibility
-            * (1.0 + uFocus * 0.12)
-            * mix(1.0, 0.46, uCompact)
-            * grain;
+          vec2 p = (vUv - 0.5) * vec2(2.2, 1.35);
+          vec2 flow = vec2(uTime * 0.0038, -uTime * 0.0025) + uPhase;
+          float cloud = fbm(p * 2.1 + flow);
+          cloud *= fbm(p * 4.0 - flow * 1.6) * 0.75 + 0.35;
+          float veil = smoothstep(0.30, 0.78, cloud);
+          float vignette = smoothstep(1.12, 0.16, length(p));
+          vec3 colour = mix(
+            vec3(0.018, 0.030, 0.043),
+            vec3(0.055, 0.082, 0.104),
+            veil
+          );
+          float alpha = veil * vignette * uOpacity * uVisible * mix(1.0, 0.55, uCompact);
           if (alpha < 0.002) discard;
-          gl_FragColor = vec4(uColour * (0.68 + core * 0.9), alpha);
+          gl_FragColor = vec4(colour, alpha);
         }
       `,
     });
+
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(spec.x, spec.y, spec.z);
-    mesh.scale.set(spec.w, spec.h, 1);
-    mesh.renderOrder = -9;
+    mesh.position.set(
+      (rng() - 0.5) * 34,
+      (rng() - 0.5) * 18,
+      -30 - index * 8 - rng() * 5,
+    );
+    mesh.scale.set(74 + rng() * 42, 40 + rng() * 25, 1);
+    mesh.rotation.z = (rng() - 0.5) * 0.28;
+    mesh.renderOrder = -30 + index;
     mesh.frustumCulled = false;
     group.add(mesh);
-    states.push({ mesh, material, spec });
+    states.push({
+      mesh,
+      homeX: mesh.position.x,
+      homeY: mesh.position.y,
+      phase: rng() * Math.PI * 2,
+      speed: 0.0015 + rng() * 0.002,
+    });
   }
 
   return {
     group,
-    states,
-    geometry,
-    update(elapsed, visibility, compact, focus, manualBurst) {
+    update(elapsed) {
       for (const state of states) {
-        const uniforms = state.material.uniforms;
-        uniforms.uTime.value = elapsed;
-        uniforms.uVisibility.value = visibility;
-        uniforms.uCompact.value = compact ? 1 : 0;
-        uniforms.uFocus.value = focus;
-        uniforms.uManualBurst.value = manualBurst;
-        state.mesh.rotation.z = Math.sin(elapsed * 0.012 + state.spec.phase) * 0.025;
+        state.mesh.position.x = state.homeX
+          + Math.sin(elapsed * state.speed + state.phase) * 1.8;
+        state.mesh.position.y = state.homeY
+          + Math.cos(elapsed * state.speed * 0.8 + state.phase) * 1.1;
       }
     },
     dispose() {
       geometry.dispose();
-      for (const state of states) state.material.dispose();
+      for (const child of group.children) child.material.dispose();
     },
   };
 }
 
+function createDust(uniforms, rng) {
+  const count = 4200;
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const seeds = new Float32Array(count * 2);
+  const sizes = new Float32Array(count);
+
+  for (let index = 0; index < count; index += 1) {
+    positions[index * 3] = (rng() - 0.5) * 122;
+    positions[index * 3 + 1] = (rng() - 0.5) * 70;
+    positions[index * 3 + 2] = -24 - rng() * 64;
+    seeds[index * 2] = rng();
+    seeds[index * 2 + 1] = rng();
+    sizes[index] = 0.45 + Math.pow(rng(), 2.3) * 2.5;
+  }
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 2));
+  geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, -50), 86);
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      ...uniforms,
+      uPixelRatio: { value: 1 },
+    },
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+    vertexShader: /* glsl */`
+      attribute vec2 aSeed;
+      attribute float aSize;
+      uniform float uTime, uPixelRatio, uVisible, uCompact, uAmbient;
+      uniform vec3 uPulsePosA, uPulsePosB;
+      uniform float uPulseStrengthA, uPulseStrengthB;
+      varying float vAlpha;
+      varying float vMix;
+
+      void main() {
+        vec3 p = position;
+        p.x += sin(uTime * (0.035 + aSeed.x * 0.025) + aSeed.y * 21.0) * (0.18 + aSeed.x * 0.48);
+        p.y += cos(uTime * (0.027 + aSeed.y * 0.021) + aSeed.x * 17.0) * (0.13 + aSeed.y * 0.42);
+        float a = exp(-distance(p, uPulsePosA) * 0.085) * uPulseStrengthA;
+        float b = exp(-distance(p, uPulsePosB) * 0.062) * uPulseStrengthB;
+        float pulse = a + b;
+        vAlpha = (uAmbient * 0.028 + pulse * 0.74)
+          * uVisible
+          * mix(1.0, 0.35, uCompact)
+          * (0.35 + aSeed.x * 0.65);
+        vMix = b / max(0.0001, a + b);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = min(
+          7.0,
+          aSize * uPixelRatio * (145.0 / max(1.0, -mv.z)) * (0.65 + pulse * 1.9)
+        );
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform vec3 uPulseColourA, uPulseColourB;
+      varying float vAlpha;
+      varying float vMix;
+      void main() {
+        vec2 p = gl_PointCoord - 0.5;
+        float d = length(p);
+        if (d > 0.5) discard;
+        float core = smoothstep(0.5, 0.0, d);
+        vec3 colour = mix(uPulseColourA, uPulseColourB, vMix);
+        colour = mix(vec3(0.10, 0.15, 0.19), colour, 0.72);
+        gl_FragColor = vec4(colour, vAlpha * core * core);
+      }
+    `,
+  });
+
+  const points = new THREE.Points(geometry, material);
+  points.name = 'machine-world-dust';
+  points.frustumCulled = false;
+  points.renderOrder = -4;
+
+  return {
+    points,
+    material,
+    dispose() {
+      geometry.dispose();
+      material.dispose();
+    },
+  };
+}
+
+function createPulseCore() {
+  const group = new THREE.Group();
+  group.name = 'travelling-illumination-core';
+  const coreMaterial = new THREE.MeshBasicMaterial({
+    color: PALETTE.ice.clone(),
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: true,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+  const haloMaterial = coreMaterial.clone();
+  const coreGeometry = new THREE.IcosahedronGeometry(0.30, 2);
+  const haloGeometry = new THREE.IcosahedronGeometry(1.0, 2);
+  const core = new THREE.Mesh(coreGeometry, coreMaterial);
+  const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+  halo.scale.setScalar(2.6);
+  group.add(core, halo);
+  group.visible = false;
+
+  return {
+    group,
+    set(position, colour, strength) {
+      group.position.copy(position);
+      group.visible = strength > 0.005;
+      coreMaterial.color.copy(colour);
+      haloMaterial.color.copy(colour);
+      coreMaterial.opacity = Math.min(0.92, strength * 0.72);
+      haloMaterial.opacity = Math.min(0.18, strength * 0.12);
+      const scale = 0.82 + strength * 0.55;
+      core.scale.setScalar(scale);
+      halo.scale.setScalar(2.5 + strength * 1.5);
+    },
+    dispose() {
+      coreGeometry.dispose();
+      haloGeometry.dispose();
+      coreMaterial.dispose();
+      haloMaterial.dispose();
+    },
+  };
+}
+
+function choosePulseColour(rng) {
+  const roll = rng();
+  if (roll < 0.48) return PALETTE.ice;
+  if (roll < 0.70) return PALETTE.steel;
+  if (roll < 0.84) return PALETTE.amber;
+  if (roll < 0.96) return PALETTE.violet;
+  return PALETTE.red;
+}
+
+function makeEventCurve(rng) {
+  const source = PATHS[Math.floor(rng() * PATHS.length) % PATHS.length];
+  const offsetX = (rng() - 0.5) * 9;
+  const offsetY = (rng() - 0.5) * 8;
+  const offsetZ = (rng() - 0.5) * 7;
+  const points = source.map(([x, y, z], index) => new THREE.Vector3(
+    x + offsetX * Math.sin((index + 1) * 1.37),
+    y + offsetY * Math.cos((index + 1) * 1.11),
+    z + offsetZ * Math.sin((index + 1) * 0.83),
+  ));
+  return new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.45);
+}
+
 export function createProceduralOrreryField({ camera = null, renderer = null } = {}) {
   const group = new THREE.Group();
-  group.name = 'hybrid-orrery-field-v5.2';
-  group.userData.kind = 'hybrid-orrery-field-v5.2';
+  group.name = 'oversized-dark-machine-world-v5.4';
+  group.userData.kind = 'oversized-dark-machine-world-v5.4';
 
-  const placeholder = makeTransparentTexture();
-  const texturedMeshes = [];
-  const texturedStates = [];
+  const rng = makeRng(0x20260902);
+  const uniforms = makeSharedUniforms();
+  const structureMaterial = makeStructureMaterial(uniforms);
+  const clusters = CLUSTERS.map((spec) => buildCluster(spec, structureMaterial, rng));
+  for (const cluster of clusters) group.add(cluster.group);
 
-  const backdropSpec = {
-    name: 'world-imprint', inner: 0.0, outer: 0.86,
-    sector: 0, sectorWidth: TWO_PI, phase: 0.0,
-    tintA: 'blue', tintB: 'amber', baseAlpha: 0.014,
-  };
-  const backdropMaterial = makeImprintMaterial(placeholder, backdropSpec, 0);
-  const backdropGeometry = new THREE.PlaneGeometry(62, 62, 1, 1);
-  const backdrop = new THREE.Mesh(backdropGeometry, backdropMaterial);
-  backdrop.name = 'orrery-world-imprint';
-  backdrop.position.set(0, 1.0, -39.0);
-  backdrop.renderOrder = -14;
-  backdrop.visible = false;
-  backdrop.frustumCulled = false;
-  group.add(backdrop);
-  texturedMeshes.push(backdrop);
-  texturedStates.push({
-    mesh: backdrop,
-    material: backdropMaterial,
-    spec: backdropSpec,
-    baseRotation: 0,
-    activationIndex: 0,
-  });
+  const placeholder = new THREE.DataTexture(
+    new Uint8Array([0, 0, 0, 0]),
+    1,
+    1,
+    THREE.RGBAFormat,
+  );
+  placeholder.needsUpdate = true;
 
-  const detailGeometry = new THREE.PlaneGeometry(1, 1, 1, 1);
-  DETAIL_LAYERS.forEach((spec, index) => {
-    const material = makeImprintMaterial(placeholder, spec, 0);
-    const mesh = new THREE.Mesh(detailGeometry, material);
-    mesh.name = `orrery-detail-${spec.name}`;
-    mesh.position.set(0, 1.0, spec.z);
-    mesh.scale.set(spec.size, spec.size, 1);
-    mesh.rotation.z = spec.phase * 0.011;
-    mesh.renderOrder = -11 + index * 0.01;
-    mesh.visible = false;
-    mesh.frustumCulled = false;
-    group.add(mesh);
-    texturedMeshes.push(mesh);
-    texturedStates.push({
-      mesh,
-      material,
-      spec,
-      baseRotation: mesh.rotation.z,
-      activationIndex: index + 1,
-    });
-  });
+  const imprintGeometry = new THREE.PlaneGeometry(126, 126, 48, 48);
+  const imprintMaterial = makeImprintMaterial(placeholder, uniforms);
+  const imprint = new THREE.Mesh(imprintGeometry, imprintMaterial);
+  imprint.name = 'giant-mechanical-imprint';
+  imprint.position.set(0, 2, -63);
+  imprint.rotation.set(-0.018, 0.015, -0.05);
+  imprint.renderOrder = -20;
+  imprint.frustumCulled = false;
+  group.add(imprint);
 
-  FRAGMENT_LAYERS.forEach((spec, index) => {
-    const material = makeImprintMaterial(placeholder, {
-      ...spec,
-      baseAlpha: 0.016,
-    }, 1);
-    const mesh = new THREE.Mesh(detailGeometry, material);
-    mesh.name = `orrery-fragment-${spec.name}`;
-    mesh.position.set(spec.x, spec.y, spec.z);
-    mesh.scale.set(spec.size * spec.scale, spec.size * spec.scale, 1);
-    mesh.rotation.z = spec.rotation;
-    mesh.rotation.y = spec.x < 0 ? 0.14 : -0.14;
-    mesh.renderOrder = -12;
-    mesh.visible = false;
-    mesh.frustumCulled = false;
-    group.add(mesh);
-    texturedMeshes.push(mesh);
-    texturedStates.push({
-      mesh,
-      material,
-      spec,
-      baseRotation: spec.rotation,
-      activationIndex: DETAIL_LAYERS.length + index + 1,
-      fragmentIndex: index,
-    });
-  });
+  const fog = createFogVeils(uniforms, rng);
+  group.add(fog.group);
 
-  const skeleton = createMechanicalSkeleton();
-  group.add(skeleton.group);
-
-  const dust = createEnergyDust();
+  const dust = createDust(uniforms, rng);
   group.add(dust.points);
 
-  const atmosphere = createAtmosphericGlows();
-  group.add(atmosphere.group);
+  const pulseCoreA = createPulseCore();
+  const pulseCoreB = createPulseCore();
+  group.add(pulseCoreA.group, pulseCoreB.group);
 
   let sourceTexture = placeholder;
-  let textureReady = false;
-  let textureActivationStart = null;
+  let disposed = false;
   let effectsEnabled = true;
-  let externallySuspended = false;
   let compact = false;
-  let pointerActive = false;
+  let documentOpen = false;
+  let externallySuspended = false;
   let visibility = 1;
   let visibilityTarget = 1;
-  let focus = 0;
-  let focusTarget = 0;
+  let currentCurve = null;
+  let eventStart = 0;
+  let eventDuration = 5.5;
+  let nextEventAt = 3.5 + rng() * 4.5;
+  let eventColourA = PALETTE.ice.clone();
+  let eventColourB = PALETTE.steel.clone();
   let manualBurst = 0;
-  let disposed = false;
-  const pointer = new THREE.Vector2(-2, -2);
+  let manualCurve = null;
 
   let resolveReady;
   const ready = new Promise((resolve) => { resolveReady = resolve; });
 
-  const loader = new THREE.TextureLoader();
-  loader.load(
+  new THREE.TextureLoader().load(
     SOURCE_URL,
     (texture) => {
       if (disposed) {
         texture.dispose();
-        resolveReady?.(false);
+        resolveReady(false);
         return;
       }
-      configureTexture(texture, renderer);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.anisotropy = Math.min(
+        6,
+        renderer?.capabilities?.getMaxAnisotropy?.() || 4,
+      );
+      texture.needsUpdate = true;
       sourceTexture = texture;
+      imprintMaterial.uniforms.uMap.value = texture;
       const width = texture.image?.naturalWidth || texture.image?.width || 1024;
       const height = texture.image?.naturalHeight || texture.image?.height || 1024;
-      for (const state of texturedStates) {
-        state.material.uniforms.uMap.value = texture;
-        state.material.uniforms.uTexel.value.set(1 / width, 1 / height);
-      }
-      textureReady = true;
-      resolveReady?.(true);
+      imprintMaterial.uniforms.uTexel.value.set(1 / width, 1 / height);
+      resolveReady(true);
     },
     undefined,
     (error) => {
-      console.warn(
-        'Orrery source image could not be loaded; the 3D mechanical world remains active.',
-        error,
-      );
-      resolveReady?.(false);
+      console.warn('Mechanical source texture could not be loaded.', error);
+      resolveReady(false);
     },
   );
 
-  function syncTexturedUniforms(elapsed) {
-    for (const state of texturedStates) {
-      const uniforms = state.material.uniforms;
-      uniforms.uTime.value = elapsed;
-      uniforms.uVisibility.value = visibility;
-      uniforms.uCompact.value = compact ? 1 : 0;
-      uniforms.uFocus.value = focus;
-      uniforms.uManualBurst.value = manualBurst;
-      uniforms.uPointer.value.copy(pointer);
-      uniforms.uPointerActive.value = pointerActive ? 1 : 0;
-    }
+  function startEvent(elapsed, forced = false) {
+    currentCurve = forced && manualCurve ? manualCurve : makeEventCurve(rng);
+    eventStart = elapsed;
+    eventDuration = forced ? 4.4 : 4.8 + rng() * 2.7;
+    eventColourA = choosePulseColour(rng).clone();
+    eventColourB = rng() < 0.72
+      ? PALETTE.ice.clone()
+      : choosePulseColour(rng).clone();
+    uniforms.uPulseColourA.value.copy(eventColourA);
+    uniforms.uPulseColourB.value.copy(eventColourB);
   }
 
-  function setLayerProgress(elapsed) {
-    if (!textureReady) return;
-    if (textureActivationStart === null) textureActivationStart = elapsed;
-    const age = elapsed - textureActivationStart;
-    for (const state of texturedStates) {
-      const delay = state.activationIndex * 0.18;
-      const progress = smooth01((age - delay) / 0.72);
-      state.material.uniforms.uLayerReveal.value = progress;
-      state.mesh.visible = progress > 0.002 && visibility > 0.002;
-      if (state.fragmentIndex !== undefined && compact) {
-        state.mesh.visible = state.fragmentIndex < 2 && state.mesh.visible;
-      }
+  function updatePulse(elapsed) {
+    if (!currentCurve && elapsed >= nextEventAt) startEvent(elapsed);
+    if (manualBurst > 0.02 && !currentCurve) startEvent(elapsed, true);
+
+    if (!currentCurve) {
+      uniforms.uPulseStrengthA.value = 0;
+      uniforms.uPulseStrengthB.value = 0;
+      pulseCoreA.set(uniforms.uPulsePosA.value, eventColourA, 0);
+      pulseCoreB.set(uniforms.uPulsePosB.value, eventColourB, 0);
+      return;
     }
+
+    const raw = (elapsed - eventStart) / eventDuration;
+    if (raw >= 1) {
+      currentCurve = null;
+      uniforms.uPulseStrengthA.value = 0;
+      uniforms.uPulseStrengthB.value = 0;
+      nextEventAt = elapsed + 8 + rng() * 11;
+      pulseCoreA.group.visible = false;
+      pulseCoreB.group.visible = false;
+      return;
+    }
+
+    const progress = clamp01(raw);
+    const envelope = smooth01(progress / 0.15)
+      * (1 - smooth01((progress - 0.78) / 0.22));
+    const mainPoint = currentCurve.getPointAt(progress, uniforms.uPulsePosA.value);
+    const trailPoint = currentCurve.getPointAt(Math.max(0, progress - 0.105), uniforms.uPulsePosB.value);
+    const variation = 0.84 + Math.sin(elapsed * 3.1) * 0.08 + Math.sin(elapsed * 7.7) * 0.035;
+    const boost = 1 + manualBurst * 0.65;
+    const mainStrength = envelope * variation * boost;
+    const trailStrength = envelope * 0.48 * boost;
+    uniforms.uPulseStrengthA.value = mainStrength;
+    uniforms.uPulseStrengthB.value = trailStrength;
+    pulseCoreA.set(mainPoint, eventColourA, mainStrength);
+    pulseCoreB.set(trailPoint, eventColourB, trailStrength);
   }
 
   return {
     group,
     ready,
 
-    // Background currently uses this hook for endpoint/telemetry suppression.
-    // The giant world intentionally remains alive behind an opened CV; this
-    // flag only lowers secondary activity instead of hiding the construction.
-    setSuspended(value) {
-      externallySuspended = Boolean(value);
-      focusTarget = externallySuspended ? 1 : 0;
-    },
-
     setEffectsEnabled(value) {
       effectsEnabled = Boolean(value);
       visibilityTarget = effectsEnabled ? 1 : 0;
-      if (!effectsEnabled) {
-        visibility = 0;
-        group.visible = false;
-      } else {
-        group.visible = true;
-      }
+      if (effectsEnabled) group.visible = true;
+    },
+
+    setSuspended(value) {
+      // The world deliberately keeps moving behind the opened CV. Suspension
+      // only reduces secondary activity; it never freezes or hides the scene.
+      externallySuspended = Boolean(value);
+    },
+
+    setDocumentOpen(value) {
+      documentOpen = Boolean(value);
+      uniforms.uDocumentOpen.value = documentOpen ? 1 : 0;
+      externallySuspended = documentOpen;
     },
 
     setCompact(value) {
-      // Visibility stays under the progressive activation controller. Merely
-      // storing the quality flag avoids compiling every image shader during
-      // the first resize before the source texture has even arrived.
       compact = Boolean(value);
+      uniforms.uCompact.value = compact ? 1 : 0;
+      clusters[4].group.visible = !compact;
+      dust.points.geometry.setDrawRange(0, compact ? 1900 : 4200);
     },
 
-    setPointerNdc(x, y, active = true) {
-      pointer.set(Number(x) || 0, Number(y) || 0);
-      pointerActive = Boolean(active);
+    setPointerNdc() {
+      // Illumination is intentionally autonomous and does not follow the cursor.
     },
 
     setPixelRatio(value) {
-      dust.material.uniforms.uPixelRatio.value = Math.min(1.5, Math.max(0.75, Number(value) || 1));
+      dust.material.uniforms.uPixelRatio.value = Math.min(
+        1.6,
+        Math.max(0.75, Number(value) || 1),
+      );
+    },
+
+    setAmbient(value) {
+      uniforms.uAmbient.value = THREE.MathUtils.clamp(Number(value) || 0, 0.008, 0.08);
     },
 
     triggerSparseIllumination() {
-      if (!effectsEnabled) return false;
       manualBurst = 1;
-      group.visible = true;
+      nextEventAt = 0;
+      manualCurve = makeEventCurve(rng);
       return true;
     },
 
@@ -931,8 +897,9 @@ export function createProceduralOrreryField({ camera = null, renderer = null } =
       const dt = Math.min(0.1, Math.max(0, delta || 0));
       const response = 1 - Math.pow(0.002, dt);
       visibility += (visibilityTarget - visibility) * response;
-      focus += (focusTarget - focus) * (1 - Math.pow(0.01, dt));
-      manualBurst = Math.max(0, manualBurst - dt / 2.7);
+      uniforms.uVisible.value = visibility;
+      uniforms.uTime.value = elapsed;
+      manualBurst = Math.max(0, manualBurst - dt / 3.2);
 
       if (!effectsEnabled && visibility < 0.002) {
         group.visible = false;
@@ -940,65 +907,51 @@ export function createProceduralOrreryField({ camera = null, renderer = null } =
       }
       group.visible = true;
 
-      setLayerProgress(elapsed);
-      syncTexturedUniforms(elapsed);
+      updatePulse(elapsed);
+      const activity = externallySuspended ? 0.82 : 1;
 
-      const activity = externallySuspended ? 0.78 : 1;
-      skeleton.update(
-        elapsed,
-        visibility,
-        compact,
-        focus,
-        activity,
-        manualBurst,
-      );
+      clusters.forEach((cluster, index) => {
+        cluster.group.rotation.z = cluster.rotation.z
+          + elapsed * cluster.speed * activity
+          + Math.sin(elapsed * cluster.drift + cluster.phase) * 0.018;
+        cluster.group.rotation.x = cluster.rotation.x
+          + Math.sin(elapsed * cluster.drift * 0.72 + cluster.phase) * 0.012;
+        cluster.group.rotation.y = cluster.rotation.y
+          + Math.cos(elapsed * cluster.drift * 0.64 + cluster.phase) * 0.017;
+        cluster.group.position.x = cluster.home.x
+          + Math.sin(elapsed * cluster.drift * 0.41 + cluster.phase) * (0.22 + index * 0.035);
+        cluster.group.position.y = cluster.home.y
+          + Math.cos(elapsed * cluster.drift * 0.35 + cluster.phase) * (0.16 + index * 0.03);
+      });
 
-      dust.material.uniforms.uTime.value = elapsed;
-      dust.material.uniforms.uVisibility.value = visibility;
-      dust.material.uniforms.uCompact.value = compact ? 1 : 0;
-      dust.material.uniforms.uFocus.value = focus;
-      dust.material.uniforms.uActivity.value = activity;
-      dust.material.uniforms.uManualBurst.value = manualBurst;
+      imprint.rotation.z = -0.05 + Math.sin(elapsed * 0.0042) * 0.014;
+      imprint.rotation.y = 0.015 + Math.sin(elapsed * 0.0031) * 0.018;
+      imprint.position.x = Math.sin(elapsed * 0.0027) * 0.75;
+      imprint.position.y = 2 + Math.cos(elapsed * 0.0021) * 0.52;
+      fog.update(elapsed);
 
-      atmosphere.update(elapsed, visibility, compact, focus, manualBurst);
-
-      backdrop.position.x = Math.sin(elapsed * 0.007) * 0.42;
-      backdrop.position.y = 1.0 + Math.cos(elapsed * 0.005) * 0.26;
-      backdrop.rotation.z = Math.sin(elapsed * 0.0043) * 0.011;
-
-      for (const state of texturedStates) {
-        if (state === texturedStates[0]) continue;
-        const { mesh, spec, baseRotation } = state;
-        mesh.rotation.z = baseRotation + elapsed * (spec.speed || 0) * activity;
-        mesh.rotation.x = Math.sin(elapsed * 0.008 + spec.phase) * 0.010;
-        if (state.fragmentIndex !== undefined) {
-          mesh.position.y = spec.y + Math.sin(elapsed * 0.013 + spec.phase) * 0.25;
-          mesh.rotation.y = (spec.x < 0 ? 0.14 : -0.14)
-            + Math.cos(elapsed * 0.009 + spec.phase) * 0.016;
-        } else {
-          mesh.rotation.y = Math.cos(elapsed * 0.007 + spec.phase) * 0.012;
-        }
-      }
-
-      // Small camera-relative parallax preserves the source detail while the
-      // background still feels volumetric during card and CV camera movement.
       if (camera) {
-        const parallaxX = THREE.MathUtils.clamp(camera.position.x * -0.020, -0.52, 0.52);
-        const parallaxY = THREE.MathUtils.clamp(camera.position.y * -0.011, -0.32, 0.32);
-        group.position.x += (parallaxX - group.position.x) * Math.min(1, dt * 0.74);
-        group.position.y += (parallaxY - group.position.y) * Math.min(1, dt * 0.74);
+        group.position.x += (
+          THREE.MathUtils.clamp(camera.position.x * -0.015, -0.75, 0.75)
+          - group.position.x
+        ) * Math.min(1, dt * 0.52);
+        group.position.y += (
+          THREE.MathUtils.clamp(camera.position.y * -0.008, -0.45, 0.45)
+          - group.position.y
+        ) * Math.min(1, dt * 0.52);
       }
     },
 
     dispose() {
       disposed = true;
-      backdropGeometry.dispose();
-      detailGeometry.dispose();
-      for (const state of texturedStates) state.material.dispose();
-      skeleton.dispose();
-      dust.geometry.dispose();
-      dust.material.dispose();
-      atmosphere.dispose();
+      for (const cluster of clusters) cluster.dispose();
+      structureMaterial.dispose();
+      imprintGeometry.dispose();
+      imprintMaterial.dispose();
+      fog.dispose();
+      dust.dispose();
+      pulseCoreA.dispose();
+      pulseCoreB.dispose();
       if (sourceTexture !== placeholder) sourceTexture.dispose();
       placeholder.dispose();
       group.clear();
