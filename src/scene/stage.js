@@ -52,6 +52,21 @@ const DOCUMENT_MIN_CLEARANCE = 0.24;
 // Der Abzug verhindert, dass ein 60-Hz-Bildschirm auf 20 Hz einrastet.
 const FRAME_BUDGET = 1000 / 30 - 3;
 
+// ORBIT_V6: Im Ruhezustand laesst sich die Buehne anfassen und drehen. Die
+// Kamera kreist dann um die Mitte der Sockelreihe; die Maschine im
+// Hintergrund umschliesst diesen Punkt und zeigt sich von neuen Seiten.
+const ORBIT_PIVOT = new THREE.Vector3(0, -5, 0);
+const ORBIT_YAW_SPEED = 0.0046;    // Bogenmass je Bildpunkt
+const ORBIT_PITCH_SPEED = 0.0028;
+const ORBIT_PITCH_MIN = -0.16;
+const ORBIT_PITCH_MAX = 0.64;
+const ORBIT_DAMPING = 0.05;        // Restgeschwindigkeit nach einer Sekunde
+const ORBIT_STEP_CLAMP = 0.16;
+
+function wrapAngle(value) {
+  return THREE.MathUtils.euclideanModulo(value + Math.PI, Math.PI * 2) - Math.PI;
+}
+
 export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -187,6 +202,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let viewMoving = false;
   let viewMoveTicket = 0;
   let qualityUpgradeTimer = 0;
+  // Orbit im Ruhezustand: Drehwinkel um die Sockelmitte samt Auslauf.
+  const orbit = { yaw: 0, pitch: 0, yawVelocity: 0, pitchVelocity: 0, dragging: false };
+  const orbitQuaternion = new THREE.Quaternion();
+  const orbitEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+  const lookTarget = new THREE.Vector3();
   // RESPONSIVE_CV_ZOOM_V5_4
   const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)').matches
     || navigator.maxTouchPoints > 0;
@@ -288,6 +308,65 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     viewMoveTicket += 1;
     gsap.killTweensOf([camPos, look]);
     viewMoving = false;
+  }
+
+  /** Zeigerform: Sockel = Hand, freie Buehne im Ruhezustand = greifbar. */
+  function syncCursor() {
+    if (orbit.dragging) canvas.style.cursor = 'grabbing';
+    else if (hovered) canvas.style.cursor = 'pointer';
+    else if (!opened && ndc.x > -1.5) canvas.style.cursor = 'grab';
+    else canvas.style.cursor = '';
+  }
+
+  function orbitBy(dx, dy) {
+    const yawDelta = THREE.MathUtils.clamp(-dx * ORBIT_YAW_SPEED, -ORBIT_STEP_CLAMP, ORBIT_STEP_CLAMP);
+    const pitchDelta = THREE.MathUtils.clamp(dy * ORBIT_PITCH_SPEED, -ORBIT_STEP_CLAMP, ORBIT_STEP_CLAMP);
+    orbit.yaw += yawDelta;
+    orbit.pitch = THREE.MathUtils.clamp(orbit.pitch + pitchDelta, ORBIT_PITCH_MIN, ORBIT_PITCH_MAX);
+    orbit.yawVelocity = yawDelta;
+    orbit.pitchVelocity = pitchDelta;
+  }
+
+  function endOrbit() {
+    if (!orbit.dragging) return;
+    orbit.dragging = false;
+    if (reduced) {
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+    }
+    syncCursor();
+  }
+
+  /** Auslauf nach dem Loslassen bzw. Rueckkehr zur Nullstellung im Fokus. */
+  function updateOrbit(dt) {
+    if (orbit.dragging) return;
+    if (opened) {
+      // Beim Heranfahren an einen Sockel kehrt die Kamera auf kuerzestem Weg
+      // in die Ausgangslage zurueck, damit das Zielbild stimmt.
+      const response = 1 - Math.pow(0.0008, dt);
+      orbit.yaw += (0 - orbit.yaw) * response;
+      orbit.pitch += (0 - orbit.pitch) * response;
+      if (Math.abs(orbit.yaw) < 0.0004) orbit.yaw = 0;
+      if (Math.abs(orbit.pitch) < 0.0004) orbit.pitch = 0;
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+      return;
+    }
+    if (Math.abs(orbit.yawVelocity) < 0.000001 && Math.abs(orbit.pitchVelocity) < 0.000001) {
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+      return;
+    }
+    const step = Math.min(1.8, dt * 60);
+    orbit.yaw += orbit.yawVelocity * step;
+    orbit.pitch = THREE.MathUtils.clamp(
+      orbit.pitch + orbit.pitchVelocity * step,
+      ORBIT_PITCH_MIN,
+      ORBIT_PITCH_MAX,
+    );
+    const damping = Math.pow(ORBIT_DAMPING, dt);
+    orbit.yawVelocity *= damping;
+    orbit.pitchVelocity *= damping;
   }
 
   /* ---------- Kamera ---------- */
@@ -392,7 +471,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     scrollLiftTarget = 0;
     pointer.set(0, 0);
     moveView(HOME.cam, HOME.look, duration);
-    canvas.style.cursor = '';
+    syncCursor();
     applyBloom();
   }
 
@@ -410,6 +489,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     });
     opened = key;
     cards.setOpened(key, true);
+    // Ein laufender Orbit endet; der Rueckweg nimmt die kuerzere Richtung.
+    orbit.dragging = false;
+    orbit.yaw = wrapAngle(orbit.yaw);
+    orbit.yawVelocity = 0;
+    orbit.pitchVelocity = 0;
     const isDocument = key === 'lebenslauf';
     setDollyGuide(isDocument && !readerOpen);
     syncDocumentInputHints();
@@ -462,7 +546,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     hovered = null;
     pointer.set(0, 0);
     drift.set(0, 0);
-    canvas.style.cursor = '';
+    syncCursor();
     moveView(nextCam, focusCenter, duration);
   }
 
@@ -652,17 +736,27 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
           event.preventDefault();
           scrollDocument(-dy / view.height);
         }
+      } else if (drag.moved && !opened) {
+        // Ruhezustand: Ziehen dreht die Kamera um die Sockelreihe.
+        if (!orbit.dragging) {
+          orbit.dragging = true;
+          syncCursor();
+        }
+        if (event.pointerType === 'touch') event.preventDefault();
+        orbitBy(dx, dy);
       }
     }
 
     if (!reduced && !opened) pointer.set(nx, ny);
     background.setPointerNdc?.(nx, ny, !opened);
+    if (!drag) syncCursor();
   }
 
   function onPointerLeave() {
     ndc.set(-2, -2);
     pointer.set(0, 0);
     background.setPointerNdc?.(0, 0, false);
+    if (!orbit.dragging) syncCursor();
   }
 
   function onPointerDown(event) {
@@ -737,6 +831,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     if (zoomHold) endDocumentWheelZoom();
     cards.endResumeRotation();
+    endOrbit();
 
     if (moved || wheelUsed) return;
     if (hovered) listener?.('select', hovered);
@@ -749,6 +844,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     pinchGesture = null;
     touchPoints.clear();
     cards.endResumeRotation();
+    endOrbit();
   }
 
   canvas.addEventListener('pointermove', onPointerMove, { passive: false });
@@ -924,11 +1020,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         (bloomTarget - bloom.intensity) * bloomResponse;
     }
 
-    const next = pick();
+    const next = orbit.dragging ? null : pick();
     if (next !== hovered) {
       hovered = next;
       cards.setHover(hovered);
-      canvas.style.cursor = hovered ? 'pointer' : '';
+      syncCursor();
       listener?.('hover', hovered);
     }
 
@@ -940,7 +1036,25 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       camPos.y + drift.y * 0.82 + scrollLift,
       camPos.z,
     );
-    camera.lookAt(look.x, look.y + scrollLift, look.z);
+    lookTarget.set(look.x, look.y + scrollLift, look.z);
+
+    // Orbit: Kamera und Blickpunkt gemeinsam um die Sockelmitte drehen.
+    updateOrbit(Math.min(dt, 0.1));
+    if (orbit.yaw !== 0 || orbit.pitch !== 0) {
+      orbitEuler.set(-orbit.pitch, orbit.yaw, 0);
+      orbitQuaternion.setFromEuler(orbitEuler);
+      // Seitlich und von oben weicht die Kamera etwas zurueck, damit die ganze
+      // Sockelreihe im Bild bleibt.
+      const dolly = 1
+        + 0.55 * Math.abs(Math.sin(orbit.yaw))
+        + 0.30 * Math.max(0, orbit.pitch);
+      camera.position.sub(ORBIT_PIVOT)
+        .applyQuaternion(orbitQuaternion)
+        .multiplyScalar(dolly)
+        .add(ORBIT_PIVOT);
+      lookTarget.sub(ORBIT_PIVOT).applyQuaternion(orbitQuaternion).add(ORBIT_PIVOT);
+    }
+    camera.lookAt(lookTarget);
 
     if (composer) composer.render();
     else renderer.render(scene, camera);
@@ -958,6 +1072,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     focusCard,
     toHome,
     setRoute,
+
+    /** Blickwinkel im Ruhezustand direkt setzen (Bogenmass). */
+    setOrbit(yaw = 0, pitch = 0) {
+      orbit.yaw = Number(yaw) || 0;
+      orbit.pitch = THREE.MathUtils.clamp(Number(pitch) || 0, ORBIT_PITCH_MIN, ORBIT_PITCH_MAX);
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+    },
     setExplored(explored) {
       cards.setExplored(explored instanceof Set ? explored : new Set(explored || []));
     },

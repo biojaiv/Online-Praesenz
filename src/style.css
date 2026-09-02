@@ -280,9 +280,17 @@ body {
 
 /* ---------- Navigation ---------- */
 
+/*
+ * NAV_INSTRUMENTS_V6
+ * Die drei Bereiche sind kleine Instrumente: ein Zifferblatt mit kreisendem
+ * Trabanten, eine Ordnungszahl und der Titel, gefasst von zwei Eckklammern.
+ * Im Ruhezustand kaum mehr als drei stille Marken; beim Ansteuern
+ * beschleunigt der Trabant, der Kern brennt bernsteinfarben und das
+ * Untermenue klappt als Tafel unter den Instrumententraeger.
+ */
 .nav {
   display: flex;
-  gap: var(--s-6);
+  gap: var(--s-5);
   align-items: flex-start;
 }
 
@@ -299,22 +307,150 @@ body {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
-  padding: 0 0 var(--s-2);
   position: relative;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: var(--s-3);
+  align-items: center;
+  text-align: left;
+  padding: var(--s-2) var(--s-3) var(--s-2) var(--s-2);
   transition: color 0.45s var(--ease-ritual);
 }
+
+/* Eckklammern: oben links und unten rechts, wachsen beim Ansteuern. */
+.nav__link::before,
 .nav__link::after {
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 1px;
-  background: var(--amber);
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 0.55s var(--ease-ritual);
+  width: var(--s-3);
+  height: var(--s-3);
+  border: 1px solid var(--line);
+  opacity: 0.7;
+  transition:
+    width 0.55s var(--ease-ritual),
+    height 0.55s var(--ease-ritual),
+    border-color 0.55s var(--ease-ritual),
+    opacity 0.55s var(--ease-ritual);
+  pointer-events: none;
 }
+.nav__link::before { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.nav__link::after  { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+
+.nav__link:hover::before,
+.nav__link:hover::after,
+.nav__link:focus-visible::before,
+.nav__link:focus-visible::after,
+.nav__link.is-active::before,
+.nav__link.is-active::after {
+  width: var(--s-5);
+  height: var(--s-5);
+  border-color: var(--amber);
+  opacity: 1;
+}
+
+.nav__dial {
+  grid-row: 1 / 3;
+  width: var(--s-5);
+  height: var(--s-5);
+  display: block;
+}
+.nav__dial svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.nav__dial circle {
+  fill: none;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: stroke 0.45s var(--ease-ritual), fill 0.45s var(--ease-ritual);
+}
+.nav__dial-ring {
+  stroke: var(--line-hot);
+  stroke-dasharray: 2 3.2;
+  opacity: 0.75;
+  animation: nav-dial-ring 34s linear infinite;
+}
+.nav__dial-orbit {
+  stroke: var(--ink-faint);
+}
+.nav__dial-core {
+  fill: var(--amber-dim);
+  stroke: none;
+}
+/* Der Trabant kreist um die Mitte des Zifferblatts, nicht um sich selbst. */
+.nav__dial-moon {
+  fill: var(--cyan);
+  stroke: none;
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  animation: nav-dial-moon 13s linear infinite;
+}
+.nav__group:nth-child(2) .nav__dial-moon { animation-duration: 21s; animation-direction: reverse; }
+.nav__group:nth-child(3) .nav__dial-moon { animation-duration: 8s; }
+
+@keyframes nav-dial-ring {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes nav-dial-moon {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.nav__link:hover .nav__dial-moon,
+.nav__link:focus-visible .nav__dial-moon,
+.nav__link.is-active .nav__dial-moon {
+  animation-duration: 2.6s;
+  fill: var(--fiber-white);
+  filter: drop-shadow(0 0 3px rgb(var(--fiber-blue-rgb) / 0.9));
+}
+.nav__link:hover .nav__dial-core,
+.nav__link:focus-visible .nav__dial-core,
+.nav__link.is-active .nav__dial-core {
+  fill: #ffd28a;
+  filter: drop-shadow(0 0 4px rgb(var(--amber-rgb) / 0.95));
+}
+.nav__link:hover .nav__dial-orbit,
+.nav__link.is-active .nav__dial-orbit { stroke: var(--line-hot); }
+.nav__link.is-active .nav__dial-ring { stroke: var(--amber); opacity: 1; }
+
+.nav__index {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--font-body);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.36em;
+  color: var(--amber-dim);
+  line-height: 1;
+  transition: color 0.45s var(--ease-ritual);
+}
+.nav__index::after {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+  width: var(--s-4);
+  height: 1px;
+  margin-left: var(--s-2);
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.nav__label {
+  grid-column: 2;
+  grid-row: 2;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .nav__link:hover,
 .nav__link.is-active { color: var(--amber); }
+.nav__link:hover .nav__index,
+.nav__link.is-active .nav__index { color: var(--amber); }
 /* Neon-Flick: ein kurzer, stufiger Farbriss beim Ansteuern — das Vivum */
 .nav__link:hover { animation: neon-flick 0.3s steps(1, end) 1; }
 @keyframes neon-flick {
@@ -323,12 +459,35 @@ body {
   70%  { text-shadow: 1px 0 var(--cyan), -1px 0 var(--fiber-white); }
   100% { text-shadow: none; }
 }
-.nav__link:hover::after,
-.nav__link.is-active::after { transform: scaleX(1); transform-origin: left; }
+
+/* Sprachschalter: ein kleines Schaltfeld statt eines weiteren Menuepunkts. */
+.nav__link--lang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 26px;
+  margin-top: var(--s-2);
+  padding: 0 var(--s-3);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  transition: color 0.45s var(--ease-ritual), border-color 0.45s var(--ease-ritual);
+}
+.nav__link--lang::before,
+.nav__link--lang::after { display: none; }
+.nav__link--lang:hover,
+.nav__link--lang:focus-visible {
+  color: var(--cyan);
+  border-color: var(--line-hot);
+  animation: none;
+}
 
 .nav__sub {
   position: absolute;
-  top: 100%;
+  top: calc(100% + var(--s-2));
   right: 0;
   z-index: 7;
   display: flex;
@@ -336,14 +495,30 @@ body {
   flex-direction: column;
   align-items: flex-end;
   gap: var(--s-1);
-  padding-top: var(--s-3);
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-5);
+  background: linear-gradient(to bottom, rgba(7, 14, 24, 0.86), rgba(5, 10, 18, 0.72));
+  border: 1px solid var(--line);
+  border-top-color: var(--line-hot);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   opacity: 0;
   transform: translateY(-4px);
   pointer-events: none;
   transition: opacity 0.5s var(--ease-ritual), transform 0.5s var(--ease-ritual);
 }
+/* Verbindungsstrich zwischen Instrument und Tafel. */
+.nav__sub::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--s-2) - 1px);
+  right: var(--s-4);
+  width: 1px;
+  height: var(--s-2);
+  background: var(--line-hot);
+}
 .nav__group:hover .nav__sub,
-.nav__group.is-open .nav__sub {
+.nav__group.is-open .nav__sub,
+.nav__group:focus-within .nav__sub {
   opacity: 1;
   transform: none;
   pointer-events: auto;
@@ -359,10 +534,29 @@ body {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
-  padding: 1px 0;
-  transition: color 0.35s var(--ease-ritual);
+  padding: 2px 0;
+  position: relative;
+  transition: color 0.35s var(--ease-ritual), padding-right 0.35s var(--ease-ritual);
 }
-.nav__sub button:hover { color: var(--cyan); }
+/* Ein kleiner Marker rechts, der beim Ansteuern aufleuchtet. */
+.nav__sub button::after {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-left: var(--s-3);
+  vertical-align: middle;
+  border: 1px solid var(--ink-faint);
+  transform: rotate(45deg);
+  transition: border-color 0.35s var(--ease-ritual), background 0.35s var(--ease-ritual);
+}
+.nav__sub button:hover,
+.nav__sub button:focus-visible { color: var(--cyan); }
+.nav__sub button:hover::after,
+.nav__sub button:focus-visible::after {
+  border-color: var(--cyan);
+  background: var(--cyan);
+}
 
 /* ---------- Buehne ---------- */
 
@@ -1482,7 +1676,15 @@ body {
     white-space: nowrap;
   }
   .nav { margin-top: 0; gap: var(--s-2); }
-  .nav__link { font-size: 10px; letter-spacing: 0.11em; }
+  .nav__link {
+    font-size: 10px;
+    letter-spacing: 0.11em;
+    column-gap: var(--s-2);
+    padding: var(--s-1) var(--s-2);
+  }
+  .nav__index { display: none; }
+  .nav__dial { width: var(--s-4); height: var(--s-4); }
+  .nav__link--lang { min-width: 32px; min-height: 22px; margin-top: 0; }
   .foot { padding-inline: var(--s-4); font-size: 8px; }
 }
 

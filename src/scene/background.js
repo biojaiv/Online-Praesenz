@@ -1,24 +1,24 @@
-// EPIC_DARK_MACHINE_BACKGROUND_V5_5_2
+// EPIC_ORRERY_BACKGROUND_V6
 import * as THREE from 'three';
-import { createProceduralOrreryField } from './proceduralOrreryField.js';
+import { createOrreryMachine } from './orreryMachine.js';
 
 /**
- * Dark machine-world background.
+ * Hintergrund: die grosse Orrery-Maschine.
  *
- * The oversized structure stays almost black. A compact autonomous light
- * travels between mechanical fragments and reveals only the local area around
- * it. The world keeps moving behind the opened CV and the HTML reader.
+ * Sie steht schraeg hinter und um die drei Sockel und bleibt fast schwarz.
+ * Sichtbar wird sie durch die Lichtfront, die vom Kern nach aussen wandert,
+ * und durch zwei Laternen auf ihren Schienen. Die Maschine laeuft auch
+ * hinter dem geoeffneten Lebenslauf weiter, nur gedaempft.
  */
-export function createBackground({ camera = null, renderer = null } = {}) {
+export function createBackground({ renderer = null } = {}) {
   const group = new THREE.Group();
-  group.name = 'dark-machine-background-v5.5.2';
-  group.userData.kind = 'dark-machine-background-v5.5.2';
+  group.name = 'orrery-background-v6';
 
-  const machineWorld = createProceduralOrreryField({ camera, renderer });
-  group.add(machineWorld.group);
+  const machine = createOrreryMachine({ renderer });
+  group.add(machine.group);
 
-  // Compatibility uniform used by the existing intro controller.
-  const ambient = { value: 0.016 };
+  // Kompatibilitaets-Uniform: die Intro-Steuerung animiert ambient.value.
+  const ambient = { value: 0.18 };
   let effectsEnabled = true;
   let symbolOnly = false;
   let documentOpen = false;
@@ -26,18 +26,17 @@ export function createBackground({ camera = null, renderer = null } = {}) {
   let disposed = false;
 
   function syncEffects() {
-    machineWorld.setEffectsEnabled(effectsEnabled && !symbolOnly);
+    machine.setEffectsEnabled(effectsEnabled && !symbolOnly);
   }
 
   function syncDocumentState() {
-    machineWorld.setDocumentOpen(documentOpen || readerOpen);
+    machine.setDocumentOpen(documentOpen || readerOpen);
   }
 
   return {
     group,
     ambient,
-    ready: machineWorld.ready,
-    traceCount: 0,
+    ready: machine.ready,
 
     setEffectsEnabled(value) {
       effectsEnabled = Boolean(value);
@@ -60,43 +59,36 @@ export function createBackground({ camera = null, renderer = null } = {}) {
     },
 
     setSuspended(value) {
-      machineWorld.setSuspended(value);
+      machine.setSuspended(value);
     },
 
     setCompact(value) {
-      machineWorld.setCompact(Boolean(value));
+      machine.setCompact(Boolean(value));
     },
 
     setPointerNdc(x, y, active = true) {
-      machineWorld.setPointerNdc(x, y, active);
+      machine.setPointerNdc(x, y, active);
     },
 
     setPixelRatio(value) {
-      machineWorld.setPixelRatio(value);
+      machine.setPixelRatio(value);
     },
 
     triggerSparseIllumination() {
       if (disposed) return false;
-      return machineWorld.triggerSparseIllumination();
+      return machine.triggerSparseIllumination();
     },
 
     update(elapsed, delta) {
       if (disposed) return;
-      // The intro can animate ambient.value up to 1. The actual machine world
-      // remains dark and never turns into a visible wallpaper.
-      const requestedAmbient = THREE.MathUtils.clamp(
-        0.007 + Number(ambient.value || 0) * 0.011,
-        0.007,
-        documentOpen || readerOpen ? 0.022 : 0.028,
-      );
-      machineWorld.setAmbient(requestedAmbient);
-      machineWorld.update(elapsed, delta);
+      machine.setAmbient(THREE.MathUtils.clamp(Number(ambient.value || 0), 0, 1));
+      machine.update(elapsed, delta);
     },
 
     dispose() {
       if (disposed) return;
       disposed = true;
-      machineWorld.dispose();
+      machine.dispose();
       group.clear();
     },
   };
