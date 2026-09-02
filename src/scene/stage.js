@@ -65,12 +65,13 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const targetPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
   let currentPixelRatio = Math.min(targetPixelRatio, 1);
   renderer.setPixelRatio(currentPixelRatio);
-  renderer.setClearColor(0x03060a, 1);
+  // FOREGROUND_BACKGROUND_SEPARATION_V5_5_2
+  renderer.setClearColor(0x020407, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.38;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x03060a, 0.0055);
+  scene.fog = new THREE.FogExp2(0x020407, 0.0068);
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1800);
   camera.position.copy(HOME.cam);
@@ -83,11 +84,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   cards.setPixelRatio(renderer.getPixelRatio());
   scene.add(cards.group);
 
-  scene.add(new THREE.AmbientLight(0x294866, 1.12));
-  const keyLight = new THREE.DirectionalLight(LIGHT_PALETTE.fiber, 1.48);
+  scene.add(new THREE.AmbientLight(0x22384d, 0.88));
+  const keyLight = new THREE.DirectionalLight(LIGHT_PALETTE.fiber, 1.72);
   keyLight.position.set(-6, 9, 12);
   scene.add(keyLight);
-  const rimLight = new THREE.PointLight(LIGHT_PALETTE.fiberBlue, 20, 40, 2);
+  const rimLight = new THREE.PointLight(LIGHT_PALETTE.fiberBlue, 24, 44, 2);
   rimLight.position.set(0, -4.5, 5);
   scene.add(rimLight);
 

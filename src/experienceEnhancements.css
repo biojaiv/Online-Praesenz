@@ -1,3 +1,4 @@
+/* HOLOGRAM_FOREGROUND_CSS_V5_5_2 */
 /* CV input guide, pedestal energy and footer interaction additions. */
 
 .camera-dolly-guide__left-button {
@@ -305,4 +306,135 @@
     opacity: 0.28;
     clip-path: inset(42% 0 38% 0);
   }
+}
+
+/* ---------- Header calibration marker: -------.------- ---------- */
+.head-calibration-marker {
+  --head-calibration-half: 220px;
+  --head-calibration-top: 86px;
+  position: absolute;
+  z-index: 3;
+  top: var(--head-calibration-top);
+  left: 50%;
+  display: grid;
+  grid-template-columns:
+    var(--head-calibration-half)
+    5px
+    var(--head-calibration-half);
+  align-items: center;
+  column-gap: 7px;
+  width: max-content;
+  color: rgba(129, 204, 255, 0.52);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 0 7px rgba(72, 168, 236, 0.19));
+  isolation: isolate;
+  transition:
+    opacity 480ms var(--ease-ritual),
+    visibility 480ms var(--ease-ritual);
+  will-change: opacity;
+}
+
+.head-calibration-marker.is-ready {
+  opacity: 0.46;
+  visibility: visible;
+}
+
+.head-calibration-marker::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
+  z-index: -1;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(120, 191, 255, 0.025) 25%,
+    rgba(120, 191, 255, 0.085) 49%,
+    rgba(232, 164, 90, 0.075) 51%,
+    rgba(120, 191, 255, 0.025) 75%,
+    transparent 100%
+  );
+  opacity: 0.52;
+  filter: blur(4px);
+}
+
+.head-calibration-marker__line {
+  display: block;
+  height: 1px;
+  /* The outer end stays visible: the rail reaches the first S instead of
+     fading out several characters before it. */
+  background: linear-gradient(
+    90deg,
+    rgba(106, 190, 248, 0.34) 0%,
+    rgba(126, 204, 255, 0.48) 46%,
+    rgba(158, 222, 255, 0.68) 82%,
+    rgba(235, 171, 96, 0.74) 100%
+  );
+  box-shadow:
+    0 0 5px rgba(88, 180, 241, 0.18),
+    0 0 12px rgba(67, 150, 214, 0.08);
+}
+
+.head-calibration-marker__line--right {
+  transform: scaleX(-1);
+}
+
+.head-calibration-marker__point {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e8a45a;
+  box-shadow:
+    0 0 4px rgba(255, 204, 133, 0.86),
+    0 0 11px rgba(232, 164, 90, 0.38);
+  animation: head-calibration-breathe 5.8s ease-in-out infinite;
+}
+
+@keyframes head-calibration-breathe {
+  0%, 100% { opacity: 0.48; transform: scale(0.82); }
+  48% { opacity: 1; transform: scale(1.14); }
+  53% { opacity: 0.66; transform: scale(0.96); }
+}
+
+@media (max-width: 860px) {
+  .head-calibration-marker {
+    max-width: calc(100% - 48px);
+    grid-template-columns:
+      min(var(--head-calibration-half), 31vw)
+      4px
+      min(var(--head-calibration-half), 31vw);
+  }
+
+  .head-calibration-marker.is-ready {
+    opacity: 0.34;
+  }
+}
+
+@media (max-width: 520px) {
+  .head-calibration-marker {
+    grid-template-columns:
+      min(var(--head-calibration-half), 27vw)
+      3px
+      min(var(--head-calibration-half), 27vw);
+    column-gap: 5px;
+  }
+
+  .head-calibration-marker.is-ready {
+    opacity: 0.28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .head-calibration-marker__point {
+    animation: none;
+  }
+}
+
+.frame.is-intro .head-calibration-marker,
+.pre-intro .head-calibration-marker {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
