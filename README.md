@@ -42,6 +42,42 @@ zitiert:
 
 ## 2. Die Szenerie im Hintergrund
 
+### Die Maschine (Stand v6)
+
+Hinter und um die drei Sockel steht ein riesiges, prozedural gebautes
+Planetarium (`src/scene/orreryMachine.js`): konzentrische Ringe mit
+Gradteilungen, Doppelschienen mit Sprossen, gestaffelte Zahnkränze im Kern,
+Kardanringe, Sphärenkäfige und Zahnräder auf den Bahnen, radiale Streben,
+drei große schräge Ringe sowie vier kleinere Satelliten-Mechanismen. Zwei
+flache Skalenringe und zwei steile Armillarringe liegen genau um die Mitte
+der Sockelreihe — die Struktur **umschließt** die Bühne, sie liegt nicht nur
+dahinter. Vorlage ist `Elemente/Orrery/orrery-source.png`; das Bild wird
+nicht als Textur verwendet, sondern in Geometrie übersetzt und dort
+reduziert, wo es dem Vordergrund im Weg stünde.
+
+Die Maschine ist fast schwarz. Sichtbar wird sie durch drei Lichtquellen:
+
+- **Die Front.** Vom Kern läuft alle 18 bis 23 Sekunden eine kugelförmige
+  Lichtschale mit rund 9,5 Einheiten je Sekunde nach außen über alle
+  Oberflächen — vorn scharf und weiß, dahinter ein kurzer farbiger Schweif.
+  Jede dritte Front ist bernsteinfarben, jede fünfte violett.
+- **Zwei Laternen**, die auf den Doppelschienen der Hauptscheibe kreisen und
+  langsam atmen.
+- **Der Kern**, der schwach warm auf die ihm zugewandten Flächen leuchtet
+  und beim Start einer Front kurz aufflammt.
+
+Alle Drehgruppen laufen mit eigenem, sehr langsamem Tempo (Scheibe rund
+zwölf Minuten je Umlauf, Kern zwei Minuten). Hinter dem geöffneten
+Lebenslauf bleibt die Maschine in Bewegung, Front und Laternen werden aber
+stark gedämpft, damit die Seite lesbar bleibt.
+
+**Orbit.** Im Ruhezustand lässt sich die Bühne anfassen: Ziehen mit gedrückter
+Maustaste oder einem Finger dreht die Kamera um die Mitte der Sockelreihe
+(horizontal frei, vertikal begrenzt) und läuft nach dem Loslassen aus. Seitlich
+weicht die Kamera automatisch etwas zurück, damit alle drei Sockel im Bild
+bleiben. Beim Anfahren eines Sockels kehrt der Blickwinkel auf kürzestem Weg
+in die Ausgangslage zurück.
+
 ### Impulse
 
 Auf den Leiterbahnen laufen Impulse — **niemals mehr als zwei gleichzeitig**,
@@ -159,7 +195,8 @@ webseite/
 │   ├── style.css               Fibonacci-Abstände, Farbwelt
 │   ├── scene/
 │   │   ├── stage.js            Renderer, Kamera, Composer, Ankerpunkte
-│   │   ├── background.js       Leiterbahnen, Impulse, Chips, Runen, Nebel
+│   │   ├── background.js       Hintergrund-Fassade (Intro-Kompatibilität, Zustände)
+│   │   ├── orreryMachine.js    Die Orrery-Maschine: Geometrie, Lichtfront, Laternen
 │   │   ├── cards.js            Die drei Bereichskarten (Sockel, Platte, Staub)
 │   │   └── runes.js            Zeichensatz als Strichzüge
 │   └── ui/
@@ -181,6 +218,13 @@ Es gibt **keine Unterseiten**. Die Kopfzeile verlinkt drei Bereiche mit je drei
 bis vier Unterbereichen. Ein Klick ändert nur den Hash (`#lebenslauf/faehigkeiten`)
 und löst eine Kamerafahrt aus. ESC führt zurück. Deep Links funktionieren,
 der Browser-Zurück-Knopf auch.
+
+Die drei Menüpunkte sind als kleine **Instrumente** gestaltet: ein Zifferblatt
+mit kreisendem Trabanten (jedes in eigenem Takt), eine Ordnungszahl (01–03)
+und der Titel, gefasst von zwei Eckklammern. Beim Ansteuern beschleunigt der
+Trabant, der Kern brennt bernsteinfarben, die Klammern wachsen, und das
+Untermenü klappt als halbtransparente Tafel unter das Instrument. Der
+Sprachschalter ist ein eigenes kleines Schaltfeld rechts daneben.
 
 Die drei Ankerpunkte liegen in `stage.slots` bei x = −9,2 / 0 / +9,2:
 

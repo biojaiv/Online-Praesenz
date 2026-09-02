@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { traceExecution } from '../state/runtimeTrace.js';
+import { onLanguageChange } from '../i18n.js';
 import {
   EffectComposer, RenderPass, EffectPass,
   BloomEffect, VignetteEffect, NoiseEffect, SMAAEffect,
@@ -7,7 +9,7 @@ import {
 } from 'postprocessing';
 import { createBackground } from './background.js';
 import { createCards } from './cards.js';
-import { CV_PAGE_ASPECT } from './resumeProjection.js';
+import { getCvPageAspect } from './resumeProjection.js';
 import { LIGHT_PALETTE } from './palette.js';
 
 /**
@@ -39,9 +41,9 @@ const DOC_GUTTER_Y = 42;
 // Mausrad ohne Zusatztaste blaettert. Linke Maustaste halten plus Mausrad
 // faehrt die Kamera entlang ihrer festen Blickachse vor und zurueck.
 const DOCUMENT_ZOOM_DEFAULT = 1.08;
-const DOCUMENT_ZOOM_MIN = 0.001;
-const DOCUMENT_ZOOM_MAX = 2.1;
-const DOCUMENT_WHEEL_SENSITIVITY = 1.65;
+const DOCUMENT_ZOOM_MIN = 0.12;
+const DOCUMENT_ZOOM_MAX = 3.2;
+const DOCUMENT_WHEEL_SENSITIVITY = 1.25;
 // Abstand zur Projektion bei frontaler Sicht. Der Wert liegt nur wenig ueber
 // der Nah-Clippingebene; beim Drehen kommt automatisch die nach vorn ragende
 // halbe Blattbreite hinzu, damit die Kamera nie im Blatt steckt.
@@ -49,6 +51,21 @@ const DOCUMENT_MIN_CLEARANCE = 0.24;
 // Filmischer Takt statt maximaler Bildrate: rund 30 Bilder je Sekunde.
 // Der Abzug verhindert, dass ein 60-Hz-Bildschirm auf 20 Hz einrastet.
 const FRAME_BUDGET = 1000 / 30 - 3;
+
+// ORBIT_V6: Im Ruhezustand laesst sich die Buehne anfassen und drehen. Die
+// Kamera kreist dann um die Mitte der Sockelreihe; die Maschine im
+// Hintergrund umschliesst diesen Punkt und zeigt sich von neuen Seiten.
+const ORBIT_PIVOT = new THREE.Vector3(0, -5, 0);
+const ORBIT_YAW_SPEED = 0.0046;    // Bogenmass je Bildpunkt
+const ORBIT_PITCH_SPEED = 0.0028;
+const ORBIT_PITCH_MIN = -0.16;
+const ORBIT_PITCH_MAX = 0.64;
+const ORBIT_DAMPING = 0.05;        // Restgeschwindigkeit nach einer Sekunde
+const ORBIT_STEP_CLAMP = 0.16;
+
+function wrapAngle(value) {
+  return THREE.MathUtils.euclideanModulo(value + Math.PI, Math.PI * 2) - Math.PI;
+}
 
 export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -59,18 +76,22 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     powerPreference: 'high-performance',
     stencil: false,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  renderer.setClearColor(0x03060a, 1);
+  // STARTUP_DPR_RAMP_V5_1_1: first usable frame at DPR 1.
+  const targetPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  let currentPixelRatio = Math.min(targetPixelRatio, 1);
+  renderer.setPixelRatio(currentPixelRatio);
+  // FOREGROUND_BACKGROUND_SEPARATION_V5_5_2
+  renderer.setClearColor(0x020407, 1);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.38;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x03060a, 0.0055);
+  scene.fog = new THREE.FogExp2(0x020407, 0.0068);
 
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 400);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1800);
   camera.position.copy(HOME.cam);
 
-  const background = createBackground();
+  const background = createBackground({ camera, renderer });
   background.setPixelRatio(renderer.getPixelRatio());
   scene.add(background.group);
 
@@ -78,11 +99,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   cards.setPixelRatio(renderer.getPixelRatio());
   scene.add(cards.group);
 
-  scene.add(new THREE.AmbientLight(0x294866, 1.12));
-  const keyLight = new THREE.DirectionalLight(LIGHT_PALETTE.fiber, 1.48);
+  scene.add(new THREE.AmbientLight(0x22384d, 0.88));
+  const keyLight = new THREE.DirectionalLight(LIGHT_PALETTE.fiber, 1.72);
   keyLight.position.set(-6, 9, 12);
   scene.add(keyLight);
-  const rimLight = new THREE.PointLight(LIGHT_PALETTE.fiberBlue, 20, 40, 2);
+  const rimLight = new THREE.PointLight(LIGHT_PALETTE.fiberBlue, 24, 44, 2);
   rimLight.position.set(0, -4.5, 5);
   scene.add(rimLight);
 
@@ -180,6 +201,17 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let docHalfWidth = 1;
   let viewMoving = false;
   let viewMoveTicket = 0;
+  let qualityUpgradeTimer = 0;
+  // Orbit im Ruhezustand: Drehwinkel um die Sockelmitte samt Auslauf.
+  const orbit = { yaw: 0, pitch: 0, yawVelocity: 0, pitchVelocity: 0, dragging: false };
+  const orbitQuaternion = new THREE.Quaternion();
+  const orbitEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+  const lookTarget = new THREE.Vector3();
+  // RESPONSIVE_CV_ZOOM_V5_4
+  const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)').matches
+    || navigator.maxTouchPoints > 0;
+  const touchPoints = new Map();
+  let pinchGesture = null;
 
   const guideHost = canvas.parentElement;
   const dollyGuide = document.createElement('div');
@@ -216,6 +248,43 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     </svg>`;
   guideHost?.append(dollyGuide);
 
+  const keyboardZoomHint = document.createElement('div');
+  keyboardZoomHint.className = 'cv-keyboard-zoom-hint';
+  keyboardZoomHint.setAttribute('aria-hidden', 'true');
+  keyboardZoomHint.innerHTML = '<kbd>↑</kbd><span>Zoom</span><kbd>↓</kbd>';
+
+  const mobileZoom = document.createElement('div');
+  mobileZoom.className = 'cv-mobile-zoom';
+  mobileZoom.setAttribute('aria-label', 'CV zoom controls');
+  mobileZoom.innerHTML = `
+    <button class="cv-mobile-zoom__button" type="button" data-cv-zoom="in" aria-label="Zoom in">+</button>
+    <button class="cv-mobile-zoom__button" type="button" data-cv-zoom="out" aria-label="Zoom out">−</button>
+    <span class="cv-mobile-zoom__label">Pinch / + −</span>`;
+  guideHost?.append(keyboardZoomHint, mobileZoom);
+
+  function syncDocumentInputHints() {
+    const active = opened === 'lebenslauf' && !readerOpen;
+    if (!active) {
+      pinchGesture = null;
+      touchPoints.clear();
+    }
+    keyboardZoomHint.classList.toggle('is-visible', active && !coarsePointer);
+    mobileZoom.classList.toggle('is-visible', active && coarsePointer);
+    canvas.style.touchAction = active && coarsePointer ? 'none' : '';
+  }
+
+  function onMobileZoomClick(event) {
+    const control = event.target instanceof Element
+      ? event.target.closest('[data-cv-zoom]')
+      : null;
+    if (!(control instanceof HTMLButtonElement)) return;
+    event.preventDefault();
+    const zoomIn = control.dataset.cvZoom === 'in';
+    zoomDocument(zoomIn ? -0.18 : 0.18);
+    pulseDollyGuide(zoomIn ? 'near' : 'far');
+  }
+  mobileZoom.addEventListener('click', onMobileZoomClick);
+
   function setDollyGuide(visible, active = false, direction = null) {
     dollyGuide.classList.toggle('is-visible', Boolean(visible));
     dollyGuide.classList.toggle('is-active', Boolean(active));
@@ -239,6 +308,65 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     viewMoveTicket += 1;
     gsap.killTweensOf([camPos, look]);
     viewMoving = false;
+  }
+
+  /** Zeigerform: Sockel = Hand, freie Buehne im Ruhezustand = greifbar. */
+  function syncCursor() {
+    if (orbit.dragging) canvas.style.cursor = 'grabbing';
+    else if (hovered) canvas.style.cursor = 'pointer';
+    else if (!opened && ndc.x > -1.5) canvas.style.cursor = 'grab';
+    else canvas.style.cursor = '';
+  }
+
+  function orbitBy(dx, dy) {
+    const yawDelta = THREE.MathUtils.clamp(-dx * ORBIT_YAW_SPEED, -ORBIT_STEP_CLAMP, ORBIT_STEP_CLAMP);
+    const pitchDelta = THREE.MathUtils.clamp(dy * ORBIT_PITCH_SPEED, -ORBIT_STEP_CLAMP, ORBIT_STEP_CLAMP);
+    orbit.yaw += yawDelta;
+    orbit.pitch = THREE.MathUtils.clamp(orbit.pitch + pitchDelta, ORBIT_PITCH_MIN, ORBIT_PITCH_MAX);
+    orbit.yawVelocity = yawDelta;
+    orbit.pitchVelocity = pitchDelta;
+  }
+
+  function endOrbit() {
+    if (!orbit.dragging) return;
+    orbit.dragging = false;
+    if (reduced) {
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+    }
+    syncCursor();
+  }
+
+  /** Auslauf nach dem Loslassen bzw. Rueckkehr zur Nullstellung im Fokus. */
+  function updateOrbit(dt) {
+    if (orbit.dragging) return;
+    if (opened) {
+      // Beim Heranfahren an einen Sockel kehrt die Kamera auf kuerzestem Weg
+      // in die Ausgangslage zurueck, damit das Zielbild stimmt.
+      const response = 1 - Math.pow(0.0008, dt);
+      orbit.yaw += (0 - orbit.yaw) * response;
+      orbit.pitch += (0 - orbit.pitch) * response;
+      if (Math.abs(orbit.yaw) < 0.0004) orbit.yaw = 0;
+      if (Math.abs(orbit.pitch) < 0.0004) orbit.pitch = 0;
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+      return;
+    }
+    if (Math.abs(orbit.yawVelocity) < 0.000001 && Math.abs(orbit.pitchVelocity) < 0.000001) {
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+      return;
+    }
+    const step = Math.min(1.8, dt * 60);
+    orbit.yaw += orbit.yawVelocity * step;
+    orbit.pitch = THREE.MathUtils.clamp(
+      orbit.pitch + orbit.pitchVelocity * step,
+      ORBIT_PITCH_MIN,
+      ORBIT_PITCH_MAX,
+    );
+    const damping = Math.pow(ORBIT_DAMPING, dt);
+    orbit.yawVelocity *= damping;
+    orbit.pitchVelocity *= damping;
   }
 
   /* ---------- Kamera ---------- */
@@ -289,13 +417,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * nicht in die Buehne, wird das Fenster niedriger und das Dokument laeuft
    * hindurch. Projektion und Lesefassung teilen genau dieses Rechteck.
    */
-  const docRect = { width: DOC_MAX_PX, height: DOC_MAX_PX / CV_PAGE_ASPECT };
+  const docRect = { width: DOC_MAX_PX, height: DOC_MAX_PX / getCvPageAspect() };
 
   function measureDocumentRect() {
     const availableWidth = Math.max(220, view.width - DOC_GUTTER_X * 2);
     const availableHeight = Math.max(220, view.height - DOC_GUTTER_Y * 2);
     const width = Math.min(DOC_MAX_PX, availableWidth);
-    const height = Math.min(width / CV_PAGE_ASPECT, availableHeight);
+    const pageAspect = getCvPageAspect();
+    const height = Math.min(width / pageAspect, availableHeight);
     if (Math.abs(width - docRect.width) < 0.5 && Math.abs(height - docRect.height) < 0.5) {
       return docRect;
     }
@@ -312,6 +441,13 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     return rect;
   }
 
+  // Language changes can change the physical page aspect (the English web
+  // projection has three native pages). Keep the HTML reader rectangle and
+  // the 3D projection tied to the same language-specific page geometry.
+  const unsubscribeDocumentLanguage = onLanguageChange(() => {
+    syncDocumentAspect();
+  });
+
   function updateDocumentLift() {
     const overflow = Math.max(0, documentHeight - visibleHeight * 0.9);
     scrollLiftTarget = (0.5 - cards.documentScroll) * overflow;
@@ -319,6 +455,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   /** Ruhezustand: alle drei Karten im Blick. */
   function toHome(duration = 0.95) {
+    traceExecution({
+      source: 'src/scene/stage.js',
+      code: `toHome(${Number(duration).toFixed(2)})`,
+    });
     opened = null;
     cards.setOpened(null);
     background.setDocumentOpen?.(false);
@@ -327,10 +467,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     docZoomTarget = DOCUMENT_ZOOM_DEFAULT;
     zoomHold = false;
     setDollyGuide(false);
+    syncDocumentInputHints();
     scrollLiftTarget = 0;
     pointer.set(0, 0);
     moveView(HOME.cam, HOME.look, duration);
-    canvas.style.cursor = '';
+    syncCursor();
     applyBloom();
   }
 
@@ -342,10 +483,20 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * Sockel selbst als Motiv.
    */
   function focusCard(key, duration = 1.8) {
+    traceExecution({
+      source: 'src/scene/stage.js',
+      code: `focusCard(${JSON.stringify(key)}, ${Number(duration).toFixed(2)})`,
+    });
     opened = key;
     cards.setOpened(key, true);
+    // Ein laufender Orbit endet; der Rueckweg nimmt die kuerzere Richtung.
+    orbit.dragging = false;
+    orbit.yaw = wrapAngle(orbit.yaw);
+    orbit.yawVelocity = 0;
+    orbit.pitchVelocity = 0;
     const isDocument = key === 'lebenslauf';
     setDollyGuide(isDocument && !readerOpen);
+    syncDocumentInputHints();
     background.setDocumentOpen?.(isDocument);
     applyBloom();
 
@@ -395,7 +546,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     hovered = null;
     pointer.set(0, 0);
     drift.set(0, 0);
-    canvas.style.cursor = '';
+    syncCursor();
     moveView(nextCam, focusCenter, duration);
   }
 
@@ -484,8 +635,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
 
     switch (event.key) {
-      case 'ArrowDown': scrollDocument(0.14); break;
-      case 'ArrowUp': scrollDocument(-0.14); break;
+      case 'ArrowDown':
+        zoomDocument(0.14);
+        pulseDollyGuide('far');
+        break;
+      case 'ArrowUp':
+        zoomDocument(-0.14);
+        pulseDollyGuide('near');
+        break;
       case 'PageDown': case ' ': scrollDocument(0.82); break;
       case 'PageUp': scrollDocument(-0.82); break;
       case 'Home': cards.setDocumentScroll(0); break;
@@ -507,6 +664,36 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function onPointerMove(event) {
     const { nx, ny } = updatePointerFromEvent(event);
+
+    if (event.pointerType === 'touch' && touchPoints.has(event.pointerId)) {
+      touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+
+    if (
+      event.pointerType === 'touch'
+      && pinchGesture
+      && touchPoints.size >= 2
+      && opened === 'lebenslauf'
+      && !readerOpen
+    ) {
+      event.preventDefault();
+      const points = Array.from(touchPoints.values()).slice(0, 2);
+      const distance = Math.max(
+        1,
+        Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y),
+      );
+      const previousTarget = docZoomTarget;
+      docZoomTarget = THREE.MathUtils.clamp(
+        pinchGesture.startZoom * pinchGesture.startDistance / distance,
+        DOCUMENT_ZOOM_MIN,
+        DOCUMENT_ZOOM_MAX,
+      );
+      if (Math.abs(previousTarget - docZoomTarget) > 0.002) {
+        pulseDollyGuide(docZoomTarget < previousTarget ? 'near' : 'far');
+      }
+      pinchGesture.lastDistance = distance;
+      return;
+    }
 
     if (drag && drag.id === event.pointerId) {
       const dx = event.clientX - drag.x;
@@ -534,8 +721,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
           } else if (drag.pointerType === 'touch') {
             drag.axis = 'y';
           } else {
-            // Bei der Maus bleibt die senkrechte Bewegung frei, weil die
-            // Kamerafahrt ausschliesslich ueber das Mausrad erfolgt.
             drag.axis = 'hold';
           }
         }
@@ -548,23 +733,63 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
             pulseDollyGuide(dx < 0 ? 'left' : 'right');
           }
         } else if (drag.axis === 'y' && drag.pointerType === 'touch') {
+          event.preventDefault();
           scrollDocument(-dy / view.height);
         }
+      } else if (drag.moved && !opened) {
+        // Ruhezustand: Ziehen dreht die Kamera um die Sockelreihe.
+        if (!orbit.dragging) {
+          orbit.dragging = true;
+          syncCursor();
+        }
+        if (event.pointerType === 'touch') event.preventDefault();
+        orbitBy(dx, dy);
       }
     }
 
     if (!reduced && !opened) pointer.set(nx, ny);
+    background.setPointerNdc?.(nx, ny, !opened);
+    if (!drag) syncCursor();
   }
 
   function onPointerLeave() {
     ndc.set(-2, -2);
     pointer.set(0, 0);
+    background.setPointerNdc?.(0, 0, false);
+    if (!orbit.dragging) syncCursor();
   }
 
   function onPointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
 
     updatePointerFromEvent(event);
+
+    if (
+      event.pointerType === 'touch'
+      && opened === 'lebenslauf'
+      && !readerOpen
+    ) {
+      touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touchPoints.size >= 2) {
+        event.preventDefault();
+        const points = Array.from(touchPoints.values()).slice(0, 2);
+        const distance = Math.max(
+          1,
+          Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y),
+        );
+        takeOverDocumentCamera();
+        pinchGesture = {
+          startDistance: distance,
+          lastDistance: distance,
+          startZoom: docZoomTarget,
+        };
+        drag = null;
+        cards.endResumeRotation();
+        canvas.setPointerCapture?.(event.pointerId);
+        return;
+      }
+    }
+
     const onDocument = opened === 'lebenslauf' && hitsDocument();
     const canWheelZoom = event.button === 0
       && event.pointerType !== 'touch'
@@ -585,31 +810,44 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     };
 
     if (canWheelZoom) beginDocumentWheelZoom();
-
     canvas.setPointerCapture?.(event.pointerId);
   }
 
   function onPointerUp(event) {
+    if (event.pointerType === 'touch') {
+      touchPoints.delete(event.pointerId);
+      if (pinchGesture) {
+        if (touchPoints.size < 2) pinchGesture = null;
+        drag = null;
+        cards.endResumeRotation();
+        setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+        return;
+      }
+    }
+
     if (!drag || drag.id !== event.pointerId) return;
     const { moved, wheelUsed, onDocument } = drag;
     drag = null;
 
     if (zoomHold) endDocumentWheelZoom();
     cards.endResumeRotation();
+    endOrbit();
 
     if (moved || wheelUsed) return;
     if (hovered) listener?.('select', hovered);
-    // Ein Klick neben das Dokument fuehrt zurueck, ein Klick darauf nicht.
     else if (opened && !onDocument) listener?.('select', 'home');
   }
 
   function onWindowBlur() {
     if (zoomHold) endDocumentWheelZoom();
     drag = null;
+    pinchGesture = null;
+    touchPoints.clear();
     cards.endResumeRotation();
+    endOrbit();
   }
 
-  canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+  canvas.addEventListener('pointermove', onPointerMove, { passive: false });
   canvas.addEventListener('pointerleave', onPointerLeave, { passive: true });
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
@@ -651,8 +889,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function applyBloom() {
     if (!bloom) return;
     const base = view.compact ? 1.22 : 1.62;
+    // CV_BLOOM_CONTROL_V4_2
+    // The document carries its own luminous ink. Global bloom must not turn
+    // the page into a white light panel when the camera moves into CV focus.
     bloomBaseTarget = opened === 'lebenslauf'
-      ? base * 0.45
+      ? base * 0.24
       : base;
   }
 
@@ -670,6 +911,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     camera.aspect = view.aspect;
     camera.updateProjectionMatrix();
     view.compact = view.aspect < 0.72;
+    syncDocumentInputHints();
     // Die Lesefassung erfaehrt jede Groessenaenderung, auch wenn der
     // Lebenslauf gerade nicht im Bild steht.
     syncDocumentAspect();
@@ -691,6 +933,16 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     background.setPixelRatio(renderer.getPixelRatio());
     cards.setPixelRatio(renderer.getPixelRatio());
     if (opened && !viewMoving) focusCard(opened, 0.65);
+  }
+
+  function settleQuality() {
+    if (qualityUpgradeTimer || currentPixelRatio >= targetPixelRatio - 0.001) return;
+    qualityUpgradeTimer = window.setTimeout(() => {
+      qualityUpgradeTimer = 0;
+      currentPixelRatio = targetPixelRatio;
+      renderer.setPixelRatio(currentPixelRatio);
+      resize();
+    }, 1100);
   }
 
   // ResizeObserver feuert waehrend CSS-Uebergaengen mehrfach je Bild.
@@ -768,11 +1020,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         (bloomTarget - bloom.intensity) * bloomResponse;
     }
 
-    const next = pick();
+    const next = orbit.dragging ? null : pick();
     if (next !== hovered) {
       hovered = next;
       cards.setHover(hovered);
-      canvas.style.cursor = hovered ? 'pointer' : '';
+      syncCursor();
       listener?.('hover', hovered);
     }
 
@@ -780,11 +1032,29 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     else drift.lerp(pointer, 0.018);
     scrollLift += (scrollLiftTarget - scrollLift) * (1 - Math.pow(0.01, Math.min(dt, 0.1)));
     camera.position.set(
-      camPos.x + drift.x * 1.7,
-      camPos.y + drift.y * 1.0 + scrollLift,
+      camPos.x + drift.x * 1.35,
+      camPos.y + drift.y * 0.82 + scrollLift,
       camPos.z,
     );
-    camera.lookAt(look.x, look.y + scrollLift, look.z);
+    lookTarget.set(look.x, look.y + scrollLift, look.z);
+
+    // Orbit: Kamera und Blickpunkt gemeinsam um die Sockelmitte drehen.
+    updateOrbit(Math.min(dt, 0.1));
+    if (orbit.yaw !== 0 || orbit.pitch !== 0) {
+      orbitEuler.set(-orbit.pitch, orbit.yaw, 0);
+      orbitQuaternion.setFromEuler(orbitEuler);
+      // Seitlich und von oben weicht die Kamera etwas zurueck, damit die ganze
+      // Sockelreihe im Bild bleibt.
+      const dolly = 1
+        + 0.55 * Math.abs(Math.sin(orbit.yaw))
+        + 0.30 * Math.max(0, orbit.pitch);
+      camera.position.sub(ORBIT_PIVOT)
+        .applyQuaternion(orbitQuaternion)
+        .multiplyScalar(dolly)
+        .add(ORBIT_PIVOT);
+      lookTarget.sub(ORBIT_PIVOT).applyQuaternion(orbitQuaternion).add(ORBIT_PIVOT);
+    }
+    camera.lookAt(lookTarget);
 
     if (composer) composer.render();
     else renderer.render(scene, camera);
@@ -794,6 +1064,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     scene, camera, renderer, composer, cards, background,
     ready: cards.ready,
     releaseModelReveal: () => cards.releaseModelReveal(),
+    settleQuality,
 
     /** cb(event, key) mit event = 'hover' | 'select' */
     on(cb) { listener = cb; },
@@ -801,6 +1072,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     focusCard,
     toHome,
     setRoute,
+
+    /** Blickwinkel im Ruhezustand direkt setzen (Bogenmass). */
+    setOrbit(yaw = 0, pitch = 0) {
+      orbit.yaw = Number(yaw) || 0;
+      orbit.pitch = THREE.MathUtils.clamp(Number(pitch) || 0, ORBIT_PITCH_MIN, ORBIT_PITCH_MAX);
+      orbit.yawVelocity = 0;
+      orbit.pitchVelocity = 0;
+    },
     setExplored(explored) {
       cards.setExplored(explored instanceof Set ? explored : new Set(explored || []));
     },
@@ -813,6 +1092,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       readerOpen = Boolean(value);
       if (zoomHold) endDocumentWheelZoom();
       setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+      syncDocumentInputHints();
       if (readerOpen) cards.endResumeRotation();
     },
 
@@ -851,6 +1131,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       begin() {
         camPos.set(HOME.cam.x, -1.3, 8.6);
         background.ambient.value = 1;
+        background.setEffectsEnabled?.(false);
         background.setSymbolOnly(true);
         cards.setHologramReveal(0, true);
         cards.group.visible = false;
@@ -879,6 +1160,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       finish() {
         gsap.killTweensOf([cards.group.position, cards.group.scale]);
         background.setSymbolOnly(false);
+        background.setEffectsEnabled?.(true);
         cards.setHologramReveal(1, true);
         cards.group.visible = true;
         cards.group.position.z = 0;
@@ -907,8 +1189,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       canvas.removeEventListener('wheel', onWheel);
       window.removeEventListener('blur', onWindowBlur);
       window.removeEventListener('keydown', onKeydown);
+      unsubscribeDocumentLanguage();
       gsap.killTweensOf([camPos, look, cards.group.position, cards.group.scale]);
       window.clearTimeout(dollyGuideTimer);
+      window.clearTimeout(qualityUpgradeTimer);
+      mobileZoom.removeEventListener('click', onMobileZoomClick);
+      mobileZoom.remove();
+      keyboardZoomHint.remove();
+      canvas.style.touchAction = '';
       dollyGuide.remove();
       timer.dispose();
       cards.dispose();
