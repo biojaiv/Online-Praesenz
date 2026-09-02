@@ -75,7 +75,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1800);
   camera.position.copy(HOME.cam);
 
-  const background = createBackground({ camera });
+  const background = createBackground({ camera, renderer });
   background.setPixelRatio(renderer.getPixelRatio());
   scene.add(background.group);
 

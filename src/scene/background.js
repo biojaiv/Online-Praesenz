@@ -102,9 +102,9 @@ function routeTrace(rng, origin, layer) {
   return pts;
 }
 
-export function createBackground({ camera = null, layers = 3, tracesPerLayer = 10, seed = 20260802 } = {}) {
+export function createBackground({ camera = null, renderer = null, layers = 3, tracesPerLayer = 10, seed = 20260802 } = {}) {
   const group = new THREE.Group();
-  const proceduralOrrery = createProceduralOrreryField({ camera });
+  const proceduralOrrery = createProceduralOrreryField({ camera, renderer });
   group.add(proceduralOrrery.group);
   // Motherboard und Impulsbahnen bilden die nahe Ebene. Sie tritt hinter
   // dem geoeffneten Lebenslauf zurueck. Sterne und Nebel bleiben dagegen
@@ -767,6 +767,7 @@ export function createBackground({ camera = null, layers = 3, tracesPerLayer = 1
       starUniforms.uPixelRatio.value = pr;
       boardSignals.setPixelRatio(pr);
       endpointBurst.setPixelRatio(pr);
+      proceduralOrrery.setPixelRatio?.(pr);
     },
 
     update(elapsed, delta) {
