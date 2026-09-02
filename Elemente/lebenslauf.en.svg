@@ -1,255 +1,295 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1241" height="3786" viewBox="0 0 1241 3786" role="img" aria-labelledby="title desc">
-<title id="title">Vladimir Leicht — English CV hologram projection</title>
-<desc id="desc">Two-page English vector CV for the interactive portfolio hologram.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1241" height="3786" viewBox="0 0 1241 3786">
 <defs>
-  <linearGradient id="cyanLine" x1="0" x2="1"><stop offset="0" stop-color="#58eaff" stop-opacity=".14"/><stop offset=".18" stop-color="#58eaff" stop-opacity=".72"/><stop offset=".82" stop-color="#58eaff" stop-opacity=".72"/><stop offset="1" stop-color="#58eaff" stop-opacity=".14"/></linearGradient>
-  <style>
-    .name{font-family:Inter,Arial,sans-serif;font-size:54px;font-weight:700;letter-spacing:1.4px;fill:#eafcff}
-    .role{font-family:Inter,Arial,sans-serif;font-size:25px;font-weight:600;letter-spacing:.5px;fill:#8cf2ff}
-    .eyebrow{font-family:Inter,Arial,sans-serif;font-size:15px;font-weight:700;letter-spacing:3.1px;fill:#78dce8}
-    .section{font-family:Inter,Arial,sans-serif;font-size:29px;font-weight:700;letter-spacing:1.1px;fill:#eafcff}
-    .body{font-family:Inter,Arial,sans-serif;font-size:21px;font-weight:400;fill:#d7f5f8}
-    .bodyStrong{font-family:Inter,Arial,sans-serif;font-size:21px;font-weight:650;fill:#f1fdff}
-    .small{font-family:Inter,Arial,sans-serif;font-size:17px;font-weight:400;fill:#afd9de}
-    .date{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:17px;font-weight:600;letter-spacing:.4px;fill:#75e6f4}
-    .skill{font-family:Inter,Arial,sans-serif;font-size:18px;font-weight:500;fill:#d8f7fa}
-    .accent{fill:#f0a55b}
-    .line{stroke:url(#cyanLine);stroke-width:2}
-    .thin{stroke:#58eaff;stroke-opacity:.22;stroke-width:1}
-  </style>
+  <linearGradient id="bgPage" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#081523"/><stop offset="55%" stop-color="#07111b"/><stop offset="100%" stop-color="#050b12"/></linearGradient>
+  <linearGradient id="glowLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#143449"/><stop offset="45%" stop-color="#57d9ff"/><stop offset="100%" stop-color="#143449"/></linearGradient>
+  <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
-<g aria-hidden="true" opacity=".9">
-<path d="M42 56 H1199" class="line"/>
-<path d="M42 1837 H1199" class="line"/>
-<path d="M56 42 V1851" class="thin"/>
-<path d="M1185 42 V1851" class="thin"/>
-<circle cx="56" cy="56" r="4" fill="#58eaff"/><circle cx="1185" cy="56" r="4" fill="#58eaff"/>
-</g>
-<g aria-hidden="true" opacity=".9">
-<path d="M42 1949 H1199" class="line"/>
-<path d="M42 3730 H1199" class="line"/>
-<path d="M56 1935 V3744" class="thin"/>
-<path d="M1185 1935 V3744" class="thin"/>
-<circle cx="56" cy="1949" r="4" fill="#58eaff"/><circle cx="1185" cy="1949" r="4" fill="#58eaff"/>
-</g>
-<g id="page-1" data-page="1">
-<text x="82" y="92" class="eyebrow">CURRICULUM VITAE · ENGLISH PROJECTION</text>
-<text x="82" y="160" class="name">Vladimir Leicht</text>
-<text x="82" y="203" class="role">Information Technology Specialist - Systems Integration (IHK)</text>
-<text x="82" y="264" class="small"><tspan class="bodyStrong">Availability:</tspan> Available immediately · Pforzheim · vleicht@keemail.me</text>
-<path d="M82 318 H1159" class="line"/>
-<text x="82" y="366" class="section">PROFILE</text>
-<rect x="62" y="343" width="6" height="27" rx="3" fill="#58eaff"/>
-<text x="82" y="402" class="body">robust, well-engineered IT solutions delivered with persistence, precision and creative</text>
-<text x="82" y="431" class="body">problem-solving.</text>
-<text x="82" y="468" class="body"><tspan class="bodyStrong">Core focus:</tspan> Planning, configuration and administration of complex IT infrastructures</text>
-<text x="82" y="530" class="section">EDUCATION &amp; PRACTICAL EXPERIENCE</text>
-<rect x="62" y="507" width="6" height="27" rx="3" fill="#58eaff"/>
-<text x="82" y="566" class="date">2024–2026</text>
-<text x="312" y="566" class="bodyStrong">Information Technology Specialist - Systems Integration (IHK)</text>
-<text x="312" y="595" class="small">TASys GmbH · IHK qualification completed in 2026</text>
-<text x="312" y="619" class="small">Practical training 01/2026–07/2026 · Office for IT &amp; Digitalisation, Enzkreis District</text>
-<text x="312" y="642" class="small">Administration</text>
-<text x="82" y="682" class="date">2001–2004</text>
-<text x="312" y="682" class="bodyStrong">Heinrich-Wieland-Schule - Technical Gymnasium</text>
-<text x="312" y="711" class="small">Abitur (general higher education entrance qualification) · Advanced courses: IT and</text>
-<text x="312" y="735" class="small">English</text>
-<text x="82" y="794" class="section">TECHNICAL SKILLS</text>
-<rect x="62" y="771" width="6" height="27" rx="3" fill="#58eaff"/>
-<text x="82" y="830" class="skill">Windows Server 2025</text>
-<rect x="342" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="82" y="861" class="skill">Active Directory</text>
-<rect x="342" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="82" y="892" class="skill">Virtualisation</text>
-<rect x="342" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="82" y="923" class="skill">UEM</text>
-<rect x="342" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="82" y="954" class="skill">Microsoft 365 / Cloud Solutions</text>
-<rect x="342" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="82" y="985" class="skill">Linux</text>
-<rect x="342" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="82" y="1016" class="skill">Docker</text>
-<rect x="342" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="367" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="392" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="417" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="442" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="467" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="640" y="830" class="skill">IT Security</text>
-<rect x="900" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1000" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1025" y="816" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<text x="640" y="861" class="skill">Python</text>
-<rect x="900" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1000" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1025" y="847" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<text x="640" y="892" class="skill">SQL</text>
-<rect x="900" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1000" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1025" y="878" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<text x="640" y="923" class="skill">GitHub</text>
-<rect x="900" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1000" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1025" y="909" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<text x="640" y="954" class="skill">Visual Studio Code</text>
-<rect x="900" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1000" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1025" y="940" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<text x="640" y="985" class="skill">HTML, CSS &amp; PHP</text>
-<rect x="900" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<rect x="1000" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<rect x="1025" y="971" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<text x="640" y="1016" class="skill">C#</text>
-<rect x="900" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="925" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="950" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="975" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".9"/>
-<rect x="1000" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<rect x="1025" y="1002" width="17" height="5" rx="2.5" fill="#58eaff" opacity=".18"/>
-<text x="82" y="1070" class="section">LANGUAGES, WORKING STYLE &amp; INTERESTS</text>
-<rect x="62" y="1047" width="6" height="27" rx="3" fill="#58eaff"/>
-<text x="82" y="1106" class="body">English · Russian · Reliability &amp; Work Ethic</text>
-<text x="82" y="1137" class="body"><tspan class="bodyStrong">Interests:</tspan> Martial Arts · Reading · AI-Assisted Development</text>
-<text x="82" y="1168" class="body"><tspan class="bodyStrong">Focus stack:</tspan> Windows Server · Virtualisation · UEM · Cloud Solutions</text>
-<path d="M82 1227 H1159" class="thin"/>
-<text x="82" y="1261" class="small">Date of Birth: 6 March 1985 · Location: Pforzheim · Email: vleicht@keemail.me</text>
-<text x="1159" y="1815" text-anchor="end" class="eyebrow">01 / 02</text>
-</g>
-<g id="page-2" data-page="2">
-<text x="82" y="1985" class="eyebrow">EMPLOYMENT HISTORY · COMPLETE TIMELINE</text>
-<text x="82" y="2049" class="section">EMPLOYMENT HISTORY</text>
-<path d="M82 2089 H1159" class="line"/>
-<text x="82" y="2131" class="date">03/2023–12/2024</text>
-<text x="312" y="2131" class="bodyStrong">Service Station Attendant</text>
-<text x="312" y="2158" class="small">Esso Service Station · Pforzheim, Germany</text>
-<circle cx="280" cy="2144" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2150 V2196" class="thin"/>
-<text x="82" y="2204" class="date">11/2023–01/2024</text>
-<text x="312" y="2204" class="bodyStrong">Warehouse Associate / Inventory Control</text>
-<text x="312" y="2231" class="small">Kaufhof · Pforzheim, Germany</text>
-<circle cx="280" cy="2217" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2223 V2269" class="thin"/>
-<text x="82" y="2277" class="date">02/2022–01/2023</text>
-<text x="312" y="2277" class="bodyStrong">Order Picker / Warehouse Associate</text>
-<text x="312" y="2304" class="small">gastromatic Aldinger · Pforzheim, Germany</text>
-<circle cx="280" cy="2290" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2296 V2342" class="thin"/>
-<text x="82" y="2350" class="date">04/2021–02/2022</text>
-<text x="312" y="2350" class="bodyStrong">Job Search</text>
-<text x="312" y="2377" class="small">Job search during challenging economic conditions</text>
-<circle cx="280" cy="2363" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2369 V2415" class="thin"/>
-<text x="82" y="2423" class="date">07/2019–09/2020</text>
-<text x="312" y="2423" class="bodyStrong">Order Picker / Warehouse Associate</text>
-<text x="312" y="2450" class="small">gastromatic Aldinger · Pforzheim, Germany</text>
-<circle cx="280" cy="2436" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2442 V2488" class="thin"/>
-<text x="82" y="2496" class="date">02/2019–06/2019</text>
-<text x="312" y="2496" class="bodyStrong">Construction Assistant</text>
-<text x="312" y="2523" class="small">Pfirmann · Pforzheim, Germany</text>
-<circle cx="280" cy="2509" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2515 V2561" class="thin"/>
-<text x="82" y="2569" class="date">09/2018–01/2019</text>
-<text x="312" y="2569" class="bodyStrong">Shipping Associate</text>
-<text x="312" y="2596" class="small">Klingel · Pforzheim, Germany</text>
-<circle cx="280" cy="2582" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2588 V2634" class="thin"/>
-<text x="82" y="2642" class="date">02/2018–08/2018</text>
-<text x="312" y="2642" class="bodyStrong">Electroplater</text>
-<text x="312" y="2669" class="small">Dudaco · Pforzheim, Germany</text>
-<circle cx="280" cy="2655" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2661 V2707" class="thin"/>
-<text x="82" y="2715" class="date">08/2017–01/2018</text>
-<text x="312" y="2715" class="bodyStrong">Job Search</text>
-<circle cx="280" cy="2705" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2711 V2757" class="thin"/>
-<text x="82" y="2765" class="date">11/2011–07/2017</text>
-<text x="312" y="2765" class="bodyStrong">Care Assistant</text>
-<text x="312" y="2792" class="small">ISB, Helfende Hand and Mobilee · Karlsruhe, Germany</text>
-<circle cx="280" cy="2778" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2784 V2830" class="thin"/>
-<text x="82" y="2838" class="date">10/2010–09/2011</text>
-<text x="312" y="2838" class="bodyStrong">Various Part-Time Roles</text>
-<circle cx="280" cy="2828" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2834 V2880" class="thin"/>
-<text x="82" y="2888" class="date">04/2010–09/2010</text>
-<text x="312" y="2888" class="bodyStrong">Health-related Career Break</text>
-<text x="312" y="2915" class="small accent">Stable health since then</text>
-<circle cx="280" cy="2901" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2907 V2953" class="thin"/>
-<text x="82" y="2961" class="date">02/2010–04/2010</text>
-<text x="312" y="2961" class="bodyStrong">Warehouse Assistant</text>
-<text x="312" y="2988" class="small">DEKRA Arbeit GmbH · Pforzheim, Germany</text>
-<circle cx="280" cy="2974" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 2980 V3026" class="thin"/>
-<text x="82" y="3034" class="date">08/2008–01/2010</text>
-<text x="312" y="3034" class="bodyStrong">Health-related Career Break</text>
-<circle cx="280" cy="3024" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 3030 V3076" class="thin"/>
-<text x="82" y="3084" class="date">07/2008–09/2008</text>
-<text x="312" y="3084" class="bodyStrong">Production Worker</text>
-<text x="312" y="3111" class="small">Witzenmann · Pforzheim, Germany</text>
-<circle cx="280" cy="3097" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 3103 V3149" class="thin"/>
-<text x="82" y="3157" class="date">02/2008–05/2008</text>
-<text x="312" y="3157" class="bodyStrong">Delivery Driver</text>
-<text x="312" y="3184" class="small">City Briefkurier · Pforzheim, Germany</text>
-<circle cx="280" cy="3170" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M280 3176 V3222" class="thin"/>
-<text x="82" y="3230" class="date">06/2007–09/2007</text>
-<text x="312" y="3230" class="bodyStrong">Internship in Journalism &amp; Culture</text>
-<text x="312" y="3257" class="small">M.D. · Magdeburg, Germany</text>
-<circle cx="280" cy="3243" r="4.5" fill="#58eaff" opacity=".9"/>
-<path d="M82 3303 H1159" class="thin"/>
-<text x="82" y="3338" class="small">Technical profile: Windows Server · Virtualisation · UEM · Cloud Solutions</text>
-<text x="1159" y="3708" text-anchor="end" class="eyebrow">02 / 02</text>
-</g>
+<rect x="0" y="0" width="1241" height="1893" fill="url(#bgPage)"/>
+<rect x="26" y="26" width="1189" height="1841" rx="36" fill="none" stroke="#57d9ff" stroke-width="3" opacity="0.92"/>
+<rect x="46" y="46" width="1149" height="1801" rx="28" fill="none" stroke="#163246" stroke-width="1.4" opacity="0.95"/>
+<line x1="88" y1="138" x2="1153" y2="138" stroke="url(#glowLine)" stroke-width="3" opacity="0.88" filter="url(#softGlow)"/>
+<text x="92" y="110" fill="#57d9ff" font-size="36" font-family="'JetBrains Mono', monospace" font-weight="700">./</text>
+<text x="118" y="228" fill="#e7f7ff" font-size="74" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="800" letter-spacing="1.4">Vladimir</text>
+<text x="118" y="306" fill="#e7f7ff" font-size="74" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="800" letter-spacing="1.4">Leicht</text>
+<text x="120" y="350" fill="#8de8ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600" letter-spacing="1.2">IT Specialist for Systems Integration</text>
+<text x="1086" y="98" text-anchor="end" fill="#9ccde0" font-size="18" font-family="'JetBrains Mono', monospace">PAGE 01</text>
+<text x="1086" y="124" text-anchor="end" fill="#f1a144" font-size="18" font-family="'JetBrains Mono', monospace">HOLOGRAM CV</text>
+<path d="M70 112 H88 M70 112 V132 M1154 112 H1172 M1172 112 V132 M70 1780 H88 M70 1760 V1780 M1154 1780 H1172 M1172 1760 V1780" stroke="#f1a144" stroke-width="3" fill="none" opacity="0.9"/>
+<rect x="0" y="1893" width="1241" height="1893" fill="url(#bgPage)"/>
+<rect x="26" y="1919" width="1189" height="1841" rx="36" fill="none" stroke="#57d9ff" stroke-width="3" opacity="0.92"/>
+<rect x="46" y="1939" width="1149" height="1801" rx="28" fill="none" stroke="#163246" stroke-width="1.4" opacity="0.95"/>
+<line x1="88" y1="2031" x2="1153" y2="2031" stroke="url(#glowLine)" stroke-width="3" opacity="0.88" filter="url(#softGlow)"/>
+<text x="92" y="2003" fill="#57d9ff" font-size="36" font-family="'JetBrains Mono', monospace" font-weight="700">./</text>
+<text x="118" y="2121" fill="#e7f7ff" font-size="74" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="800" letter-spacing="1.4">Vladimir</text>
+<text x="118" y="2199" fill="#e7f7ff" font-size="74" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="800" letter-spacing="1.4">Leicht</text>
+<text x="120" y="2243" fill="#8de8ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600" letter-spacing="1.2">IT Specialist for Systems Integration</text>
+<text x="1086" y="1991" text-anchor="end" fill="#9ccde0" font-size="18" font-family="'JetBrains Mono', monospace">PAGE 02</text>
+<text x="1086" y="2017" text-anchor="end" fill="#f1a144" font-size="18" font-family="'JetBrains Mono', monospace">HOLOGRAM CV</text>
+<path d="M70 2005 H88 M70 2005 V132 M1154 2005 H1172 M1172 2005 V132 M70 3673 H88 M70 3653 V1780 M1154 3673 H1172 M1172 3653 V1780" stroke="#f1a144" stroke-width="3" fill="none" opacity="0.9"/>
+<circle cx="1014" cy="245" r="136" fill="none" stroke="#57d9ff" stroke-width="3" opacity="0.85"/>
+<circle cx="1014" cy="245" r="126" fill="#0d2235" stroke="#f1a144" stroke-width="2"/>
+<circle cx="1014" cy="245" r="122" fill="#10283d"/>
+<circle cx="1014" cy="227" r="46" fill="#1f4664" opacity="0.95"/>
+<path d="M 936 345 C 956 277, 1072 277, 1092 345 Z" fill="#1f4664" opacity="0.95"/>
+<text x="1014" y="253" fill="#8de8ff" text-anchor="middle" font-size="34" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">VL</text>
+<rect x="86" y="412" width="506" height="246" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="96" y="422" width="486" height="226" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="108" y1="482" x2="570" y2="482" stroke="#163246" stroke-width="1.6"/>
+<text x="110" y="460" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">FOCUS</text>
+<text x="568" y="460" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">PRIMARY MISSION</text>
+<text x="110" y="474" fill="#e7f7ff" font-size="28" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">
+  <tspan x="110" dy="0">My focus is on durable, cleanly engineered IT</tspan>
+  <tspan x="110" dy="35.8">solutions that I deliver with persistence and</tspan>
+  <tspan x="110" dy="35.8">ingenuity.</tspan>
+</text>
+<text x="110" y="620" fill="#9ccde0" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Windows Server · Virtualisation · UEM · Cloud Solutions</text>
+<rect x="642" y="412" width="514" height="246" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="652" y="422" width="494" height="226" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="664" y1="482" x2="1134" y2="482" stroke="#163246" stroke-width="1.6"/>
+<text x="666" y="460" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">HARD FACTS</text>
+<text x="1132" y="460" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">STATUS</text>
+<text x="670" y="470" fill="#f1a144" font-size="18" font-family="'JetBrains Mono', monospace">AVAILABLE</text>
+<text x="812" y="470" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">Available from August 2026</text>
+<text x="670" y="512" fill="#f1a144" font-size="18" font-family="'JetBrains Mono', monospace">LOCATION</text>
+<text x="812" y="512" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">Pforzheim</text>
+<text x="670" y="554" fill="#f1a144" font-size="18" font-family="'JetBrains Mono', monospace">EMAIL</text>
+<text x="812" y="554" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">vleicht@keemail.me</text>
+<text x="670" y="596" fill="#f1a144" font-size="18" font-family="'JetBrains Mono', monospace">BORN</text>
+<text x="812" y="596" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">6 March 1985</text>
+<rect x="86" y="706" width="506" height="462" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="96" y="716" width="486" height="442" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="108" y1="776" x2="570" y2="776" stroke="#163246" stroke-width="1.6"/>
+<text x="110" y="754" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">EDUCATION</text>
+<text x="568" y="754" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">TRAINING</text>
+<circle cx="120" cy="764" r="6" fill="#f1a144"/>
+<text x="148" y="770" fill="#57d9ff" font-size="20" font-family="'JetBrains Mono', monospace">2024–2026</text>
+<text x="148" y="804" fill="#e7f7ff" font-size="24" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">
+  <tspan x="148" dy="0">Vocational retraining as an IT</tspan>
+  <tspan x="148" dy="30.7">Specialist for Systems</tspan>
+  <tspan x="148" dy="30.7">Integration</tspan>
+</text>
+<text x="148" y="900" fill="#9ccde0" font-size="18" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="400">
+  <tspan x="148" dy="0">TASys GmbH · Qualification</tspan>
+  <tspan x="148" dy="23.0">completed in 2026</tspan>
+</text>
+<text x="148" y="948" fill="#f1a144" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">
+  <tspan x="148" dy="0">Practical phase 01/2026–07/2026 · IT &amp;</tspan>
+  <tspan x="148" dy="21.8">Digitalisation Office, Enzkreis</tspan>
+  <tspan x="148" dy="21.8">District Administration</tspan>
+</text>
+<line x1="120" y1="770" x2="120" y2="1003" stroke="#163246" stroke-width="2"/>
+<circle cx="120" cy="1043" r="6" fill="#f1a144"/>
+<text x="148" y="1049" fill="#57d9ff" font-size="20" font-family="'JetBrains Mono', monospace">2001–2004</text>
+<text x="148" y="1083" fill="#e7f7ff" font-size="24" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">
+  <tspan x="148" dy="0">Heinrich-Wieland Technical</tspan>
+  <tspan x="148" dy="30.7">Upper Secondary School</tspan>
+</text>
+<text x="148" y="1148" fill="#9ccde0" font-size="18" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="400">
+  <tspan x="148" dy="0">Abitur · Advanced courses in IT</tspan>
+  <tspan x="148" dy="23.0">and English</tspan>
+</text>
+<line x1="120" y1="1049" x2="120" y2="1184" stroke="#163246" stroke-width="2"/>
+<rect x="642" y="706" width="514" height="462" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="652" y="716" width="494" height="442" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="664" y1="776" x2="1134" y2="776" stroke="#163246" stroke-width="1.6"/>
+<text x="666" y="754" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">TECH STACK</text>
+<text x="1132" y="754" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">SKILLS</text>
+<text x="668" y="770" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Windows Server 2025</text>
+<rect x="668" y="780" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="780" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="780" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="818" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Active Directory</text>
+<rect x="668" y="828" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="828" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="828" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="866" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Virtualisation</text>
+<rect x="668" y="876" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="876" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="876" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="914" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">UEM</text>
+<rect x="668" y="924" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="924" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="924" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="962" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Microsoft 365 / Cloud Solutions</text>
+<rect x="668" y="972" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="972" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="972" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="1010" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Linux</text>
+<rect x="668" y="1020" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="1020" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="1020" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="1058" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Docker</text>
+<rect x="668" y="1068" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="1068" width="164" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="1068" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="668" y="1106" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">IT Security</text>
+<rect x="668" y="1116" width="382" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="668" y="1116" width="136" height="10" rx="5" fill="#f1a144"/>
+<rect x="668" y="1116" width="382" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<rect x="86" y="1216" width="506" height="554" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="96" y="1226" width="486" height="534" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="108" y1="1286" x2="570" y2="1286" stroke="#163246" stroke-width="1.6"/>
+<text x="110" y="1264" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">STRENGTHS</text>
+<text x="568" y="1264" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">LANGUAGE &amp; MINDSET</text>
+<text x="112" y="1282" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">English</text>
+<rect x="112" y="1292" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="1292" width="362" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="1292" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="1338" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Russian</text>
+<rect x="112" y="1348" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="1348" width="217" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="1348" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="1394" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Work Discipline &amp; Reliability</text>
+<rect x="112" y="1404" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="1404" width="362" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="1404" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="1476" fill="#e7f7ff" font-size="23" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">
+  <tspan x="112" dy="0">Planning, configuration and</tspan>
+  <tspan x="112" dy="29.4">administration of complex IT</tspan>
+  <tspan x="112" dy="29.4">infrastructures</tspan>
+</text>
+<text x="112" y="1574" fill="#9ccde0" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="400">
+  <tspan x="112" dy="0">Interests: Martial Arts, Reading,</tspan>
+  <tspan x="112" dy="25.6">AI-Assisted Development</tspan>
+</text>
+<rect x="642" y="1216" width="514" height="554" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="652" y="1226" width="494" height="534" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="664" y1="1286" x2="1134" y2="1286" stroke="#163246" stroke-width="1.6"/>
+<text x="666" y="1264" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">SUMMARY</text>
+<text x="1132" y="1264" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">PROFILE</text>
+<text x="668" y="1280" fill="#e7f7ff" font-size="27" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">
+  <tspan x="668" dy="0">I plan, build and stabilise</tspan>
+  <tspan x="668" dy="34.6">complex IT environments with a</tspan>
+  <tspan x="668" dy="34.6">strong focus on structure,</tspan>
+  <tspan x="668" dy="34.6">persistence and practical problem</tspan>
+  <tspan x="668" dy="34.6">solving.</tspan>
+</text>
+<text x="668" y="1476" fill="#9ccde0" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="400">
+  <tspan x="668" dy="0">My English CV keeps the existing</tspan>
+  <tspan x="668" dy="28.2">content but adopts the same</tspan>
+  <tspan x="668" dy="28.2">holographic visual language as the</tspan>
+  <tspan x="668" dy="28.2">German version.</tspan>
+</text>
+<line x1="668" y1="1564" x2="1080" y2="1564" stroke="#163246" stroke-width="2"/>
+<text x="668" y="1616" fill="#f1a144" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">
+  <tspan x="668" dy="0">Signature domains: Windows Server</tspan>
+  <tspan x="668" dy="25.6">· Virtualisation · UEM · Cloud</tspan>
+  <tspan x="668" dy="25.6">Solutions</tspan>
+</text>
+<rect x="86" y="2069" width="1070" height="1268" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="96" y="2079" width="1050" height="1248" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="108" y1="2139" x2="1134" y2="2139" stroke="#163246" stroke-width="1.6"/>
+<text x="110" y="2117" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">PROFESSIONAL EXPERIENCE</text>
+<text x="1132" y="2117" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">TIMELINE</text>
+<line x1="146" y1="2141" x2="146" y2="3253" stroke="#163246" stroke-width="3"/>
+<circle cx="146" cy="2151" r="6" fill="#f1a144"/>
+<text x="178" y="2157" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">03/2023–12/2024</text>
+<text x="408" y="2155" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Service Station Attendant</text>
+<text x="408" y="2179" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Esso Service Station · Pforzheim, BW</text>
+<circle cx="146" cy="2217" r="6" fill="#f1a144"/>
+<text x="178" y="2223" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">11/2023–01/2024</text>
+<text x="408" y="2221" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Warehouse Associate / Inventory…</text>
+<text x="408" y="2245" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Kaufhof · Pforzheim, BW</text>
+<circle cx="146" cy="2283" r="6" fill="#f1a144"/>
+<text x="178" y="2289" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">02/2022–01/2023</text>
+<text x="408" y="2287" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Order Picker / Warehouse Associate</text>
+<text x="408" y="2311" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">gastromatic Aldinger · Pforzheim, BW</text>
+<circle cx="146" cy="2349" r="6" fill="#f1a144"/>
+<text x="178" y="2355" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">04/2021–02/2022</text>
+<text x="408" y="2353" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Seeking Employment</text>
+<text x="408" y="2377" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Under challenging economic conditions</text>
+<circle cx="146" cy="2415" r="6" fill="#f1a144"/>
+<text x="178" y="2421" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">07/2019–09/2020</text>
+<text x="408" y="2419" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Order Picker / Warehouse Associate</text>
+<text x="408" y="2443" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">gastromatic Aldinger · Pforzheim, BW</text>
+<circle cx="146" cy="2481" r="6" fill="#f1a144"/>
+<text x="178" y="2487" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">02/2019–06/2019</text>
+<text x="408" y="2485" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Construction Assistant</text>
+<text x="408" y="2509" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Pfirmann · Pforzheim, BW</text>
+<circle cx="146" cy="2547" r="6" fill="#f1a144"/>
+<text x="178" y="2553" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">09/2018–01/2019</text>
+<text x="408" y="2551" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Shipping Associate</text>
+<text x="408" y="2575" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Klingel · Pforzheim, BW</text>
+<circle cx="146" cy="2613" r="6" fill="#f1a144"/>
+<text x="178" y="2619" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">02/2018–08/2018</text>
+<text x="408" y="2617" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Electroplater</text>
+<text x="408" y="2641" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Dudaco · Pforzheim, BW</text>
+<circle cx="146" cy="2679" r="6" fill="#f1a144"/>
+<text x="178" y="2685" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">08/2017–01/2018</text>
+<text x="408" y="2683" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Seeking Employment</text>
+<text x="408" y="2707" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif"></text>
+<circle cx="146" cy="2745" r="6" fill="#f1a144"/>
+<text x="178" y="2751" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">11/2011–07/2017</text>
+<text x="408" y="2749" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Care Assistant</text>
+<text x="408" y="2773" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">ISB, Helfende Hand and Mobilee · Karlsruhe, BW</text>
+<circle cx="146" cy="2811" r="6" fill="#f1a144"/>
+<text x="178" y="2817" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">10/2010–09/2011</text>
+<text x="408" y="2815" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Various Part-Time Roles</text>
+<text x="408" y="2839" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif"></text>
+<circle cx="146" cy="2877" r="6" fill="#f1a144"/>
+<text x="178" y="2883" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">04/2010–09/2010</text>
+<text x="408" y="2881" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Unable to Work</text>
+<text x="408" y="2905" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Stable health since this period</text>
+<circle cx="146" cy="2943" r="6" fill="#f1a144"/>
+<text x="178" y="2949" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">02/2010–04/2010</text>
+<text x="408" y="2947" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Warehouse Assistant</text>
+<text x="408" y="2971" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">DEKRA Arbeit GmbH · Pforzheim, BW</text>
+<circle cx="146" cy="3009" r="6" fill="#f1a144"/>
+<text x="178" y="3015" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">08/2008–01/2010</text>
+<text x="408" y="3013" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Unable to Work</text>
+<text x="408" y="3037" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif"></text>
+<circle cx="146" cy="3075" r="6" fill="#f1a144"/>
+<text x="178" y="3081" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">07/2008–09/2008</text>
+<text x="408" y="3079" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Production Worker</text>
+<text x="408" y="3103" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">Witzenmann · Pforzheim, BW</text>
+<circle cx="146" cy="3141" r="6" fill="#f1a144"/>
+<text x="178" y="3147" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">02/2008–05/2008</text>
+<text x="408" y="3145" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Delivery Driver</text>
+<text x="408" y="3169" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">City Briefkurier · Pforzheim, BW</text>
+<circle cx="146" cy="3207" r="6" fill="#f1a144"/>
+<text x="178" y="3213" fill="#57d9ff" font-size="18" font-family="'JetBrains Mono', monospace">06/2007–09/2007</text>
+<text x="408" y="3211" fill="#e7f7ff" font-size="22" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">Internship in Journalism and Culture</text>
+<text x="408" y="3235" fill="#9ccde0" font-size="17" font-family="'Inter', 'Segoe UI', Arial, sans-serif">M.D. · Magdeburg, SA</text>
+<rect x="86" y="3387" width="514" height="244" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="96" y="3397" width="494" height="224" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="108" y1="3457" x2="578" y2="3457" stroke="#163246" stroke-width="1.6"/>
+<text x="110" y="3435" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">TOOLS</text>
+<text x="576" y="3435" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">ADDITIONAL SKILLS</text>
+<text x="112" y="3447" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Python</text>
+<rect x="112" y="3457" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="3457" width="129" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="3457" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="3487" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">SQL</text>
+<rect x="112" y="3497" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="3497" width="129" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="3497" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="3527" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">GitHub</text>
+<rect x="112" y="3537" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="3537" width="129" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="3537" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="3567" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">Visual Studio Code</text>
+<rect x="112" y="3577" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="3577" width="155" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="3577" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="3607" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">HTML, CSS &amp; PHP</text>
+<rect x="112" y="3617" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="3617" width="78" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="3617" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<text x="112" y="3647" fill="#e7f7ff" font-size="20" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="600">C#</text>
+<rect x="112" y="3657" width="362" height="10" rx="5" fill="#163246" opacity="0.95"/>
+<rect x="112" y="3657" width="103" height="10" rx="5" fill="#f1a144"/>
+<rect x="112" y="3657" width="362" height="10" rx="5" fill="none" stroke="#57d9ff" stroke-width="1" opacity="0.65"/>
+<rect x="642" y="3387" width="514" height="244" rx="26" fill="#0b1a29" stroke="#57d9ff" stroke-width="2.2" opacity="0.97"/>
+<rect x="652" y="3397" width="494" height="224" rx="20" fill="none" stroke="#163246" stroke-width="1.2"/>
+<line x1="664" y1="3457" x2="1134" y2="3457" stroke="#163246" stroke-width="1.6"/>
+<text x="666" y="3435" fill="#f1a144" font-size="30" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="700">PERSONAL</text>
+<text x="1132" y="3435" fill="#9ccde0" text-anchor="end" font-size="16" font-family="'Inter', 'Segoe UI', Arial, sans-serif" letter-spacing="1.4">DETAILS</text>
+<text x="668" y="3451" fill="#e7f7ff" font-size="21" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-weight="500">
+  <tspan x="668" dy="0">Home base: Pforzheim</tspan>
+  <tspan x="668" dy="26.9">Contact: vleicht@keemail.me</tspan>
+  <tspan x="668" dy="26.9">Date of birth: 6 March 1985</tspan>
+  <tspan x="668" dy="26.9">Interests: Martial Arts, Reading,</tspan>
+  <tspan x="668" dy="26.9">AI-Assisted Development</tspan>
+</text>
+<text x="620.5" y="3742" text-anchor="middle" fill="#8de8ff" font-size="16" font-family="'JetBrains Mono', monospace" letter-spacing="2.4">ENGLISH HOLOGRAM CV · STYLE PARITY WITH GERMAN MASTER</text>
 </svg>

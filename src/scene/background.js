@@ -33,8 +33,8 @@ const MOTHERBOARD_URL = new URL(
 const FIB = [3, 5, 8, 13, 21, 34, 55];
 
 const MAX_ACTIVE   = 1;
-const SPAWN_MIN    = 4.2;
-const SPAWN_MAX    = 9.5;
+const SPAWN_MIN    = 8.0;
+const SPAWN_MAX    = 16.0;
 
 const BOARD_ASPECT = 1;
 const BOARD_WIDTH = 1040;
@@ -171,7 +171,7 @@ export function createBackground({ camera = null, renderer = null, layers = 3, t
     uState: { value: stateTex },
     uCount: { value: count },
     uTime:  { value: 0 },
-    uAmbient: { value: 0.18 },   // Kompatibilitaet fuer die bestehende Intro-Schnittstelle.
+    uAmbient: { value: 0.065 },   // Kompatibilitaet fuer die bestehende Intro-Schnittstelle.
     uAmber: { value: lightColor('amber') },
     uCyan:  { value: lightColor('fiber') },
     uBase:  { value: lightColor('base') },
