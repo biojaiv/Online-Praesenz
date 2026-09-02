@@ -124,9 +124,11 @@ function makeEnergyReservoir(accent, seed, reduced) {
         float distanceToCentre = length(point);
         if (distanceToCentre > 0.5) discard;
         float core = smoothstep(0.5, 0.02, distanceToCentre);
-        vec3 cold = vec3(0.28, 0.78, 1.0);
+        // COLOURED_PEDESTAL_ENERGY_V6_2_2
+        vec3 cold = vec3(0.06, 0.70, 0.98);
+        vec3 energised = mix(vec3(0.03, 0.80, 0.98), uAccent, 0.64);
         vec3 colour = mix(cold, uAccent, smoothstep(0.16, 0.88, vLane));
-        colour = mix(colour, vec3(1.0, 0.94, 0.82), vHeat * 0.55);
+        colour = mix(colour, energised, vHeat * 0.58);
         float alpha = core * vLife
           * (0.018 + vHeat * 0.10)
           * uIntensity;
@@ -189,6 +191,7 @@ function makeInscription(accent) {
   mesh.renderOrder = 8;
 
   const colour = new THREE.Color(accent);
+  const brightColour = colour.clone().lerp(new THREE.Color(0x35d7ff), 0.38);
   let currentLabel = '';
 
   function draw(label) {
@@ -196,6 +199,7 @@ function makeInscription(accent) {
     if (!context) return;
     context.clearRect(0, 0, canvas.width, canvas.height);
     const css = colour.getStyle();
+    const brightCss = brightColour.getStyle();
     const lines = splitLabel(label);
     const fontSize = lines.length > 1 ? 62 : 76;
     context.textAlign = 'center';
@@ -215,7 +219,7 @@ function makeInscription(accent) {
 
     context.lineWidth = 2.2;
     context.strokeStyle = css;
-    context.fillStyle = 'rgba(226, 249, 255, 0.88)';
+    context.fillStyle = brightCss;
     context.shadowColor = css;
     context.shadowBlur = 34;
     lines.forEach((line, index) => {
@@ -398,8 +402,8 @@ export function createPedestalEnergyField({ cards, renderer, reduced = false } =
         state.reservoir.uniforms.uTime.value = reduced ? 0 : elapsed;
         state.reservoir.uniforms.uIntensity.value = state.intensity;
         state.inscription.material.opacity = Math.max(
-          0.08,
-          state.intensity * (0.34 + pulseBoost * 0.32),
+          0.12,
+          state.intensity * (0.44 + pulseBoost * 0.28),
         );
         state.inscription.mesh.scale.y = 1 + pulseBoost * 0.018;
       }

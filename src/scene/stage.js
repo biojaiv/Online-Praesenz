@@ -130,7 +130,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     composer.addPass(new RenderPass(scene, camera));
 
     noise = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY, premultiply: true });
-    noise.blendMode.opacity.value = 0.22;
+    // LOCAL_SIGNAL_NOISE_ONLY_V6_2_2: kein permanentes Vollbildrauschen.
+    noise.blendMode.opacity.value = 0;
 
     bloom = new BloomEffect({
       intensity: 1.62,
@@ -1120,8 +1121,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
      * Intro-Glitch den ganzen Raum erfasst und nicht nur die Schrift.
      */
     setGlitch(v) {
-      glitch = v;
-      if (noise) noise.blendMode.opacity.value = 0.22 + v * 0.65;
+      const amount = THREE.MathUtils.clamp(Number(v) || 0, 0, 1);
+      glitch = amount;
+      // Der NoiseEffect gehört dem absichtlichen Signalbruch. Im normalen
+      // Betrieb ist der Pass vollständig transparent und flimmert nicht.
+      if (noise) {
+        noise.blendMode.opacity.value = amount > 0.001
+          ? 0.06 + amount * 0.67
+          : 0;
+      }
       applyBloom();
     },
 

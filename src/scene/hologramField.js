@@ -1,4 +1,4 @@
-// PEDESTAL_HOLOGRAM_VOLUME_V5_5_2
+// PEDESTAL_HOLOGRAM_VOLUME_V6_2_2
 import * as THREE from 'three';
 import { LIGHT_PALETTE } from './palette.js';
 
@@ -58,7 +58,7 @@ function captureAdjustmentBaselines(state) {
 
 function restoreAdjustmentBaselines(state) {
   if (!state.adjustmentBaselines) return;
-  state.volume.group.position.x = state.volumeBaseX || 0;
+  state.volume.group.position.x = state.volumeBaseX ?? 0;
   for (const baseline of state.adjustmentBaselines) {
     const { object } = baseline;
     if (!object?.parent) continue;
@@ -100,7 +100,7 @@ function makeVolumeMaterial(uniforms) {
     `,
     fragmentShader: /* glsl */`
       uniform float uTime, uIntensity, uAdjustment, uAdjustProgress;
-      uniform float uReaderFactor, uCompact, uSeed;
+      uniform float uReaderFactor, uCompact, uSeed, uPlaneWeight;
       uniform vec3 uAccent;
       varying vec2 vUv;
       varying vec3 vViewNormal;
@@ -111,42 +111,84 @@ function makeVolumeMaterial(uniforms) {
       }
 
       void main() {
-        // The volume begins directly above the pedestal and remains present
-        // over almost its full height. Only the extreme top edge dissolves.
-        float verticalWindow = smoothstep(0.001, 0.020, vUv.y)
-          * (1.0 - smoothstep(0.925, 0.998, vUv.y));
-        float scanline = 0.78 + 0.22 * sin(
+        // Several crossed, softly feathered planes create volume without a
+        // visible cone shell. The density is already nearly zero at every
+        // geometry edge, so no straight cutoff line can appear.
+        float horizontalDistance = abs(vUv.x - 0.5) * 2.0;
+        float horizontalCore = exp(
+          -horizontalDistance * horizontalDistance * 2.85
+        );
+        float horizontalFeather = 1.0 - smoothstep(
+          0.68,
+          1.0,
+          horizontalDistance
+        );
+        float horizontalWindow = horizontalCore * horizontalFeather;
+        float verticalWindow = smoothstep(0.0, 0.050, vUv.y)
+          * (1.0 - smoothstep(0.70, 1.0, vUv.y));
+        float fieldWindow = horizontalWindow * verticalWindow;
+
+        // Idle scanlines and grain are static. Temporal brightness changes are
+        // confined to the occasional bottom-to-top adjustment event.
+        float staticScanline = 0.970 + 0.030 * sin(
+          vUv.y * 690.0 + uSeed * 8.0
+        );
+        float movingScanline = 0.88 + 0.12 * sin(
           vUv.y * 690.0 - uTime * 5.4 + uSeed * 8.0
         );
-        float slowBreath = 0.86 + 0.14 * sin(uTime * 0.67 + uSeed * 11.0);
+        float adjustmentAmount = clamp(uAdjustment, 0.0, 1.0);
+        float scanline = mix(staticScanline, movingScanline, adjustmentAmount);
+        // A literal steady base prevents any idle whole-field luminance pulse.
+        float steadyOutput = 1.0;
+        float adjustmentFlutter = mix(
+          steadyOutput,
+          0.955 + 0.045 * sin(uTime * 7.2 + uSeed * 11.0),
+          adjustmentAmount
+        );
 
-        // Old-TV vertical-sync disturbance: strictly bottom to top.
+        // Old-TV vertical synchronisation remains local to this hologram.
         float rollDistance = abs(vUv.y - uAdjustProgress);
-        float rollCore = exp(-rollDistance * rollDistance / 0.00072);
-        float rollHalo = exp(-rollDistance * rollDistance / 0.0062) * 0.32;
+        float rollCore = exp(-rollDistance * rollDistance / 0.00092);
+        float rollHalo = exp(-rollDistance * rollDistance / 0.0090) * 0.24;
         float roll = (rollCore + rollHalo) * uAdjustment;
 
-        float rim = pow(
-          1.0 - abs(dot(normalize(vViewNormal), normalize(vViewDirection))),
-          1.8
+        float facing = 0.72 + 0.28 * abs(dot(
+          normalize(vViewNormal),
+          normalize(vViewDirection)
+        ));
+        float staticGrain = 0.965 + hash(
+          floor(vUv * vec2(240.0, 420.0)) + vec2(uSeed * 17.0)
+        ) * 0.035;
+        float movingGrain = 0.91 + hash(
+          floor(vUv * vec2(240.0, 420.0))
+            + floor(uTime * 9.0)
+            + vec2(uSeed * 17.0)
+        ) * 0.09;
+        float grain = mix(
+          staticGrain,
+          movingGrain,
+          clamp(uAdjustment, 0.0, 1.0)
         );
-        float grain = 0.86 + hash(
-          floor(vUv * vec2(240.0, 420.0)) + floor(uTime * 11.0)
-        ) * 0.14;
 
-        vec3 cold = vec3(0.24, 0.73, 1.0);
-        vec3 colour = mix(cold, uAccent, 0.38 + rim * 0.22);
-        colour = mix(colour, vec3(0.90, 0.98, 1.0), rollCore * 0.60);
+        // Saturated cyan/accent colour only; no white flash elements.
+        vec3 cyan = vec3(0.10, 0.67, 0.96);
+        vec3 syncColour = mix(vec3(0.05, 0.78, 0.98), uAccent, 0.58);
+        vec3 colour = mix(cyan, uAccent, 0.46);
+        colour = mix(colour, syncColour, rollCore * 0.46);
 
-        float alpha = verticalWindow
-          * (0.0042 + uIntensity * 0.018 + rim * uIntensity * 0.015)
+        float alpha = fieldWindow
+          * (0.0105 + uIntensity * 0.034)
+          * facing
           * scanline
-          * slowBreath
-          * grain;
-        alpha += verticalWindow * roll * (0.044 + uIntensity * 0.088);
-        alpha *= uReaderFactor * mix(1.0, 0.72, uCompact);
-        if (alpha < 0.0014) discard;
-        gl_FragColor = vec4(colour * (0.64 + roll * 1.28), alpha);
+          * adjustmentFlutter
+          * grain
+          * uPlaneWeight;
+        alpha += fieldWindow * roll
+          * (0.036 + uIntensity * 0.070)
+          * uPlaneWeight;
+        alpha *= uReaderFactor * mix(1.0, 0.78, uCompact);
+        if (alpha < 0.0012) discard;
+        gl_FragColor = vec4(colour * (0.82 + roll * 0.72), alpha);
       }
     `,
   });
@@ -174,17 +216,19 @@ function makeFloorMaterial(uniforms) {
       varying vec2 vUv;
 
       void main() {
-        vec2 point = vUv - 0.5;
-        float radius = length(point) * 2.0;
-        if (radius > 1.0) discard;
-        float centre = exp(-radius * radius * 4.5);
-        float edge = exp(-abs(radius - 0.79) * 15.0) * 0.30;
-        float alpha = (centre * 0.12 + edge * 0.075)
-          * (0.30 + uIntensity * 1.35 + uAdjustment * 0.38)
+        vec2 point = (vUv - 0.5) * 2.0;
+        float radius = length(point);
+
+        // The enlarged plane and Gaussian tail remove the former circular
+        // cutoff. Density reaches zero naturally before the plane boundary.
+        float centre = exp(-radius * radius * 4.6);
+        float feather = 1.0 - smoothstep(0.70, 1.42, radius);
+        float alpha = centre * feather
+          * (0.060 + uIntensity * 0.18 + uAdjustment * 0.030)
           * uReaderFactor
-          * mix(1.0, 0.74, uCompact);
-        if (alpha < 0.0014) discard;
-        vec3 colour = mix(vec3(0.30, 0.78, 1.0), uAccent, 0.46);
+          * mix(1.0, 0.78, uCompact);
+        if (alpha < 0.0012) discard;
+        vec3 colour = mix(vec3(0.07, 0.64, 0.92), uAccent, 0.52);
         gl_FragColor = vec4(colour, alpha);
       }
     `,
@@ -236,7 +280,7 @@ function makeHologramParticles(uniforms, seed, reduced) {
         float travel = fract(aSeed.z + uTime * speed);
         // Start almost directly on the pedestal's highest surface; there is
         // no visually empty gap below the hologram field.
-        float y = mix(-0.497, 0.49, travel);
+        float y = mix(-0.4992, 0.49, travel);
         float radius = sqrt(aSeed.y) * (0.84 - travel * 0.18);
         float angle = aSeed.x * 6.2831853
           + uTime * mix(-0.35, 0.42, aSeed.w)
@@ -253,27 +297,30 @@ function makeHologramParticles(uniforms, seed, reduced) {
 
         float roll = exp(-abs((y + 0.5) - uAdjustProgress) * 24.0)
           * uAdjustment;
-        float spark = pow(max(0.0, sin(
+        float sparkBase = pow(max(0.0, sin(
           uTime * (1.7 + aSeed.w * 2.2)
           + aSeed.x * 73.0
           + aSeed.y * 31.0
-        )), 15.0);
+        )), 18.0);
+        // Spark brightness is event-bound. Particles keep moving at idle,
+        // but do not blink rhythmically across the whole hologram volume.
+        float spark = sparkBase * uAdjustment * 0.62;
         float edge = 1.0 - smoothstep(0.68, 0.92, radius);
-        float verticalFade = smoothstep(-0.499, -0.468, y)
+        float verticalFade = smoothstep(-0.4995, -0.480, y)
           * (1.0 - smoothstep(0.40, 0.49, y));
 
-        vHeat = max(roll, spark * 0.38);
+        vHeat = max(roll, spark * 0.30);
         vTint = aSeed.w;
         vAlpha = edge * verticalFade
-          * (0.020 + uIntensity * 0.090 + vHeat * 0.20)
-          * mix(1.0, 0.76, uCompact);
+          * (0.042 + uIntensity * 0.145 + vHeat * 0.145)
+          * mix(1.0, 0.78, uCompact);
 
         vec4 modelView = modelViewMatrix * vec4(point, 1.0);
         gl_PointSize = min(
-          8.5,
+          7.2,
           aSize * uPixelRatio
             * (74.0 / max(5.0, -modelView.z))
-            * (0.72 + uIntensity * 0.78 + vHeat * 1.70)
+            * (0.84 + uIntensity * 0.92 + vHeat * 1.25)
         );
         gl_Position = projectionMatrix * modelView;
       }
@@ -288,12 +335,13 @@ function makeHologramParticles(uniforms, seed, reduced) {
         float distanceToCentre = length(point);
         if (distanceToCentre > 0.5) discard;
         float core = smoothstep(0.5, 0.02, distanceToCentre);
-        vec3 cold = vec3(0.28, 0.78, 1.0);
-        vec3 colour = mix(cold, uAccent, 0.23 + vTint * 0.52);
-        colour = mix(colour, vec3(1.0, 0.96, 0.84), vHeat * 0.50);
+        vec3 cold = vec3(0.08, 0.70, 0.98);
+        vec3 energised = mix(vec3(0.02, 0.82, 0.96), uAccent, 0.70);
+        vec3 colour = mix(cold, uAccent, 0.30 + vTint * 0.48);
+        colour = mix(colour, energised, vHeat * 0.46);
         float alpha = core * core * vAlpha * uReaderFactor;
-        if (alpha < 0.0014) discard;
-        gl_FragColor = vec4(colour * (0.72 + vHeat * 1.70), alpha);
+        if (alpha < 0.0012) discard;
+        gl_FragColor = vec4(colour * (0.92 + vHeat * 1.18), alpha);
       }
     `,
   });
@@ -316,7 +364,7 @@ function makeHologramParticles(uniforms, seed, reduced) {
 function makeHologramVolume(accent, seed, reduced) {
   const group = new THREE.Group();
   group.name = 'pedestal-hologram-volume';
-  group.userData.kind = 'pedestal-hologram-volume-v5.5.2';
+  group.userData.kind = 'pedestal-hologram-volume-v6.2.2';
 
   const uniforms = {
     uTime: { value: 0 },
@@ -327,28 +375,23 @@ function makeHologramVolume(accent, seed, reduced) {
     uCompact: { value: 0 },
     uAccent: { value: new THREE.Color(accent) },
     uSeed: { value: seed },
+    uPlaneWeight: { value: reduced ? 0.58 : 0.40 },
   };
 
   const volumeMaterial = makeVolumeMaterial(uniforms);
-  const shellGeometry = new THREE.CylinderGeometry(
-    0.88,
-    1.0,
-    1,
-    reduced ? 24 : 48,
-    reduced ? 1 : 2,
-    true,
-  );
-  const shell = new THREE.Mesh(shellGeometry, volumeMaterial);
-  shell.name = 'hologram-volume-shell';
-  shell.renderOrder = 6;
-  shell.frustumCulled = false;
-  group.add(shell);
 
-  const planeGeometry = new THREE.PlaneGeometry(1.74, 1, 1, reduced ? 18 : 42);
-  for (let index = 0; index < 3; index += 1) {
+  // Intersecting feathered planes form a volume without a hard cone shell.
+  const planeGeometry = new THREE.PlaneGeometry(
+    1.92,
+    1,
+    reduced ? 1 : 2,
+    reduced ? 18 : 42,
+  );
+  const planeCount = reduced ? 3 : 5;
+  for (let index = 0; index < planeCount; index += 1) {
     const plane = new THREE.Mesh(planeGeometry, volumeMaterial);
     plane.name = `hologram-volume-plane-${index}`;
-    plane.rotation.y = index * Math.PI / 3;
+    plane.rotation.y = index * Math.PI / planeCount;
     plane.renderOrder = 5;
     plane.frustumCulled = false;
     group.add(plane);
@@ -361,22 +404,24 @@ function makeHologramVolume(accent, seed, reduced) {
     uCompact: uniforms.uCompact,
     uAccent: uniforms.uAccent,
   });
-  const floorGeometry = new THREE.PlaneGeometry(2, 2, 1, 1);
+  const floorGeometry = new THREE.PlaneGeometry(2.8, 2.8, 1, 1);
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
   floor.name = 'hologram-volume-floor';
   floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -0.498;
+  floor.position.y = -0.4992;
   floor.renderOrder = 7;
   group.add(floor);
 
   const particles = makeHologramParticles(uniforms, seed, reduced);
   group.add(particles.points);
 
-  const lightColour = new THREE.Color(0x8fdfff).lerp(
+  const lightColour = new THREE.Color(0x159fd6).lerp(
     new THREE.Color(accent),
-    0.34,
+    0.62,
   );
-  const light = new THREE.PointLight(lightColour, 0, 12, 2);
+  // Saturated local fill light: enough to separate foreground geometry,
+  // without bleaching the hologram into white.
+  const light = new THREE.PointLight(lightColour, 0, 15, 2.4);
   light.name = 'pedestal-hologram-light';
   light.castShadow = false;
   light.position.set(0, -0.34, 0.26);
@@ -387,7 +432,6 @@ function makeHologramVolume(accent, seed, reduced) {
     uniforms,
     particles,
     light,
-    shellGeometry,
     planeGeometry,
     floorGeometry,
     volumeMaterial,
@@ -399,7 +443,6 @@ function makeHologramVolume(accent, seed, reduced) {
     dispose() {
       particles.geometry.dispose();
       particles.material.dispose();
-      shellGeometry.dispose();
       planeGeometry.dispose();
       floorGeometry.dispose();
       volumeMaterial.dispose();
@@ -423,7 +466,9 @@ export function createHologramField({ cards, reduced = false } = {}) {
   let readerOpen = false;
   let compact = false;
   let globalPulseRemaining = 0;
+  let globalPulseDuration = 0;
   let nextAdjustmentAt = 4.2;
+  let lastElapsed = 0;
   let forcedAdjustmentKey = null;
   let disposed = false;
 
@@ -443,8 +488,8 @@ export function createHologramField({ cards, reduced = false } = {}) {
       adjustmentTargets: collectAdjustmentTargets(holder),
       adjustmentBaselines: null,
       volumeBaseX: 0,
-      intensity: 0.34,
-      target: 0.34,
+      intensity: 0.48,
+      target: 0.48,
       localPulse: 0,
       surfaceY: -5.25,
       height: key === 'lebenslauf' ? 13.0 : 11.6,
@@ -470,7 +515,7 @@ export function createHologramField({ cards, reduced = false } = {}) {
       state.height = state.key === 'lebenslauf' ? 13.0 : 11.6;
       state.volume.group.position.set(
         0,
-        anchor.surfaceY + state.height * 0.5 + 0.02,
+        anchor.surfaceY + state.height * 0.5 + 0.008,
         0,
       );
       state.volume.group.scale.set(
@@ -478,8 +523,8 @@ export function createHologramField({ cards, reduced = false } = {}) {
         state.height,
         anchor.radius * 0.90,
       );
-      state.volume.light.distance = Math.max(8.5, state.height * 0.79);
-      state.volume.light.decay = 2;
+      state.volume.light.distance = Math.max(10.5, state.height * 1.05);
+      state.volume.light.decay = 2.6;
     }
     refreshAdjustmentTargets();
   }
@@ -526,10 +571,10 @@ export function createHologramField({ cards, reduced = false } = {}) {
     if (!state.adjustmentBaselines) captureAdjustmentBaselines(state);
     const shift = Math.sin(elapsed * 67.0 + state.seed * 13.0)
       * amount
-      * 0.024;
+      * 0.014;
     const depthShift = Math.sin(elapsed * 91.0 + state.seed * 7.0)
       * amount
-      * 0.010;
+      * 0.006;
     state.volume.group.position.x = state.volumeBaseX + shift;
     for (const baseline of state.adjustmentBaselines || []) {
       const { object } = baseline;
@@ -548,51 +593,86 @@ export function createHologramField({ cards, reduced = false } = {}) {
 
   return {
     setRoute(route) {
-      activeRoot = String(route || 'home').split('/')[0] || 'home';
-      for (const state of states) {
-        state.target = activeRoot === 'home'
-          ? 0.46
-          : state.key === activeRoot
-            ? 1.0
-            : 0.21;
-        if (state.key === activeRoot) state.localPulse = 1;
-      }
-      if (!reduced && activeRoot !== 'home') {
-        forcedAdjustmentKey = activeRoot;
-        nextAdjustmentAt = 0;
-      } else if (activeRoot === 'home') {
-        // A rapid route change must not replay an adjustment that belonged to
-        // the previously opened pedestal.
-        forcedAdjustmentKey = null;
-      }
-    },
+      const nextRoot = String(route || 'home').split('/')[0] || 'home';
+      const routeChanged = nextRoot !== activeRoot;
+      activeRoot = nextRoot;
 
-    setReaderOpen(value) {
-      readerOpen = Boolean(value);
-      if (readerOpen) {
+      if (routeChanged) {
+        // Route changes invalidate any adjustment that was captured against a
+        // different pedestal. Restore every baseline before selecting a new
+        // local event.
         forcedAdjustmentKey = null;
         for (const state of states) {
           state.adjustmentStart = -1;
           resetContentAdjustment(state);
         }
       }
+
+      for (const state of states) {
+        state.target = activeRoot === 'home'
+          ? 0.66
+          : state.key === activeRoot
+            ? 1.22
+            : 0.32;
+        if (state.key === activeRoot) state.localPulse = 1;
+      }
+
+      if (!reduced && activeRoot !== 'home') {
+        forcedAdjustmentKey = activeRoot;
+        // Let the focus camera settle before the local bottom-to-top sync roll.
+        nextAdjustmentAt = lastElapsed + 0.65;
+      } else {
+        nextAdjustmentAt = Math.max(nextAdjustmentAt, lastElapsed + 3.4);
+      }
+    },
+
+    setReaderOpen(value) {
+      const nextReaderOpen = Boolean(value);
+      const changed = nextReaderOpen !== readerOpen;
+      readerOpen = nextReaderOpen;
+      if (readerOpen) {
+        forcedAdjustmentKey = null;
+        for (const state of states) {
+          state.adjustmentStart = -1;
+          resetContentAdjustment(state);
+        }
+      } else if (changed) {
+        // Returning from the flat reader should be calm; do not fire an
+        // adjustment in the same frame as the projection reappears.
+        nextAdjustmentAt = Math.max(nextAdjustmentAt, lastElapsed + 3.0);
+      }
     },
 
     setCompact(value) {
-      compact = Boolean(value);
-      for (const state of states) state.volume.setCompact(compact);
+      const nextCompact = Boolean(value);
+      if (nextCompact === compact) return;
+      compact = nextCompact;
+      for (const state of states) {
+        state.volume.setCompact(compact);
+        // A layout/DPR change must not keep applying stale captured offsets.
+        state.adjustmentStart = -1;
+        resetContentAdjustment(state);
+      }
+      forcedAdjustmentKey = null;
+      nextAdjustmentAt = Math.max(nextAdjustmentAt, lastElapsed + 2.5);
     },
 
     pulseAll(duration = 2000) {
-      globalPulseRemaining = Math.max(
-        globalPulseRemaining,
-        Math.max(0.4, duration / 1000),
-      );
-      for (const state of states) state.localPulse = 1;
-      if (!reduced) {
-        forcedAdjustmentKey = activeRoot !== 'home' ? activeRoot : states[0]?.key;
-        nextAdjustmentAt = 0;
+      const seconds = Math.max(0.4, duration / 1000);
+      globalPulseRemaining = Math.max(globalPulseRemaining, seconds);
+      globalPulseDuration = Math.max(globalPulseDuration, seconds);
+      for (const state of states) {
+        state.localPulse = 1;
+        state.adjustmentStart = -1;
+        resetContentAdjustment(state);
       }
+      // A section prompt only brightens the fields. It must neither continue,
+      // restart nor schedule a TV-adjustment while the user is choosing.
+      forcedAdjustmentKey = null;
+      nextAdjustmentAt = Math.max(
+        nextAdjustmentAt,
+        lastElapsed + seconds + 1.25,
+      );
     },
 
     setPixelRatio(value) {
@@ -607,11 +687,16 @@ export function createHologramField({ cards, reduced = false } = {}) {
     update(elapsed, delta) {
       if (disposed) return;
       const dt = Math.min(0.1, Math.max(0, delta || 0));
+      lastElapsed = Math.max(lastElapsed, Number(elapsed) || 0);
       const response = reduced ? 1 : 1 - Math.pow(0.006, dt);
       globalPulseRemaining = Math.max(0, globalPulseRemaining - dt);
+      const globalPulseProgress = globalPulseDuration > 0
+        ? 1 - globalPulseRemaining / globalPulseDuration
+        : 1;
       const globalPulse = globalPulseRemaining > 0
-        ? 0.5 + 0.5 * Math.sin(elapsed * 7.6)
+        ? Math.sin(Math.PI * Math.max(0, Math.min(1, globalPulseProgress)))
         : 0;
+      if (globalPulseRemaining <= 0) globalPulseDuration = 0;
 
       const activeAdjustment = states.some((state) => state.adjustmentStart >= 0);
       if (!reduced && !readerOpen && !activeAdjustment && elapsed >= nextAdjustmentAt) {
@@ -642,7 +727,7 @@ export function createHologramField({ cards, reduced = false } = {}) {
         state.localPulse *= Math.pow(0.068, dt);
         const readerFactor = readerOpen && state.key === 'lebenslauf' ? 0.46 : 1;
         const pulseBoost = Math.max(globalPulse * 0.48, state.localPulse * 0.52);
-        const target = Math.min(1.45, (state.target + pulseBoost) * readerFactor);
+        const target = Math.min(1.52, (state.target + pulseBoost) * readerFactor);
         state.intensity += (target - state.intensity) * response;
 
         const uniforms = state.volume.uniforms;
@@ -653,15 +738,17 @@ export function createHologramField({ cards, reduced = false } = {}) {
         uniforms.uReaderFactor.value = readerFactor;
         uniforms.uCompact.value = compact ? 1 : 0;
 
+        // Cross-plane overlap remains static at idle. Only the local TV-sync
+        // adjustment may introduce a very small rotational disturbance.
         state.volume.group.rotation.y = Math.sin(
           elapsed * 0.31 + state.seed,
-        ) * 0.006;
+        ) * 0.004 * adjustment;
         const compactLightFactor = compact ? 0.72 : 1;
         state.volume.light.intensity = (
-          1.35
-          + state.intensity * 5.8
-          + pulseBoost * 3.6
-          + adjustment * 1.8
+          0.85
+          + state.intensity * 3.9
+          + pulseBoost * 1.25
+          + adjustment * 0.38
         ) * readerFactor * compactLightFactor;
         state.volume.group.visible = state.intensity > 0.015;
       }

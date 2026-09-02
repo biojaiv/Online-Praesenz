@@ -53,7 +53,7 @@ const RESUME_KEY = 'lebenslauf';
 // Ruhehelligkeit der Lebenslauf-Vorschau, solange der Sockel nicht offen ist.
 // SACRED_CARD_LAYOUT_V4_2
 // The landing-page projection should be readable light, not a luminous plate.
-const RESUME_IDLE_OPACITY = 0.62;
+const RESUME_IDLE_OPACITY = 0.72;
 // Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
 // Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
 const RESUME_IDLE_SCALE = 1;
@@ -273,12 +273,15 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         float core = smoothstep(0.5, 0.0, d);
 
         // Am Austritt weissglueheend, mit der Hoehe saettigt sich die Farbe.
+        // COLOURED_HOLOGRAM_EMITTERS_V6_2_2
+        // Gesättigte Austrittsfarbe statt weißglühendem Partikelkern.
         vec3 tone = hue2rgb(fract(vHue + vT * 0.18));
-        vec3 color = mix(vec3(1.0, 0.97, 0.92), tone, smoothstep(0.0, 0.22, vT));
-        color = mix(color, tone * 1.3, smoothstep(0.3, 0.85, vT));
+        vec3 emitter = mix(vec3(0.06, 0.72, 0.98), tone, 0.34);
+        vec3 color = mix(emitter, tone, smoothstep(0.0, 0.22, vT));
+        color = mix(color, tone * 1.28, smoothstep(0.3, 0.85, vT));
 
-        float alpha = core * vSpark * (0.26 + uHover * 0.12)
-          * uReveal * mix(1.0, 0.6, uCompact);
+        float alpha = core * vSpark * (0.31 + uHover * 0.14)
+          * uReveal * mix(1.0, 0.64, uCompact);
         if (alpha < 0.005) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -411,8 +414,9 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
         // Dieselbe Regenbogenpalette wie in den Duesenstrahlen; der Farbton
         // wandert nur ganz langsam weiter.
         vec3 tone = hue2rgb(fract(vHue + uTime * 0.01 + vSeed * 0.08));
-        vec3 color = mix(tone * 1.3, vec3(1.0, 0.97, 0.92), vSpark * 0.3);
-        float alpha = core * uOpacity * (0.4 + 0.45 * vSpark);
+        vec3 syncTint = mix(vec3(0.05, 0.74, 0.98), tone, 0.42);
+        vec3 color = mix(tone * 1.24, syncTint, vSpark * 0.34);
+        float alpha = core * uOpacity * (0.48 + 0.48 * vSpark);
         if (alpha < 0.008) discard;
         gl_FragColor = vec4(color * 1.25, alpha);
       }
@@ -505,11 +509,15 @@ function makeComingSoon(accent, maxAnisotropy = 1) {
     context.textBaseline = 'middle';
     if ('letterSpacing' in context) context.letterSpacing = '0.34em';
 
-    const tint = new THREE.Color(accent).getStyle();
+    const tintColour = new THREE.Color(accent);
+    const tint = tintColour.getStyle();
+    const brightTint = tintColour.clone()
+      .lerp(new THREE.Color(0x35d7ff), 0.34)
+      .getStyle();
     context.shadowColor = tint;
     context.shadowBlur = 34;
     context.font = '600 92px "Barlow Condensed", "DejaVu Sans Condensed", sans-serif';
-    context.fillStyle = '#dceeff';
+    context.fillStyle = brightTint;
     // Der Sperrsatz schiebt den Text nach rechts; die halbe Sperre gleicht aus.
     context.fillText('COMING SOON', width * 0.5 - 15, height * 0.45);
 
@@ -557,7 +565,7 @@ function makeComingSoon(accent, maxAnisotropy = 1) {
     },
     update(elapsed, delta, hover) {
       reveal += (revealTarget - reveal) * (1 - Math.pow(0.01, Math.min(delta, 0.1)));
-      const pulse = 0.7 + 0.1 * Math.sin(elapsed * 0.9);
+      const pulse = 0.78 + 0.08 * Math.sin(elapsed * 0.9);
       material.opacity = (pulse + hover * 0.28) * reveal;
       group.visible = material.opacity > 0.01;
       mesh.position.y = Math.sin(elapsed * 0.5) * 0.03;
@@ -914,7 +922,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     // Die beiden noch unfertigen Bereiche kuendigen sich selbst an.
     const comingSoon = isResume ? null : makeComingSoon(def.accent, maxAnisotropy);
     const resumeFrame = isResume
-      ? makeResumeFrame(time, { reduced, idleOpacity: 0.5 })
+      ? makeResumeFrame(time, { reduced, idleOpacity: 0.60 })
       : null;
     const resumeProjection = isResume
       ? createResumeProjection({
