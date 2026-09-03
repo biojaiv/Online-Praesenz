@@ -186,7 +186,8 @@
     2px 0 rgba(255, 145, 48, 0.68);
   transform: translateX(0);
   clip-path: inset(0 0 100% 0);
-  animation: footer-signal-distortion 10.8s steps(1, end) infinite;
+  /* Selten: ein kurzer Akzent alle gut 40 Sekunden statt alle zehn. */
+  animation: footer-signal-distortion 42s steps(1, end) infinite;
 }
 
 .foot__hint:hover .foot__hint-lead::after,

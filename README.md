@@ -55,21 +55,31 @@ dahinter. Vorlage ist `Elemente/Orrery/orrery-source.png`; das Bild wird
 nicht als Textur verwendet, sondern in Geometrie übersetzt und dort
 reduziert, wo es dem Vordergrund im Weg stünde.
 
-Die Maschine ist fast schwarz. Sichtbar wird sie durch drei Lichtquellen:
+Die Maschine liegt im Dunkeln. Im Ruhezustand ist sie kaum mehr als eine
+Silhouette vor dem Nebel; Licht gibt es nur von Zeit zu Zeit, und es trifft
+immer nur Teile der Struktur:
 
-- **Die Front.** Vom Kern läuft alle 18 bis 23 Sekunden eine kugelförmige
-  Lichtschale mit rund 9,5 Einheiten je Sekunde nach außen über alle
-  Oberflächen — vorn scharf und weiß, dahinter ein kurzer farbiger Schweif.
-  Jede dritte Front ist bernsteinfarben, jede fünfte violett.
-- **Zwei Laternen**, die auf den Doppelschienen der Hauptscheibe kreisen und
-  langsam atmen.
-- **Der Kern**, der schwach warm auf die ihm zugewandten Flächen leuchtet
-  und beim Start einer Front kurz aufflammt.
+- **Läufer.** Kurzlebige Lichter (Cyan, seltener Bernstein oder Eis), die für
+  fünf bis zwölf Sekunden ein Stück einer einzelnen Ringbahn entlangwandern
+  und dabei nur ihre unmittelbare Umgebung erhellen — Zahnkranz, Sprossen,
+  Skalenteilung. Höchstens drei zugleich, mit Pausen von zwei bis sechs
+  Sekunden. Sie wählen ihre Bahn gewichtet aus allen Ringen der Haupt-
+  maschine, der Satelliten und der Armillarsphäre um die Sockel.
+- **Die Front.** Alle 11 bis 22 Sekunden läuft vom Kern eine Lichtschale mit
+  rund 8,5 Einheiten je Sekunde nach außen — aber nur innerhalb eines Kegels
+  von 22 bis 40 Grad halbem Öffnungswinkel. Sie streift also einen Sektor der
+  Maschine und lässt den Rest dunkel. Jede dritte Front ist bernsteinfarben,
+  jede fünfte violett; gut die Hälfte zielt in Richtung der Sockel.
+- **Der Kern** glimmt kaum und flammt nur beim Start einer Front kurz auf.
 
-Alle Drehgruppen laufen mit eigenem, sehr langsamem Tempo (Scheibe rund
-zwölf Minuten je Umlauf, Kern zwei Minuten). Hinter dem geöffneten
-Lebenslauf bleibt die Maschine in Bewegung, Front und Laternen werden aber
-stark gedämpft, damit die Seite lesbar bleibt.
+**Bewegung.** Alle Drehgruppen laufen sehr langsam. Die geneigten Ringe —
+Kardanringe, die drei großen Schrägringe und zwei zusätzliche Wanderringe in
+der Hauptscheibe — drehen sich nicht nur in sich, sondern **präzedieren um
+die Achse des Kerns**: jeder hängt in einem Halter, der langsam um die
+Kernachse kreist, sodass die Ringebene sichtbar um den Kern wandert. Die
+Armillarringe um die Sockel tun dasselbe um ihren Mittelpunkt. Hinter dem
+geöffneten Lebenslauf bleibt die Maschine in Bewegung, Front und Läufer
+werden aber stark gedämpft, damit die Seite lesbar bleibt.
 
 **Orbit.** Im Ruhezustand lässt sich die Bühne anfassen: Ziehen mit gedrückter
 Maustaste oder einem Finger dreht die Kamera um die Mitte der Sockelreihe
@@ -159,26 +169,42 @@ einem Nachhall über der ganzen Zeile. Danach nie wieder.
 ### Intro-Sequenz
 
 Beim ersten Besuch einer Sitzung (ohne Deep Link, ohne
-`prefers-reduced-motion`) läuft eine Eröffnung von rund 14,5 Sekunden,
-jederzeit per Klick oder Taste überspringbar:
+`prefers-reduced-motion`) läuft eine Eröffnung von **sechs Sekunden**. Sie ist
+jederzeit per Klick oder Taste abbrechbar; zusätzlich erscheint nach knapp
+einer Sekunde unten rechts ein stiller Textknopf „Intro überspringen".
 
-1. **Der Raum allein.** Die Kamera fährt aus der Tiefe auf ihre
-   Ruheposition zurück, die Runen glimmen im goldenen Takt.
-2. **Der Name** legt sich wie eine Filmeinblendung von links nach rechts
-   frei, ein Lichtsaum begleitet die Kante.
-3. **Tokyo-Neon-Ausbruch** (~400 ms): vier CMY/RGB-Geisterkopien von Name
-   und Sigil springen in horizontalen Streifen, Skew- und Scale-Stöße brechen
-   den ruhigen Takt — nichts wird interpoliert, nur hart gesetzt. Gleichzeitig
-   reißen Filmkorn und Bloom des Composers hoch, damit die Störung den
-   ganzen Raum erfasst und nicht nur die Schrift.
-4. **Rolle und Sigil**: die Bezeichnung leuchtet auf, die drei Quadrate
-   des Sigils wachsen aus dem Nichts — das äußere dreht nach links, das
-   mittlere nach rechts, der Kern pulsiert.
-5. **Warp** nach oben links. Rotation und Kernpuls laufen währenddessen
-   weiter. Der Markenzug ist dasselbe DOM-Element wie
-   in der Kopfzeile; am Ende fällt nur sein Transform auf null zurück,
-   er rastet also zwangsläufig pixelgenau ein. Danach übernehmen CSS-Schleifen
-   bei rund 30 % der Intro-Geschwindigkeit ohne sichtbaren Phasensprung.
+1. **Der Raum allein** (0–0,7 s). Die Kamera fährt aus der Tiefe auf ihre
+   Ruheposition zurück.
+2. **Der Name** (0,7–2,4 s) legt sich Buchstabe für Buchstabe von links nach
+   rechts frei, ein Lichtsaum begleitet die Kante.
+3. **Signalbruch** (~0,3 s): fünf harte Bilder mit farbigen Geisterkopien von
+   Name und Sigil — spürbar, nicht hektisch. Filmkorn und Bloom ziehen kurz
+   mit.
+4. **Rolle und Sigil** (3,1–4,9 s): die Bezeichnung blendet ruhig ein, die
+   drei Quadrate des Sigils wachsen aus dem Nichts — das äußere dreht nach
+   links, das mittlere nach rechts, der Kern pulsiert einmal.
+5. **Warp** (4,95–6,0 s) nach oben links; gleichzeitig steigen die Sockel aus
+   der Tiefe. Der Markenzug ist dasselbe DOM-Element wie in der Kopfzeile;
+   am Ende fällt nur sein Transform auf null zurück, er rastet also
+   zwangsläufig pixelgenau ein.
+
+### Ruhe im Vordergrund
+
+Die Kopfzeile trägt keine Dauerbewegung mehr: der Name steht in einem festen
+Verlauf, die Rolle in festem Bernstein. Der Marken-Glitch ist ein Akzent etwa
+jede halbe Minute (weiche Störungsarten bevorzugt, kaum Nachbeben), das
+Symbol in der Kopfmitte erscheint nur noch alle 16 bis 30 Sekunden und
+ausschließlich in Cyan oder Bernstein. Bedienelemente wechseln beim Hover in
+ihre Zielfarbe — kein Signalbruch, kein Aufhellungsfilter, Bernstein bleibt
+Bernstein.
+
+Jeder Sockel trägt im Startbild eine **Beschriftung** vorn an der Kante
+(Ordnungszahl, Titel, Stichworte; zweisprachig), die beim Öffnen eines
+Bereichs abtritt. Der „Coming soon"-Schriftzug steht neutral in Faserweiß
+statt in der Sockelfarbe und pulsiert nicht mehr. Die Lebenslauf-Projektion
+ist etwas heller gestellt, ihr Partikelrahmen gedämpft; der TV-Synchronlauf
+der Hologramme (der helle Balken) läuft nur noch in der Übersicht und nie
+über einem geöffneten Dokument.
 
 ---
 
@@ -196,7 +222,7 @@ webseite/
 │   ├── scene/
 │   │   ├── stage.js            Renderer, Kamera, Composer, Ankerpunkte
 │   │   ├── background.js       Hintergrund-Fassade (Intro-Kompatibilität, Zustände)
-│   │   ├── orreryMachine.js    Die Orrery-Maschine: Geometrie, Lichtfront, Laternen
+│   │   ├── orreryMachine.js    Die Orrery-Maschine: Geometrie, Läufer, Sektor-Fronten, Präzession
 │   │   ├── cards.js            Die drei Bereichskarten (Sockel, Platte, Staub)
 │   │   └── runes.js            Zeichensatz als Strichzüge
 │   └── ui/

@@ -5,9 +5,9 @@ import { createOrreryMachine } from './orreryMachine.js';
 /**
  * Hintergrund: die grosse Orrery-Maschine.
  *
- * Sie steht schraeg hinter und um die drei Sockel und bleibt fast schwarz.
- * Sichtbar wird sie durch die Lichtfront, die vom Kern nach aussen wandert,
- * und durch zwei Laternen auf ihren Schienen. Die Maschine laeuft auch
+ * Sie steht schraeg hinter und um die drei Sockel und liegt im Dunkeln.
+ * Sichtbar wird sie nur zeitweise: durch Laeufer auf einzelnen Ringen und
+ * durch keilfoermige Lichtfronten vom Kern. Die Maschine laeuft auch
  * hinter dem geoeffneten Lebenslauf weiter, nur gedaempft.
  */
 export function createBackground({ renderer = null } = {}) {

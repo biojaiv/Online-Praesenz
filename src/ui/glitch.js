@@ -24,12 +24,14 @@ const GHOST_KINDS = ['cyan', 'magenta', 'lime'];
 
 // Auftrittswahrscheinlichkeiten der Stoerungsarten. Die ruhigeren Arten
 // laufen haeufiger, der harte Signalabriss bleibt ein seltenes Ereignis.
+// Beruhigte Fassung: die weichen Arten dominieren, der Signalabriss ist
+// eine Seltenheit.
 const BURST_KINDS = [
-  { kind: 'tear',    weight: 30 },
-  { kind: 'slice',   weight: 22 },
+  { kind: 'wash',    weight: 40 },
+  { kind: 'tear',    weight: 26 },
   { kind: 'roll',    weight: 20 },
-  { kind: 'wash',    weight: 18 },
-  { kind: 'dropout', weight: 10 },
+  { kind: 'slice',   weight: 11 },
+  { kind: 'dropout', weight: 3 },
 ];
 
 const TOTAL_WEIGHT = BURST_KINDS.reduce((sum, entry) => sum + entry.weight, 0);
@@ -83,7 +85,8 @@ export function startBrandGlitch({ stage } = {}) {
 
   function schedule(delay) {
     if (stopped) return;
-    timer = window.setTimeout(burst, delay ?? 5200 + Math.random() * 9000);
+    // Ein Ereignis etwa jede halbe Minute — ein Akzent, kein Dauerzustand.
+    timer = window.setTimeout(burst, delay ?? 24000 + Math.random() * 30000);
   }
 
   /** Platzierung je Burst neu messen, damit Resizes nie danebenliegen. */
@@ -304,7 +307,7 @@ export function startBrandGlitch({ stage } = {}) {
 
     // Selten folgt direkt ein Nachbeben aus einer anderen Stoerungsart.
     const kinds = [pickKind()];
-    if (Math.random() < 0.22) {
+    if (Math.random() < 0.06) {
       let second = pickKind();
       if (second === kinds[0]) second = 'tear';
       kinds.push(second);

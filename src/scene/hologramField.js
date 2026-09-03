@@ -184,7 +184,7 @@ function makeVolumeMaterial(uniforms) {
           * grain
           * uPlaneWeight;
         alpha += fieldWindow * roll
-          * (0.036 + uIntensity * 0.070)
+          * (0.016 + uIntensity * 0.034)
           * uPlaneWeight;
         alpha *= uReaderFactor * mix(1.0, 0.78, uCompact);
         if (alpha < 0.0012) discard;
@@ -547,8 +547,8 @@ export function createHologramField({ cards, reduced = false } = {}) {
       state.seed * 5.3,
     ) * 0.58;
     nextAdjustmentAt = elapsed
-      + 8.5
-      + hash(Math.floor(elapsed * 7), state.seed * 9.7) * 10.5;
+      + 14
+      + hash(Math.floor(elapsed * 7), state.seed * 9.7) * 16;
   }
 
   function selectAdjustmentState(elapsed) {
@@ -557,10 +557,9 @@ export function createHologramField({ cards, reduced = false } = {}) {
       forcedAdjustmentKey = null;
       if (forced) return forced;
     }
-    if (activeRoot !== 'home') {
-      const active = states.find((state) => state.key === activeRoot);
-      if (active) return active;
-    }
+    // Ein geoeffneter Bereich wird gelesen: kein Synchronlauf, kein heller
+    // Balken ueber dem Text. Der Effekt bleibt der Uebersicht vorbehalten.
+    if (activeRoot !== 'home') return null;
     if (!states.length) return null;
     const index = Math.floor(hash(Math.floor(elapsed * 3.1), 11.7) * states.length)
       % states.length;
@@ -617,13 +616,10 @@ export function createHologramField({ cards, reduced = false } = {}) {
         if (state.key === activeRoot) state.localPulse = 1;
       }
 
-      if (!reduced && activeRoot !== 'home') {
-        forcedAdjustmentKey = activeRoot;
-        // Let the focus camera settle before the local bottom-to-top sync roll.
-        nextAdjustmentAt = lastElapsed + 0.65;
-      } else {
-        nextAdjustmentAt = Math.max(nextAdjustmentAt, lastElapsed + 3.4);
-      }
+      // Kein erzwungener Synchronlauf beim Fokus: das Dokument soll ruhig
+      // stehen, sobald man es liest.
+      forcedAdjustmentKey = null;
+      nextAdjustmentAt = Math.max(nextAdjustmentAt, lastElapsed + 3.4);
     },
 
     setReaderOpen(value) {

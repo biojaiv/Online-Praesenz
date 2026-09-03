@@ -1,10 +1,12 @@
 import gsap from 'gsap';
 import { playSound } from './audio.js';
+import { t } from '../i18n.js';
 
 /**
  * Die Intro-Sequenz.
  *
- * Ablauf (cinematisch, jederzeit per Klick oder Taste ueberspringbar):
+ * Ablauf (sechs Sekunden; jederzeit per Klick, Taste oder den stillen
+ * Knopf unten rechts ueberspringbar):
  *
  *   1. Nur der Raum. Die Kamera faehrt aus der Tiefe zurueck,
  *      die Runen glimmen im goldenen Takt (uAmbient steht auf 1).
@@ -126,19 +128,30 @@ export function playIntro({ stage, onDone } = {}) {
   flash.className = 'intro__flash';
   frame.appendChild(flash);
 
+  // Dezenter Ausweg: ein stiller Textknopf unten rechts. Er erscheint erst
+  // nach einem Moment, damit er die erste Einstellung nicht stoert.
+  const skipButton = document.createElement('button');
+  skipButton.type = 'button';
+  skipButton.className = 'intro__skip';
+  skipButton.textContent = t('intro.skip');
+  frame.appendChild(skipButton);
+  const skipReveal = window.setTimeout(() => skipButton.classList.add('is-visible'), 900);
+
   let tl = null;
   let done = false;
   // Auch bei stark gedrosseltem WebGL/RAF darf die Navigation nie im
   // Intro-Zustand eingeschlossen bleiben.
-  const safetyTimer = window.setTimeout(() => finalize(), 14000);
+  const safetyTimer = window.setTimeout(() => finalize(), 9000);
 
   function finalize(skipped = false) {
     if (done) return;
     done = true;
     window.clearTimeout(safetyTimer);
+    window.clearTimeout(skipReveal);
     tl?.kill();
     window.removeEventListener('pointerdown', skip, true);
     window.removeEventListener('keydown', skip, true);
+    skipButton.remove();
 
     const roleGlyphs = role.querySelectorAll('.glyph');
     gsap.killTweensOf([
@@ -213,16 +226,22 @@ export function playIntro({ stage, onDone } = {}) {
 
     tl = gsap.timeline({ onComplete: finalize });
 
-    /* 1 — Drei Sekunden lebt nur die verteilte Symbolarchitektur. */
-    tl.call(() => stage.intro.play(5.0), null, 0);
+    /* Die ganze Sequenz dauert sechs Sekunden. */
+
+    /* 1 — Kurz lebt nur der Raum. */
+    tl.call(() => stage.intro.play(3.2), null, 0);
     tl.to(fiberField, {
-      opacity: 0.58,
+      opacity: 0.5,
       scaleY: 1,
-      duration: 2.1,
+      duration: 1.3,
       ease: 'power2.out',
-    }, 0.08);
+    }, 0.05);
 
     /* 2 — Der Name materialisiert sich ruhig von links nach rechts. */
+    const glyphStagger = 0.085;
+    const glyphDuration = 0.5;
+    const nameStart = 0.7;
+    const nameEnd = nameStart + (nameGlyphs.length - 1) * glyphStagger + glyphDuration;
     tl.fromTo(nameGlyphs,
       {
         opacity: 0,
@@ -237,33 +256,31 @@ export function playIntro({ stage, onDone } = {}) {
         y: 0,
         filter: 'blur(0px)',
         textShadow: '0 0 10px rgba(127,212,255,.6), 0 0 22px rgba(240,160,60,.22)',
-        duration: 0.62,
-        stagger: 0.145,
+        duration: glyphDuration,
+        stagger: glyphStagger,
         ease: 'power2.out',
       },
-      3.28);
-    // Ein einziger Impuls quittiert den fertig aufgebauten Schriftzug; er
-    // faellt genau dann, wenn der letzte Buchstabe steht.
-    tl.call(() => playSound('build'), null, 3.28 + (nameGlyphs.length - 1) * 0.145 + 0.62);
+      nameStart);
+    // Ein einziger Impuls quittiert den fertig aufgebauten Schriftzug.
+    tl.call(() => playSound('build'), null, nameEnd);
     tl.to(nameGlyphs,
-      { textShadow: '0 0 0 rgba(127,212,255,0)', duration: 0.75, stagger: 0.035 },
-      4.05);
-    // Der Schriftzug steht: erst jetzt faellt der Klang, danach erst setzt
-    // sich die Buehne in Bewegung.
-    tl.call(() => playSound('warp'), null, 5.8);
-    tl.call(() => name.classList.remove('intro__source-hidden'), null, 5.82);
-    tl.to(nameVisual, { opacity: 0, duration: 0.22, ease: 'power1.out' }, 5.82);
-    tl.to(fiberField, { opacity: 0.16, duration: 1.3, ease: 'power1.inOut' }, 5.45);
+      { textShadow: '0 0 0 rgba(127,212,255,0)', duration: 0.6, stagger: 0.025 },
+      nameStart + 0.6);
+    tl.call(() => playSound('warp'), null, 2.9);
+    tl.call(() => name.classList.remove('intro__source-hidden'), null, 2.92);
+    tl.to(nameVisual, { opacity: 0, duration: 0.2, ease: 'power1.out' }, 2.92);
+    tl.to(fiberField, { opacity: 0.14, duration: 1.0, ease: 'power1.inOut' }, 2.7);
 
-    /* 3 — Ein kurzer analoger Signalverlust weckt das Sigil. */
+    /* 3 — Ein kurzer Signalverlust weckt das Sigil: wenige Bilder, nicht
+       mehr — der Bruch soll spuerbar sein, nicht hektisch. */
     tl.call(() => {
       signal.classList.add('is-active');
       brand.classList.add('is-signal-break');
       brand.style.filter = 'url(#intro-signal-warp)';
-    }, null, 6.12);
-    tl.to(signal, { opacity: 0.82, duration: 0.06, ease: 'none' }, 6.12);
-    let glitchTime = 6.14;
-    for (let i = 0; i < 11; i++) {
+    }, null, 3.05);
+    tl.to(signal, { opacity: 0.7, duration: 0.05, ease: 'none' }, 3.05);
+    let glitchTime = 3.07;
+    for (let i = 0; i < 5; i++) {
       for (const ghost of ghosts) {
         const top = gsap.utils.random(0, 76);
         const bottom = Math.max(0, 94 - top - gsap.utils.random(5, 22));
@@ -301,8 +318,8 @@ export function playIntro({ stage, onDone } = {}) {
         scale: gsap.utils.random(0.93, 1.1),
         skewX: gsap.utils.random(-8, 8),
       }, glitchTime);
-      tl.call(() => stage.setGlitch(gsap.utils.random(0.55, 1)), null, glitchTime);
-      glitchTime += gsap.utils.random(0.038, 0.072);
+      tl.call(() => stage.setGlitch(gsap.utils.random(0.45, 0.85)), null, glitchTime);
+      glitchTime += gsap.utils.random(0.045, 0.075);
     }
     tl.set([...ghosts, ...sigilGhosts, ...tears], { opacity: 0 }, glitchTime);
     tl.set(brand, { scale: scaleTo, skewX: 0, y: dy }, glitchTime);
@@ -314,52 +331,48 @@ export function playIntro({ stage, onDone } = {}) {
       brand.style.removeProperty('filter');
       stage.setGlitch(0);
     }, null, glitchTime);
-    tl.to(signal, { opacity: 0, duration: 0.18 }, glitchTime);
+    tl.to(signal, { opacity: 0, duration: 0.15 }, glitchTime);
 
-    /* 4 — Nach dem vollstaendigen Namen atmet die Unterschrift langsam ein. */
+    /* 4 — Die Unterschrift blendet ruhig ein, das Sigil erwacht. */
     tl.fromTo(role,
       { opacity: 0, y: 5, filter: 'blur(4px)' },
-      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 3.4, ease: 'power1.inOut' },
-      7.05);
+      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1.5, ease: 'power1.inOut' },
+      3.35);
 
     /* GSAP endet bei exakt null Grad; dort uebernehmen die CSS-Dauerspuren. */
-    tl.fromTo(rects.outer, { rotation: 630 }, { rotation: 0, duration: 8.65, ease: 'none' }, 6.2);
-    tl.to(rects.outer, { scale: 1, duration: 2.45, ease: 'power3.out' }, 6.2);
-    tl.fromTo(rects.mid, { rotation: -630 }, { rotation: 0, duration: 8.6, ease: 'none' }, 6.25);
-    tl.to(rects.mid, { scale: 1, duration: 2.45, ease: 'power3.out' }, 6.25);
+    tl.fromTo(rects.outer, { rotation: 360 }, { rotation: 0, duration: 2.9, ease: 'none' }, 3.1);
+    tl.to(rects.outer, { scale: 1, duration: 1.3, ease: 'power3.out' }, 3.1);
+    tl.fromTo(rects.mid, { rotation: -360 }, { rotation: 0, duration: 2.85, ease: 'none' }, 3.15);
+    tl.to(rects.mid, { scale: 1, duration: 1.3, ease: 'power3.out' }, 3.15);
     tl.fromTo(rects.core,
       { scale: 0, opacity: 0 },
-      { scale: 1, opacity: 0.4, duration: 1.65, ease: 'power2.out' },
-      6.3);
+      { scale: 1, opacity: 0.4, duration: 0.9, ease: 'power2.out' },
+      3.2);
     tl.to(rects.core, {
       opacity: 0.95,
-      scale: 1.35,
-      duration: 1.05,
+      scale: 1.3,
+      duration: 0.7,
       yoyo: true,
-      repeat: 5,
+      repeat: 1,
       ease: 'sine.inOut',
-    }, 8.2);
+    }, 4.1);
 
     /* 5 — Der unveraenderte DOM-Markenzug rastet pixelgenau im Header ein. */
-    tl.to(brand, { scale: scaleTo * 0.94, duration: 0.55, ease: 'power2.in' }, 12.15);
+    tl.to(brand, { scale: scaleTo * 0.95, duration: 0.4, ease: 'power2.in' }, 4.55);
     tl.call(() => {
       gsap.killTweensOf(role);
       role.style.textShadow = '';
       stage.intro.recoil();
       // Erst mit dem Warp des Schriftzugs steigen die Sockel aus der Tiefe.
-      stage.intro.revealWorld(2.35);
-    }, null, 12.7);
-    tl.to(brand, { x: 0, y: 0, scale: 1, duration: 2.35, ease: 'power4.inOut' }, 12.7);
+      stage.intro.revealWorld(1.05);
+    }, null, 4.95);
+    tl.to(brand, { x: 0, y: 0, scale: 1, duration: 1.05, ease: 'power4.inOut' }, 4.95);
     tl.fromTo(flash,
-      { opacity: 0.5, scale: 0.4 },
-      { opacity: 0, scale: 1.6, duration: 1.2, ease: 'power2.out' },
-      12.7);
+      { opacity: 0.4, scale: 0.4 },
+      { opacity: 0, scale: 1.6, duration: 0.9, ease: 'power2.out' },
+      4.95);
     tl.to(stage.background.ambient,
-      { value: 0.18, duration: 3.7, ease: 'power1.inOut' },
-      11.2);
-
-    // Bewusst filmisches Tempo: die Sequenz laeuft rund zwei Sekunden laenger
-    // als die fruehere Fassung und laesst jedem Moment Raum zum Nachklingen.
-    tl.timeScale(1.55);
+      { value: 0.18, duration: 1.7, ease: 'power1.inOut' },
+      4.3);
   }
 }

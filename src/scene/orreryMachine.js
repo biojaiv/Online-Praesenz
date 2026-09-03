@@ -9,9 +9,11 @@ import { lightColor } from './palette.js';
  * Ein riesiges, prozedural gebautes Planetarium aus Ringen, Zahnkraenzen,
  * Sphaerenkaefigen und Streben. Es steht schraeg hinter und um die drei
  * Sockel, sodass ein Kamera-Orbit die Struktur aus wechselnden Blickwinkeln
- * zeigt. Die Maschine ist fast schwarz. Sichtbar wird sie durch eine
- * kugelfoermige Lichtfront, die vom Kern nach aussen ueber alle Oberflaechen
- * wandert, sowie durch zwei Laternen, die auf den Schienen kreisen.
+ * zeigt. Die Maschine liegt im Dunkeln. Sichtbar wird sie nur von Zeit zu
+ * Zeit: durch Laeufer, die ein Stueck weit ueber einen einzelnen Ring
+ * wandern und dabei nur dessen Umgebung erhellen, und durch keilfoermige
+ * Lichtfronten, die vom Kern aus einen Sektor der Struktur ueberstreichen.
+ * Die geneigten Ringe praezedieren dazu langsam um die Achse des Kerns.
  *
  * Alle statischen Teile einer Drehgruppe werden zu einer Geometrie
  * verschmolzen; Sphaeren und Zahnraeder sind Instanzen. Das haelt die Zahl
@@ -45,9 +47,15 @@ const MACHINE_TILT = new THREE.Euler(0.5, 0.3, -0.06);
 const PIVOT = new THREE.Vector3(0, -5, 0);
 
 const WAVE_MAX_RADIUS = 96;
-const WAVE_SPEED = 9.5;          // Welteinheiten je Sekunde
-const WAVE_PAUSE_MIN = 5.5;
-const WAVE_PAUSE_MAX = 10.5;
+const WAVE_SPEED = 8.5;          // Welteinheiten je Sekunde
+const WAVE_PAUSE_MIN = 11;
+const WAVE_PAUSE_MAX = 22;
+
+// Laeufer: kurzlebige Lichter, die ein Stueck eines Rings entlangwandern.
+const RUNNER_SLOTS = 4;
+const RUNNER_PAUSE_MIN = 1.8;
+const RUNNER_PAUSE_MAX = 5.5;
+const RUNNER_MAX_ACTIVE = 3;
 
 function makeRng(seed) {
   let state = seed >>> 0;
@@ -190,17 +198,19 @@ function makeSharedUniforms() {
     uIdle: { value: 1 },
     uDocumentOpen: { value: 0 },
     uCore: { value: MACHINE_CENTRE.clone() },
-    uCoreGlow: { value: 0.35 },
+    uCoreGlow: { value: 0.08 },
     uWaveRadius: { value: -50 },
     uWaveStrength: { value: 0 },
+    // Richtung und Oeffnung des Sektors, den die Front ueberstreicht
+    // (Kosinus des halben Oeffnungswinkels).
+    uWaveDir: { value: new THREE.Vector3(0, 0, 1) },
+    uWaveCone: { value: 0.75 },
     uWaveColourA: { value: PALETTE.ice.clone() },
     uWaveColourB: { value: PALETTE.cyan.clone() },
-    uLampPosA: { value: new THREE.Vector3() },
-    uLampPosB: { value: new THREE.Vector3() },
-    uLampColourA: { value: PALETTE.cyan.clone() },
-    uLampColourB: { value: PALETTE.amber.clone() },
-    uLampStrengthA: { value: 0 },
-    uLampStrengthB: { value: 0 },
+    // Laeufer: Position, Farbe + Staerke (w), Leuchtradius.
+    uRunnerPos: { value: Array.from({ length: RUNNER_SLOTS }, () => new THREE.Vector3()) },
+    uRunnerCol: { value: Array.from({ length: RUNNER_SLOTS }, () => new THREE.Vector4(0, 0, 0, 0)) },
+    uRunnerRadius: { value: new Float32Array(RUNNER_SLOTS).fill(8) },
     uFogColour: { value: PALETTE.fog.clone() },
     uFogDensity: { value: 0.0074 },
   };
@@ -238,24 +248,27 @@ function makeMachineMaterial(uniforms) {
       }
     `,
     fragmentShader: /* glsl */`
+      #define RUNNERS ${RUNNER_SLOTS}
       uniform float uTime, uVisible, uIdle, uDocumentOpen, uCoreGlow;
       uniform vec3 uCore;
-      uniform float uWaveRadius, uWaveStrength;
-      uniform vec3 uWaveColourA, uWaveColourB;
-      uniform vec3 uLampPosA, uLampPosB, uLampColourA, uLampColourB;
-      uniform float uLampStrengthA, uLampStrengthB;
+      uniform float uWaveRadius, uWaveStrength, uWaveCone;
+      uniform vec3 uWaveDir, uWaveColourA, uWaveColourB;
+      uniform vec3 uRunnerPos[RUNNERS];
+      uniform vec4 uRunnerCol[RUNNERS];
+      uniform float uRunnerRadius[RUNNERS];
       uniform vec3 uFogColour;
       uniform float uFogDensity;
       varying vec3 vWorldPos;
       varying vec3 vWorldNormal;
 
-      vec3 lamp(vec3 position, vec3 colour, float strength, vec3 n, float radius) {
-        vec3 toLamp = position - vWorldPos;
-        float d = length(toLamp);
-        vec3 l = toLamp / max(d, 0.0001);
+      vec3 runner(vec3 position, vec4 colour, float radius, vec3 n) {
+        vec3 toLight = position - vWorldPos;
+        float d = length(toLight);
+        vec3 l = toLight / max(d, 0.0001);
+        // Enger Kern, weicher Saum: das Licht bleibt lokal.
         float falloff = exp(-(d * d) / (radius * radius));
-        float diffuse = 0.28 + 0.72 * max(0.0, dot(n, l));
-        return colour * falloff * diffuse * strength;
+        float diffuse = 0.22 + 0.78 * max(0.0, dot(n, l));
+        return colour.rgb * falloff * diffuse * colour.a;
       }
 
       void main() {
@@ -265,37 +278,41 @@ function makeMachineMaterial(uniforms) {
         float facing = abs(dot(n, v));
         float rim = pow(1.0 - facing, 2.6);
 
-        // Ruhezustand: kaltes, fast schwarzes Metall mit duenner Lichtkante.
-        vec3 colour = vec3(0.0035, 0.006, 0.010) * (0.6 + 0.4 * facing);
-        colour += vec3(0.030, 0.052, 0.080) * rim * 0.75;
+        // Ruhezustand: die Struktur liegt im Dunkeln. Nur ein Hauch von
+        // Kante, damit Silhouetten vor dem Nebel nicht voellig verschwinden.
+        vec3 colour = vec3(0.0012, 0.0022, 0.0040) * (0.6 + 0.4 * facing);
+        colour += vec3(0.012, 0.022, 0.036) * rim * 0.5;
         colour *= uIdle;
 
-        // Der Kern leuchtet schwach auf die ihm zugewandten Flaechen.
+        // Der Kern glimmt nur schwach auf die naechsten Flaechen.
         vec3 toCore = uCore - vWorldPos;
         float coreDistance = length(toCore);
         vec3 coreDirection = toCore / max(coreDistance, 0.0001);
         float coreDiffuse = max(0.0, dot(n, coreDirection));
-        float coreFalloff = 1.0 / (1.0 + coreDistance * coreDistance * 0.016);
+        float coreFalloff = 1.0 / (1.0 + coreDistance * coreDistance * 0.03);
         colour += vec3(0.95, 0.74, 0.46) * coreDiffuse * coreFalloff * uCoreGlow * 0.42;
 
-        // Die Lichtfront: eine Kugelschale, die vom Kern nach aussen laeuft.
-        // Vorn scharf und hell, dahinter ein kuerzerer farbiger Schweif.
+        // Die Lichtfront: eine Kugelschale, die vom Kern nach aussen laeuft,
+        // aber nur innerhalb eines Kegels — sie streift einen Sektor der
+        // Maschine und laesst den Rest im Dunkeln.
         float shell = coreDistance - uWaveRadius;
-        float front = exp(-(shell * shell) / 11.0);
-        float tail = exp(max(shell, -40.0) / 7.5) * step(shell, 0.0) * (1.0 - front);
+        float front = exp(-(shell * shell) / 9.0);
+        float tail = exp(max(shell, -30.0) / 6.0) * step(shell, 0.0) * (1.0 - front);
+        float sector = smoothstep(uWaveCone - 0.16, uWaveCone + 0.06, dot(-coreDirection, uWaveDir));
         float grazing = 0.4 + 0.6 * abs(dot(n, coreDirection));
         vec3 waveColour = mix(uWaveColourB, uWaveColourA, front);
         // Hinter dem geoeffneten Dokument bleibt die Front nur ein Schimmer,
         // damit die Seite lesbar bleibt.
-        float waveScale = mix(1.0, 0.18, uDocumentOpen);
-        float wave = (front * 0.62 + tail * 0.22) * grazing * uWaveStrength * waveScale;
+        float waveScale = mix(1.0, 0.16, uDocumentOpen) * sector;
+        float wave = (front * 0.58 + tail * 0.18) * grazing * uWaveStrength * waveScale;
         colour += waveColour * wave;
-        colour += uWaveColourA * rim * front * uWaveStrength * 0.45 * waveScale;
+        colour += uWaveColourA * rim * front * uWaveStrength * 0.40 * waveScale;
 
-        // Zwei Laternen auf den Schienen.
-        float lampScale = mix(1.0, 0.45, uDocumentOpen);
-        colour += lamp(uLampPosA, uLampColourA, uLampStrengthA * lampScale, n, 9.0);
-        colour += lamp(uLampPosB, uLampColourB, uLampStrengthB * lampScale, n, 11.0);
+        // Laeufer auf den Ringen.
+        float runnerScale = mix(1.0, 0.4, uDocumentOpen);
+        for (int index = 0; index < RUNNERS; index += 1) {
+          colour += runner(uRunnerPos[index], uRunnerCol[index], uRunnerRadius[index], n) * runnerScale;
+        }
 
         // Geoeffnetes Dokument: die Welt tritt etwas zurueck.
         colour *= mix(1.0, 0.72, uDocumentOpen);
@@ -324,6 +341,21 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
   const orbSets = [];
   const gearSets = [];
   const tracks = [];
+  // Ringbahnen, auf denen Laeufer wandern koennen: Objekt + lokaler Radius.
+  const paths = [];
+
+  /**
+   * Haengt ein geneigtes Teil in einen Halter, der um die Kernachse (y)
+   * kreist. So praezediert die Ringebene sichtbar um den Kern, statt nur
+   * in sich zu drehen.
+   */
+  function precess(object, speed) {
+    const holder = new THREE.Group();
+    holder.add(object);
+    root.add(holder);
+    rotors.push({ object: holder, speed, axis: 'y' });
+    return holder;
+  }
 
   /* Kern: Spirale aus gestaffelten Zahnkraenzen plus Kardanringe. */
   {
@@ -352,20 +384,22 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
     root.add(core);
     rotors.push({ object: core, speed: -0.055, axis: 'y' });
 
-    // Drei Kardanringe um den Kern, jeder auf eigener Achse.
+    // Drei Kardanringe um den Kern, jeder auf eigener Achse. Sie drehen
+    // sich in sich und kreisen zugleich um die Kernachse.
     const gimbalSpecs = [
-      [10.2, new THREE.Euler(1.1, 0.2, 0.3), 0.021],
-      [11.4, new THREE.Euler(0.4, 1.3, -0.6), -0.017],
-      [12.8, new THREE.Euler(-0.8, 0.5, 1.9), 0.013],
+      [10.2, new THREE.Euler(1.1, 0.2, 0.3), 0.021, 0.030],
+      [11.4, new THREE.Euler(0.4, 1.3, -0.6), -0.017, -0.022],
+      [12.8, new THREE.Euler(-0.8, 0.5, 1.9), 0.013, 0.016],
     ];
-    for (const [radius, tilt, speed] of gimbalSpecs) {
+    for (const [radius, tilt, speed, orbitSpeed] of gimbalSpecs) {
       const gimbalParts = [];
       ring(gimbalParts, radius, 0.13, 128);
       ticks(gimbalParts, radius, 72, { length: 0.42, majorEvery: 6, majorLength: 0.95, thickness: 0.06 });
       const gimbal = new THREE.Mesh(mergeParts(gimbalParts), material);
       gimbal.rotation.copy(tilt);
-      root.add(gimbal);
+      precess(gimbal, orbitSpeed);
       rotors.push({ object: gimbal, speed, axis: 'local' });
+      paths.push({ object: gimbal, radius, y: 0, weight: 1.4 });
     }
   }
 
@@ -393,7 +427,7 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
         });
       }
     }
-    // Zwei Laufbahnen mit Sprossen, darauf wandern die Laternen.
+    // Zwei Laufbahnen mit Sprossen, bevorzugte Bahnen der Laeufer.
     track(parts, 26.4, 1.15, 200, 132, { y: -0.2, tube: 0.10 });
     tracks.push({ radius: 26.4, y: -0.2 });
     if (detail >= 1) {
@@ -440,6 +474,30 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
     disc.name = 'orrery-disc';
     root.add(disc);
     rotors.push({ object: disc, speed: 0.0085, axis: 'y' });
+    for (let index = 0; index < ringCount; index += 1) {
+      paths.push({ object: disc, radius: discRings[index].r, y: discRings[index].y, weight: 1 });
+    }
+    for (const spec of tracks) paths.push({ object: disc, radius: spec.radius, y: spec.y, weight: 2 });
+
+    // Zwei leicht geneigte Wanderringe: sie liegen nicht in der Scheibe,
+    // sondern kreisen um die Kernachse und schneiden die Scheibe dabei
+    // sichtbar — das ist die Bewegung, die man von aussen liest.
+    if (detail >= 1) {
+      const wanderSpecs = [
+        { r: 25, tube: 0.15, tilt: new THREE.Euler(0.26, 0, 0.08), speed: 0.012 },
+        { r: 44, tube: 0.18, tilt: new THREE.Euler(-0.19, 0, 0.22), speed: -0.0075 },
+      ];
+      for (const spec of wanderSpecs) {
+        const wanderParts = [];
+        ring(wanderParts, spec.r, spec.tube, Math.round(120 + spec.r * 3));
+        ticks(wanderParts, spec.r, Math.round(spec.r * 3), { length: 0.5, majorEvery: 8, majorLength: 1.1, thickness: 0.07 });
+        const wander = new THREE.Mesh(mergeParts(wanderParts), material);
+        wander.name = 'orrery-wander';
+        wander.rotation.copy(spec.tilt);
+        precess(wander, spec.speed);
+        paths.push({ object: wander, radius: spec.r, y: 0, weight: 1.6 });
+      }
+    }
 
     // Sphaerenkaefige und Zahnraeder sitzen auf den Scheibenringen.
     const orbMatrices = [];
@@ -481,9 +539,9 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
   /* Grosse schraege Ringe, die das Ganze umfassen. */
   if (detail >= 1) {
     const greatSpecs = [
-      { r: 36, tube: 0.22, tilt: new THREE.Euler(1.05, 0.3, 0.25), speed: 0.006, orbs: 3 },
-      { r: 49, tube: 0.26, tilt: new THREE.Euler(0.75, -1.1, 0.9), speed: -0.0045, orbs: 4 },
-      { r: 63, tube: 0.30, tilt: new THREE.Euler(1.35, 0.9, -0.4), speed: 0.0032, orbs: 4 },
+      { r: 36, tube: 0.22, tilt: new THREE.Euler(1.05, 0.3, 0.25), speed: 0.006, orbit: 0.0085, orbs: 3 },
+      { r: 49, tube: 0.26, tilt: new THREE.Euler(0.75, -1.1, 0.9), speed: -0.0045, orbit: -0.0060, orbs: 4 },
+      { r: 63, tube: 0.30, tilt: new THREE.Euler(1.35, 0.9, -0.4), speed: 0.0032, orbit: 0.0042, orbs: 4 },
     ];
     for (const spec of greatSpecs) {
       const parts = [];
@@ -501,8 +559,9 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
       }
       const great = new THREE.Mesh(mergeParts(parts), material);
       great.rotation.copy(spec.tilt);
-      root.add(great);
+      precess(great, spec.orbit);
       rotors.push({ object: great, speed: spec.speed, axis: 'local' });
+      paths.push({ object: great, radius: spec.r, y: 0, weight: 1.2 });
 
       const items = [];
       for (let index = 0; index < spec.orbs; index += 1) {
@@ -519,7 +578,7 @@ function buildOrrery({ material, orbGeometry, gearGeometry, rng, scale = 1, deta
   }
 
   root.scale.setScalar(scale);
-  return { root, rotors, orbSets, gearSets, tracks };
+  return { root, rotors, orbSets, gearSets, tracks, paths };
 }
 
 /* ---------- Staub und Leuchtkoerper ---------- */
@@ -571,16 +630,18 @@ function createDust(uniforms, rng) {
     blending: THREE.AdditiveBlending,
     toneMapped: false,
     vertexShader: /* glsl */`
+      #define RUNNERS ${RUNNER_SLOTS}
       attribute vec2 aSeed;
       attribute float aSize;
       uniform float uTime, uPixelRatio, uVisible, uIdle, uDocumentOpen;
-      uniform vec3 uCore;
-      uniform float uWaveRadius, uWaveStrength;
-      uniform vec3 uLampPosA, uLampPosB;
-      uniform float uLampStrengthA, uLampStrengthB;
+      uniform vec3 uCore, uWaveDir;
+      uniform float uWaveRadius, uWaveStrength, uWaveCone;
+      uniform vec3 uRunnerPos[RUNNERS];
+      uniform vec4 uRunnerCol[RUNNERS];
+      uniform float uRunnerRadius[RUNNERS];
       varying float vAlpha;
       varying float vWave;
-      varying float vLampMix;
+      varying vec3 vRunnerColour;
 
       void main() {
         vec3 point = position;
@@ -588,28 +649,40 @@ function createDust(uniforms, rng) {
         point.y += cos(uTime * (0.04 + aSeed.y * 0.03) + aSeed.x * 17.0) * (0.2 + aSeed.y * 0.7);
         vec4 world = modelMatrix * vec4(point, 1.0);
 
-        float shell = distance(world.xyz, uCore) - uWaveRadius;
-        float wave = exp(-(shell * shell) / 24.0) * uWaveStrength * mix(0.45, 0.06, uDocumentOpen);
-        float lampA = exp(-distance(world.xyz, uLampPosA) * 0.16) * uLampStrengthA;
-        float lampB = exp(-distance(world.xyz, uLampPosB) * 0.13) * uLampStrengthB;
-        float lamps = lampA + lampB;
+        vec3 fromCore = world.xyz - uCore;
+        float shell = length(fromCore) - uWaveRadius;
+        float sector = smoothstep(uWaveCone - 0.16, uWaveCone + 0.06, dot(normalize(fromCore), uWaveDir));
+        float wave = exp(-(shell * shell) / 24.0) * uWaveStrength * sector * mix(0.4, 0.05, uDocumentOpen);
+
+        float runners = 0.0;
+        vec3 runnerColour = vec3(0.0);
+        for (int index = 0; index < RUNNERS; index += 1) {
+          float d = distance(world.xyz, uRunnerPos[index]);
+          // Enger als auf den Flaechen: der Staub soll den Laeufer nur
+          // saeumen, nicht als Wolke ueberstrahlen.
+          float glow = exp(-(d * d) / (uRunnerRadius[index] * uRunnerRadius[index] * 0.55)) * uRunnerCol[index].a;
+          runners += glow;
+          runnerColour += uRunnerCol[index].rgb * glow;
+        }
         vWave = wave;
-        vLampMix = lampB / max(0.0001, lampA + lampB);
+        vRunnerColour = runnerColour / max(0.0001, runners);
 
         vec4 viewPosition = viewMatrix * world;
         float depthFade = smoothstep(150.0, 40.0, -viewPosition.z);
-        vAlpha = (0.05 * uIdle + wave * 0.9 + lamps * 0.8)
+        // Staub ist im Ruhezustand praktisch unsichtbar; erst Licht macht
+        // ihn sichtbar.
+        vAlpha = (0.0025 * uIdle + wave * 0.9 + runners * 0.35)
           * uVisible * (0.4 + aSeed.x * 0.6) * depthFade
-          * mix(1.0, 0.6, uDocumentOpen);
-        gl_PointSize = min(6.0, aSize * uPixelRatio * (150.0 / max(1.0, -viewPosition.z)) * (0.7 + wave * 1.2 + lamps * 0.8));
+          * mix(1.0, 0.5, uDocumentOpen);
+        gl_PointSize = min(6.0, aSize * uPixelRatio * (150.0 / max(1.0, -viewPosition.z)) * (0.7 + wave * 1.2 + runners * 0.8));
         gl_Position = projectionMatrix * viewPosition;
       }
     `,
     fragmentShader: /* glsl */`
-      uniform vec3 uWaveColourA, uWaveColourB, uLampColourA, uLampColourB;
+      uniform vec3 uWaveColourA;
       varying float vAlpha;
       varying float vWave;
-      varying float vLampMix;
+      varying vec3 vRunnerColour;
 
       void main() {
         vec2 point = gl_PointCoord - 0.5;
@@ -617,8 +690,7 @@ function createDust(uniforms, rng) {
         if (d > 0.5) discard;
         float core = smoothstep(0.5, 0.0, d);
         vec3 idle = vec3(0.30, 0.42, 0.56);
-        vec3 lampColour = mix(uLampColourA, uLampColourB, vLampMix);
-        vec3 colour = mix(idle, mix(lampColour, uWaveColourA, clamp(vWave * 2.0, 0.0, 1.0)), 0.75);
+        vec3 colour = mix(idle, mix(vRunnerColour, uWaveColourA, clamp(vWave * 2.0, 0.0, 1.0)), 0.75);
         float alpha = vAlpha * core * core;
         if (alpha < 0.002) discard;
         gl_FragColor = vec4(colour, alpha);
@@ -686,6 +758,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
   const rotors = [];
   const orbSets = [];
   const gearSets = [];
+  const paths = [];
 
   // Hauptmaschine, geneigt hinter den Sockeln.
   const main = buildOrrery({ material, orbGeometry, gearGeometry, rng, scale: 1, detail: 1 });
@@ -698,6 +771,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
   rotors.push(...main.rotors, { object: machine, speed: 0.0024, axis: 'y' });
   orbSets.push(...main.orbSets);
   gearSets.push(...main.gearSets);
+  paths.push(...main.paths);
 
   // Drei Satelliten-Mechanismen rund um die Sockel, damit jeder Blickwinkel
   // Struktur zeigt.
@@ -721,6 +795,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
     rotors.push(...satellite.rotors, { object: holder, speed: spec.speed, axis: 'y' });
     orbSets.push(...satellite.orbSets);
     gearSets.push(...satellite.gearSets);
+    for (const path of satellite.paths) paths.push({ ...path, weight: path.weight * 0.35, holder });
   }
 
   // Zwei flache Skalenringe genau um den Kamera-Drehpunkt: sie fassen die
@@ -742,6 +817,8 @@ export function createOrreryMachine({ renderer = null } = {}) {
     halo.position.copy(PIVOT);
     group.add(halo);
     rotors.push({ object: halo, speed: -0.0036, axis: 'y' });
+    paths.push({ object: halo, radius: 30, y: -4.2, weight: 1.5 });
+    paths.push({ object: halo, radius: 37, y: -6.4, weight: 1.0 });
 
     // Zwei grosse, steil stehende Ringe um den Drehpunkt: eine Armillarsphaere,
     // in der die Sockel stehen. Sie schliessen die Szene auch nach hinten.
@@ -764,8 +841,15 @@ export function createOrreryMachine({ renderer = null } = {}) {
       armillary.name = 'pivot-armillary';
       armillary.position.copy(PIVOT);
       armillary.rotation.copy(spec.tilt);
-      group.add(armillary);
+      // Auch die Armillarringe kreisen um die Achse ihres Mittelpunkts.
+      const armHolder = new THREE.Group();
+      armHolder.position.copy(PIVOT);
+      armillary.position.set(0, 0, 0);
+      armHolder.add(armillary);
+      group.add(armHolder);
+      rotors.push({ object: armHolder, speed: spec.speed * 1.6, axis: 'y' });
       rotors.push({ object: armillary, speed: spec.speed, axis: 'local' });
+      paths.push({ object: armillary, radius: spec.r, y: 0, weight: 1.3 });
 
       const items = [];
       for (let index = 0; index < spec.orbs; index += 1) {
@@ -785,18 +869,88 @@ export function createOrreryMachine({ renderer = null } = {}) {
   group.add(dust.points);
 
   const coreGlow = createGlowBody(0.55, 2.6);
-  const lampGlowA = createGlowBody(0.30, 3.0);
-  const lampGlowB = createGlowBody(0.34, 3.0);
-  group.add(coreGlow.group, lampGlowA.group, lampGlowB.group);
+  group.add(coreGlow.group);
 
-  // Laternen laufen auf den Laufbahnen der Hauptscheibe.
-  const disc = main.rotors.find((rotor) => rotor.object.name === 'orrery-disc').object;
-  const lamps = [
-    { track: main.tracks[0], angle: rng() * Math.PI * 2, speed: 0.085, colour: PALETTE.cyan.clone(), strength: 0, target: 1, glow: lampGlowA, position: uniforms.uLampPosA, strengthUniform: uniforms.uLampStrengthA },
-    { track: main.tracks[1] || main.tracks[0], angle: rng() * Math.PI * 2, speed: -0.052, colour: PALETTE.amber.clone(), strength: 0, target: 1, glow: lampGlowB, position: uniforms.uLampPosB, strengthUniform: uniforms.uLampStrengthB },
-  ];
-  uniforms.uLampColourA.value.copy(lamps[0].colour);
-  uniforms.uLampColourB.value.copy(lamps[1].colour);
+  // Laeufer: bis zu RUNNER_SLOTS Lichter, die fuer einige Sekunden ein
+  // Stueck einer Ringbahn entlangwandern und dann verloeschen.
+  const runners = Array.from({ length: RUNNER_SLOTS }, (_, index) => {
+    const glow = createGlowBody(0.28, 3.0);
+    group.add(glow.group);
+    return {
+      slotIndex: index,
+      active: false, path: null, angle: 0, speed: 0, born: 0, duration: 0,
+      radius: 8, colour: PALETTE.cyan.clone(), strength: 0, glow,
+      position: uniforms.uRunnerPos.value[index],
+      colourUniform: uniforms.uRunnerCol.value[index],
+    };
+  });
+  const pathWeightTotal = () => paths.reduce((sum, path) => sum + (path.holder && !path.holder.visible ? 0 : path.weight), 0);
+  let nextRunnerAt = 1.2;
+
+  function pickPath() {
+    let pick = rng() * pathWeightTotal();
+    for (const path of paths) {
+      if (path.holder && !path.holder.visible) continue;
+      pick -= path.weight;
+      if (pick <= 0) return path;
+    }
+    return paths[paths.length - 1];
+  }
+
+  function launchRunner(elapsed) {
+    const runner = runners.find((candidate) => !candidate.active);
+    if (!runner) return;
+    const path = pickPath();
+    runner.active = true;
+    runner.path = path;
+    runner.angle = rng() * Math.PI * 2;
+    // Winkelgeschwindigkeit so, dass die Bahngeschwindigkeit aehnlich bleibt.
+    const worldRadius = path.radius * path.object.getWorldScale(TMP_S).x;
+    const linear = 4 + rng() * 5;
+    runner.speed = (rng() < 0.5 ? -1 : 1) * (linear / Math.max(4, worldRadius));
+    runner.born = elapsed;
+    runner.duration = 5 + rng() * 7;
+    runner.radius = 6 + rng() * 6;
+    const roll = rng();
+    if (roll < 0.62) runner.colour.copy(PALETTE.cyan).lerp(PALETTE.ice, rng() * 0.5);
+    else if (roll < 0.9) runner.colour.copy(PALETTE.amber);
+    else runner.colour.copy(PALETTE.ice);
+    uniforms.uRunnerRadius.value[runner.slotIndex] = runner.radius;
+  }
+
+  function updateRunners(elapsed, dt) {
+    const activeCount = runners.filter((runner) => runner.active).length;
+    if (activeCount < RUNNER_MAX_ACTIVE && elapsed >= nextRunnerAt) {
+      launchRunner(elapsed);
+      nextRunnerAt = elapsed + RUNNER_PAUSE_MIN + rng() * (RUNNER_PAUSE_MAX - RUNNER_PAUSE_MIN);
+    }
+    for (const runner of runners) {
+      if (!runner.active) {
+        runner.colourUniform.set(0, 0, 0, 0);
+        runner.glow.set(runner.position, runner.colour, 0);
+        continue;
+      }
+      const age = elapsed - runner.born;
+      if (age > runner.duration) {
+        runner.active = false;
+        continue;
+      }
+      runner.angle += runner.speed * dt;
+      // Weich auf- und abblenden, dazwischen ein leichtes Flackern.
+      const envelope = smooth01(age / 1.2) * (1 - smooth01((age - runner.duration + 1.8) / 1.8));
+      const flicker = 0.88 + 0.12 * Math.sin(elapsed * 5.3 + runner.angle * 3.0);
+      runner.strength = envelope * flicker * visibility;
+      runner.path.object.updateWorldMatrix(true, false);
+      TMP_A.set(
+        Math.cos(runner.angle) * runner.path.radius,
+        runner.path.y,
+        Math.sin(runner.angle) * runner.path.radius,
+      ).applyMatrix4(runner.path.object.matrixWorld);
+      runner.position.copy(TMP_A);
+      runner.colourUniform.set(runner.colour.r, runner.colour.g, runner.colour.b, runner.strength);
+      runner.glow.set(TMP_A, runner.colour, runner.strength * 0.7);
+    }
+  }
 
   let disposed = false;
   let effectsEnabled = true;
@@ -819,6 +973,22 @@ export function createOrreryMachine({ renderer = null } = {}) {
     waveStart = elapsed;
     waveIndex += 1;
     coreFlash = 1;
+    // Richtung des Sektors: zufaellig, aber bevorzugt in den Bereich vor
+    // und um die Sockel, wo die Kamera hinschaut.
+    const yaw = rng() * Math.PI * 2;
+    const pitch = (rng() - 0.5) * 1.6;
+    uniforms.uWaveDir.value.set(
+      Math.cos(pitch) * Math.sin(yaw),
+      Math.sin(pitch),
+      Math.cos(pitch) * Math.cos(yaw),
+    );
+    if (rng() < 0.55) {
+      // Zum Drehpunkt hin blenden, damit die Front die Szene um die Sockel trifft.
+      TMP_A.copy(PIVOT).sub(MACHINE_CENTRE).normalize();
+      uniforms.uWaveDir.value.lerp(TMP_A, 0.6).normalize();
+    }
+    // Halber Oeffnungswinkel 22..40 Grad.
+    uniforms.uWaveCone.value = Math.cos(THREE.MathUtils.degToRad(22 + rng() * 18));
     // Jede dritte Front ist bernsteinfarben, sonst Eis ueber Cyan.
     if (waveIndex % 3 === 0) {
       uniforms.uWaveColourA.value.copy(PALETTE.amber).lerp(PALETTE.ice, 0.35);
@@ -851,24 +1021,6 @@ export function createOrreryMachine({ renderer = null } = {}) {
     const envelope = smooth01(radius / 6) * (1 - smooth01((radius - WAVE_MAX_RADIUS) / 20));
     uniforms.uWaveRadius.value = radius;
     uniforms.uWaveStrength.value = envelope * (0.9 + 0.1 * Math.sin(elapsed * 3.1));
-  }
-
-  function updateLamps(elapsed, dt) {
-    disc.updateWorldMatrix(true, false);
-    for (const lamp of lamps) {
-      lamp.angle += lamp.speed * dt;
-      // Laternen atmen langsam; manchmal verloeschen sie fast.
-      const breath = 0.55 + 0.45 * Math.sin(elapsed * 0.23 + lamp.angle * 0.5);
-      lamp.strength += ((lamp.target * breath) - lamp.strength) * Math.min(1, dt * 1.5);
-      TMP_A.set(
-        Math.cos(lamp.angle) * lamp.track.radius,
-        lamp.track.y,
-        Math.sin(lamp.angle) * lamp.track.radius,
-      ).applyMatrix4(disc.matrixWorld);
-      lamp.position.value.copy(TMP_A);
-      lamp.strengthUniform.value = lamp.strength * visibility;
-      lamp.glow.set(TMP_A, lamp.colour, lamp.strength * visibility * 0.8);
-    }
   }
 
   function updateRotors(elapsed, dt) {
@@ -910,7 +1062,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
     set.mesh.frustumCulled = false;
   }
 
-  return {
+  const api = {
     group,
     ready: Promise.resolve(true),
 
@@ -951,13 +1103,21 @@ export function createOrreryMachine({ renderer = null } = {}) {
     /** Ruhehelligkeit 0..1 — von der Intro-Steuerung animiert. */
     setAmbient(value) {
       const ambient = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
-      uniforms.uIdle.value = 0.75 + ambient * 1.4;
+      // Die Struktur bleibt im Dunkeln; ambient hebt sie nur einen Hauch.
+      uniforms.uIdle.value = 0.28 + ambient * 0.5;
     },
 
     /** Loest sofort eine neue Lichtfront aus. */
     triggerSparseIllumination() {
       if (!effectsEnabled || disposed) return false;
       launchWave(lastElapsed);
+      return true;
+    },
+
+    /** Schickt sofort einen Laeufer auf die Reise (Test und Entwicklung). */
+    triggerRunner() {
+      if (!effectsEnabled || disposed) return false;
+      launchRunner(lastElapsed);
       return true;
     },
 
@@ -979,12 +1139,13 @@ export function createOrreryMachine({ renderer = null } = {}) {
 
       updateRotors(elapsed, dt);
       updateWave(elapsed);
-      updateLamps(elapsed, dt);
+      updateRunners(elapsed, dt);
 
-      coreFlash = Math.max(0, coreFlash - dt / 2.6);
-      const pulse = 0.30 + 0.08 * Math.sin(elapsed * 0.7) + coreFlash * 1.2;
+      // Der Kern glimmt kaum; nur beim Start einer Front flammt er kurz auf.
+      coreFlash = Math.max(0, coreFlash - dt / 2.2);
+      const pulse = 0.07 + 0.02 * Math.sin(elapsed * 0.7) + coreFlash * 0.9;
       uniforms.uCoreGlow.value = pulse * visibility;
-      coreGlow.set(MACHINE_CENTRE, uniforms.uWaveColourA.value, pulse * visibility * 0.55);
+      coreGlow.set(MACHINE_CENTRE, uniforms.uWaveColourA.value, pulse * visibility * 0.5);
     },
 
     dispose() {
@@ -1000,9 +1161,12 @@ export function createOrreryMachine({ renderer = null } = {}) {
       material.dispose();
       dust.dispose();
       coreGlow.dispose();
-      lampGlowA.dispose();
-      lampGlowB.dispose();
+      for (const runner of runners) runner.glow.dispose();
       group.clear();
     },
   };
+
+  // Nur im Entwicklungsmodus: Zugriff fuer Sichtpruefungen.
+  if (import.meta.env?.DEV && typeof window !== 'undefined') window.__orrery = api;
+  return api;
 }

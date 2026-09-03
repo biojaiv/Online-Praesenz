@@ -221,33 +221,13 @@ body {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1;
+  /* Ruhig und lesbar: ein stehender Verlauf von Faserweiss nach Tinte,
+     kein wandernder Farbfilm. */
   color: var(--ink);
-  background:
-    radial-gradient(42% 130% at 18% 32%, var(--cyan) 0%, transparent 62%),
-    radial-gradient(48% 150% at 68% 78%, var(--violet) 0%, transparent 64%),
-    radial-gradient(36% 120% at 88% 22%, var(--amber) 0%, transparent 58%),
-    radial-gradient(55% 160% at 42% 58%, var(--fiber-white) 0%, transparent 66%),
-    linear-gradient(var(--ink), var(--ink));
-  background-size: 230% 260%, 250% 300%, 210% 240%, 270% 320%, 100% 100%;
-  background-position: 0% 20%, 100% 80%, 50% 0%, 20% 100%, 0 0;
+  background: linear-gradient(100deg, var(--fiber-white) 0%, var(--ink) 55%, rgb(var(--fiber-blue-rgb) / 0.85) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: name-lava 21s ease-in-out infinite alternate;
-}
-@keyframes name-lava {
-  0% {
-    background-position: 0% 20%, 100% 80%, 50% 0%, 20% 100%, 0 0;
-  }
-  33% {
-    background-position: 60% 90%, 30% 10%, 90% 70%, 70% 20%, 0 0;
-  }
-  66% {
-    background-position: 100% 30%, 0% 60%, 20% 100%, 100% 60%, 0 0;
-  }
-  100% {
-    background-position: 30% 100%, 70% 0%, 0% 40%, 40% 0%, 0 0;
-  }
 }
 
 .head__role {
@@ -256,17 +236,6 @@ body {
   text-transform: uppercase;
   color: var(--amber);
   margin-top: var(--s-2);
-  animation: role-amber-pulse 6.9s var(--ease-ritual) infinite;
-}
-@keyframes role-amber-pulse {
-  0%, 100% {
-    color: #87531f;
-    text-shadow: 0 0 0 rgb(var(--amber-rgb) / 0);
-  }
-  50% {
-    color: #ffc36b;
-    text-shadow: 0 0 13px rgb(var(--amber-rgb) / 0.24);
-  }
 }
 
 /* Einzelbuchstaben fuer die Durchleuchtung beim Seitenaufruf */
@@ -451,15 +420,6 @@ body {
 .nav__link.is-active { color: var(--amber); }
 .nav__link:hover .nav__index,
 .nav__link.is-active .nav__index { color: var(--amber); }
-/* Neon-Flick: ein kurzer, stufiger Farbriss beim Ansteuern — das Vivum */
-.nav__link:hover { animation: neon-flick 0.3s steps(1, end) 1; }
-@keyframes neon-flick {
-  0%   { text-shadow: 1px 0 var(--violet), -1px 0 var(--fiber-white); }
-  40%  { text-shadow: -1px 0 var(--amber), 1px 0 var(--violet); }
-  70%  { text-shadow: 1px 0 var(--cyan), -1px 0 var(--fiber-white); }
-  100% { text-shadow: none; }
-}
-
 /* Sprachschalter: ein kleines Schaltfeld statt eines weiteren Menuepunkts. */
 .nav__link--lang {
   display: inline-flex;
@@ -744,7 +704,6 @@ body {
 }
 .cv-action:hover,
 .cv-action:focus-visible { color: var(--amber); }
-.cv-action:hover { animation: neon-flick 0.3s steps(1, end) 1; }
 .cv-action:hover::after,
 .cv-action:focus-visible::after { transform: scaleX(1); transform-origin: left; }
 .cv-action[hidden] { display: none; }
@@ -1120,6 +1079,38 @@ body {
     rgb(var(--fiber-blue-rgb) / 0.5) 0%,
     rgb(var(--fiber-blue-rgb) / 0.12) 40%,
     transparent 70%);
+}
+
+/* Stiller Ausweg aus dem Intro: ein Textknopf unten rechts, der erst nach
+   einem Moment erscheint und keine Aufmerksamkeit fordert. */
+.intro__skip {
+  position: absolute;
+  right: clamp(18px, 3vw, 40px);
+  bottom: clamp(18px, 3vw, 36px);
+  z-index: 12;
+  appearance: none;
+  border: 1px solid rgb(var(--fiber-blue-rgb) / 0.22);
+  border-radius: 999px;
+  background: rgb(4 8 14 / 0.55);
+  color: rgb(var(--fiber-blue-rgb) / 0.72);
+  font: 500 11px/1 var(--font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.6s ease, transform 0.6s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.intro__skip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.intro__skip:hover,
+.intro__skip:focus-visible {
+  color: var(--fiber-white);
+  border-color: rgb(var(--fiber-blue-rgb) / 0.55);
+  outline: none;
 }
 
 /* ---------- Lebenslauf als Lesefassung ---------- */
@@ -2069,62 +2060,18 @@ body {
 }
 .foot.is-esc-actionable .foot__hint {
   cursor: pointer;
-  will-change: transform, filter, text-shadow;
+  transition: color 0.2s var(--ease-ritual);
 }
 .foot.is-esc-actionable .foot__esc-label {
-  animation: foot-esc-pulse 5.8s ease-in-out infinite;
+  color: #f4fbff;
 }
 .foot.is-esc-actionable .foot__hint:hover,
 .foot.is-esc-actionable .foot__hint:focus-visible {
-  animation: foot-esc-distort 0.3s steps(2, end) 1;
-  filter: brightness(1.45) contrast(1.28);
+  color: var(--fiber-white);
 }
 .foot.is-esc-actionable .foot__hint:hover .foot__esc-label,
 .foot.is-esc-actionable .foot__hint:focus-visible .foot__esc-label {
   color: #ffffff;
-}
-@keyframes foot-esc-pulse {
-  0%, 100% {
-    color: #f4fbff;
-    text-shadow: 0 0 5px rgb(255 255 255 / 0.12);
-  }
-  50% {
-    color: var(--amber);
-    text-shadow:
-      0 0 6px rgb(var(--amber-rgb) / 0.42),
-      0 0 15px rgb(var(--amber-rgb) / 0.2);
-  }
-}
-@keyframes foot-esc-distort {
-  0%, 100% {
-    transform: translate(0, 0) skewX(0deg) scaleX(1);
-    text-shadow: none;
-  }
-  20% {
-    transform: translate(-4px, 1px) skewX(-13deg) scaleX(1.05);
-    text-shadow:
-      4px 0 #53f5ff,
-      -4px 0 #ff4fd8,
-      0 0 12px #ffffff;
-  }
-  40% {
-    transform: translate(5px, -1px) skewX(15deg) scaleX(0.96);
-    text-shadow:
-      -5px 0 var(--amber),
-      3px 0 #b8ff4d;
-  }
-  60% {
-    transform: translate(-2px, 1px) skewX(-8deg) scaleX(1.08);
-    text-shadow:
-      6px 0 #ff4fd8,
-      -3px 0 #53f5ff;
-  }
-  80% {
-    transform: translate(3px, -1px) skewX(9deg) scaleX(0.98);
-    text-shadow:
-      -4px 0 #53f5ff,
-      4px 0 var(--amber);
-  }
 }
 
 /* Bediengrafik: nur die direkt unter der Maus liegenden Drehpfeile. */
@@ -2165,29 +2112,18 @@ body {
   }
 }
 
-/* ---------- Einheitlicher Signalbruch an Bedienelementen ---------- */
+/* ---------- Ruhiger Hover an Bedienelementen ---------- */
 /*
- * Derselbe kontrollierte Signalbruch wie beim Ruecksprung links unten.
- * Die Dauer entspricht dem bisherigen kurzen Neon-Flick der Kopfzeile:
- * genau 0,3 Sekunden und kein Dauerlauf waehrend des Hover-Zustands.
+ * Kein Signalbruch, kein Aufhellungsfilter: Bedienelemente wechseln beim
+ * Hover nur in ihre Zielfarbe. Bernstein bleibt Bernstein, Blau bleibt Blau.
  */
-.nav__link,
-.nav__sub button,
-.cv-action,
 .cv-nav button,
 .cv-back,
 .cv-primary-action,
 .cv-state button {
-  transform-origin: center;
-  will-change: transform, filter, text-shadow;
+  transition: color 0.2s var(--ease-ritual), border-color 0.2s var(--ease-ritual), background-color 0.2s var(--ease-ritual);
 }
 
-.nav__link:hover,
-.nav__link:focus-visible,
-.nav__sub button:hover,
-.nav__sub button:focus-visible,
-.cv-action:hover,
-.cv-action:focus-visible,
 .cv-nav button:hover,
 .cv-nav button:focus-visible,
 .cv-back:hover,
@@ -2196,37 +2132,15 @@ body {
 .cv-primary-action:focus-visible,
 .cv-state button:hover,
 .cv-state button:focus-visible {
-  animation: foot-esc-distort 0.3s steps(2, end) 1;
-  filter: brightness(1.45) contrast(1.28);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .foot.is-esc-actionable .foot__hint:hover,
-  .foot.is-esc-actionable .foot__hint:focus-visible,
-  .nav__link:hover,
-  .nav__link:focus-visible,
-  .nav__sub button:hover,
-  .nav__sub button:focus-visible,
-  .cv-action:hover,
-  .cv-action:focus-visible,
-  .cv-nav button:hover,
-  .cv-nav button:focus-visible,
-  .cv-back:hover,
-  .cv-back:focus-visible,
-  .cv-primary-action:hover,
-  .cv-primary-action:focus-visible,
-  .cv-state button:hover,
-  .cv-state button:focus-visible {
-    animation: none !important;
-    filter: none !important;
-  }
+  color: var(--fiber-white);
+  border-color: rgb(var(--fiber-blue-rgb) / 0.6);
 }
 
 /* ---------- Klickbarer Pfad rechts unten ---------- */
 .foot__crumb {
   transform-origin: right center;
   cursor: default;
-  will-change: transform, filter, text-shadow;
+  transition: color 0.2s var(--ease-ritual);
 }
 .foot__crumb-item {
   appearance: none;
@@ -2248,6 +2162,5 @@ button.foot__crumb-item {
 }
 .foot__crumb:hover,
 .foot__crumb:focus-within {
-  animation: foot-esc-distort 0.3s steps(2, end) 1;
-  filter: brightness(1.45) contrast(1.28);
+  color: var(--fiber-white);
 }

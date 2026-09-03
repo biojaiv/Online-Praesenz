@@ -2,20 +2,22 @@ import { PRIMARY, RUNES } from '../scene/runes.js';
 import { SACRED_FIGURES } from '../scene/sacredGeometry.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const FIRST_DELAY_MIN = 1.6;
-const FIRST_DELAY_MAX = 2.8;
+const FIRST_DELAY_MIN = 6.0;
+const FIRST_DELAY_MAX = 10.0;
 const RUNE_VISIBLE_MIN = 7.0;
-const RUNE_VISIBLE_MAX = 9.5;
-const SACRED_VISIBLE_MIN = 10.0;
-const SACRED_VISIBLE_MAX = 14.0;
-const QUIET_MIN = 3.2;
-const QUIET_MAX = 5.6;
-const ARRIVAL_FLICKER_MS = 1650;
-const DEPARTURE_FLICKER_MS = 1450;
+const RUNE_VISIBLE_MAX = 10.0;
+const SACRED_VISIBLE_MIN = 9.0;
+const SACRED_VISIBLE_MAX = 13.0;
+// Lange Pausen: das Symbol ist ein gelegentlicher Gast, kein Dauerlaeufer.
+const QUIET_MIN = 16.0;
+const QUIET_MAX = 30.0;
+const ARRIVAL_FLICKER_MS = 900;
+const DEPARTURE_FLICKER_MS = 800;
 const CENTRE_CLEARANCE = 10;
 const MIN_SIZE = 30;
 const MAX_SIZE = 78;
-const TONES = ['cyan', 'amber', 'violet', 'ember', 'cyan', 'amber', 'violet', 'ember'];
+// Nur die beiden Leitfarben der Seite.
+const TONES = ['cyan', 'amber', 'cyan', 'amber'];
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);

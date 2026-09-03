@@ -1230,7 +1230,7 @@ export function createResumeProjection({
     uOffset: { value: 0 },
     uOpacity: { value: 0 },
     uFade: { value: new THREE.Vector2(0.085, 0.055) },
-    uGlow: { value: 1.05 },
+    uGlow: { value: 1.18 },
     uBias: { value: -0.65 },
   };
 
@@ -1322,7 +1322,9 @@ export function createResumeProjection({
     const source = cvSource(language);
     // White-page English raster needs less shader gain than the already
     // transparency-processed German web projection.
-    uniforms.uGlow.value = language === 'en' ? 1.02 : 1.05;
+    // Etwas mehr Zeichnung als frueher: das Blatt soll vor der dunklen
+    // Maschine hell und lesbar stehen.
+    uniforms.uGlow.value = language === 'en' ? 1.14 : 1.18;
     const revision = ++loadRevision;
     sourceLanguage = language;
     pageCount = source.pageCount;
