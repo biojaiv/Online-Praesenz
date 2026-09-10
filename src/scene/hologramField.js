@@ -8,7 +8,7 @@ const CARD_ACCENTS = Object.freeze({
   projekte: LIGHT_PALETTE.violet,
   lebenslauf: LIGHT_PALETTE.signal,
 });
-const ADJUSTABLE_KINDS = new Set(['ring-jet', 'coming-soon', 'resume-frame']);
+const ADJUSTABLE_KINDS = new Set(['ring-jet', 'coming-soon', 'resume-frame', 'card-label']);
 
 function hash(index, salt = 0) {
   const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453123;
@@ -88,7 +88,7 @@ function makeVolumeMaterial(uniforms) {
         vec3 point = position;
         float syncJitter = uAdjustment
           * sin((position.y + uTime * 0.82 + uSeed) * 91.0)
-          * 0.008;
+          * 0.024;
         point.x += syncJitter;
         point.z -= syncJitter * 0.58;
 
@@ -542,13 +542,13 @@ export function createHologramField({ cards, reduced = false } = {}) {
     }
     captureAdjustmentBaselines(state);
     state.adjustmentStart = elapsed;
-    state.adjustmentDuration = 1.28 + hash(
+    state.adjustmentDuration = 0.64 + hash(
       Math.floor(elapsed * 10),
       state.seed * 5.3,
-    ) * 0.58;
+    ) * 0.32;
     nextAdjustmentAt = elapsed
-      + 14
-      + hash(Math.floor(elapsed * 7), state.seed * 9.7) * 16;
+      + 7
+      + hash(Math.floor(elapsed * 7), state.seed * 9.7) * 7;
   }
 
   function selectAdjustmentState(elapsed) {
@@ -570,10 +570,10 @@ export function createHologramField({ cards, reduced = false } = {}) {
     if (!state.adjustmentBaselines) captureAdjustmentBaselines(state);
     const shift = Math.sin(elapsed * 67.0 + state.seed * 13.0)
       * amount
-      * 0.014;
+      * 0.14;
     const depthShift = Math.sin(elapsed * 91.0 + state.seed * 7.0)
       * amount
-      * 0.006;
+      * 0.03;
     state.volume.group.position.x = state.volumeBaseX + shift;
     for (const baseline of state.adjustmentBaselines || []) {
       const { object } = baseline;

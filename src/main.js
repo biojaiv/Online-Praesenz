@@ -205,6 +205,10 @@ let enhancements = null;
 let enhancementTimer = 0;
 let stopBrandGlitch = null;
 let stopHeaderSymbols = null;
+function startAmbientUi() {
+  if (!stopBrandGlitch) stopBrandGlitch = startBrandGlitch({ stage });
+  if (!stopHeaderSymbols) stopHeaderSymbols = startHeaderSymbols();
+}
 // Die Buehne meldet die Flaeche des Dokuments, bevor die Lesefassung existiert.
 let readerRef = null;
 
@@ -421,14 +425,12 @@ async function beginExperience() {
       stage,
       onDone() {
         introRunning = false;
-        stopBrandGlitch = startBrandGlitch({ stage });
-        stopHeaderSymbols = startHeaderSymbols();
+        startAmbientUi();
       },
     });
   } else {
     igniteTitle(document.querySelector('.head__role'), { delay: 0.55 });
-    stopBrandGlitch = startBrandGlitch({ stage });
-    stopHeaderSymbols = startHeaderSymbols();
+    startAmbientUi();
   }
 }
 
@@ -444,6 +446,7 @@ beginExperience().catch((error) => {
   try { stage?.intro?.finish?.(); } catch {}
   stage?.settleQuality?.();
   scheduleEnhancements(0);
+  startAmbientUi();
 });
 
 // Ressourcen freigeben, wenn der Tab in den Hintergrund geht

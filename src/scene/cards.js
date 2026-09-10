@@ -156,7 +156,7 @@ function makeAccentRing(accent) {
  * am Austritt, danach ausrollend und sprudelnd aufgefaechert.
  */
 function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = JET_HEIGHT } = {}) {
-  const count = 3400;
+  const count = 2400;
   const positions = new Float32Array(count * 3);
   const angles = new Float32Array(count);
   const seeds = new Float32Array(count);
@@ -271,7 +271,7 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         point.y *= mix(0.46, 0.15, vT);
         float d = length(point);
         if (d > 0.5) discard;
-        float core = smoothstep(0.5, 0.0, d);
+        float core = 1.0 - smoothstep(0.0, 0.5, d);
 
         // Am Austritt weissglueheend, mit der Hoehe saettigt sich die Farbe.
         // COLOURED_HOLOGRAM_EMITTERS_V6_2_2
@@ -281,7 +281,7 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         vec3 color = mix(emitter, tone, smoothstep(0.0, 0.22, vT));
         color = mix(color, tone * 1.28, smoothstep(0.3, 0.85, vT));
 
-        float alpha = core * vSpark * (0.31 + uHover * 0.14)
+        float alpha = core * vSpark * (0.23 + uHover * 0.10)
           * uReveal * mix(1.0, 0.64, uCompact);
         if (alpha < 0.005) discard;
         gl_FragColor = vec4(color, alpha);

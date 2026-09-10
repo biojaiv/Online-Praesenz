@@ -162,7 +162,46 @@
   text-transform: uppercase;
 }
 
-/* Home and Choose section share one restrained signal-distortion language. */
+/* Farbkopien duerfen nicht die transparente Textfuellung des Namens erben. */
+.head__name.glitch-ghost {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Lokale Kanalverschiebung der Navigation, zeitlich gegeneinander versetzt. */
+.nav__label {
+  animation: navigation-signal-distortion 17s steps(1, end) infinite;
+  animation-delay: -11s;
+}
+.nav__group:nth-child(2) .nav__label {
+  animation-duration: 19s;
+  animation-delay: -9s;
+}
+.nav__group:nth-child(3) .nav__label {
+  animation-duration: 23s;
+  animation-delay: -9s;
+}
+.nav__link:hover .nav__label,
+.nav__link:focus-visible .nav__label {
+  animation: navigation-signal-distortion-active 560ms steps(1, end) 1;
+}
+
+@keyframes navigation-signal-distortion {
+  0%, 94%, 100% { transform: none; text-shadow: none; }
+  95% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 #53f5ff, -2px 0 #ff4fd8; }
+  96% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 #53f5ff, 2px 0 #ff4fd8; }
+  97% { transform: translateX(-1px); text-shadow: 2px 0 #53f5ff; }
+  98% { transform: none; text-shadow: none; }
+}
+@keyframes navigation-signal-distortion-active {
+  0%, 100% { transform: none; text-shadow: none; }
+  18% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 #53f5ff, -2px 0 #ff4fd8; }
+  36% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 #53f5ff, 2px 0 #ff4fd8; }
+  54% { transform: translateX(-1px); text-shadow: 2px 0 #53f5ff; }
+  72% { transform: none; text-shadow: none; }
+}
+
+/* Home und Bereichsauswahl verwenden dieselbe lokale Signalstoerung. */
 .foot__hint-lead,
 .foot__crumb-item.is-distortion-target {
   position: relative;
@@ -186,9 +225,11 @@
     2px 0 rgba(255, 145, 48, 0.68);
   transform: translateX(0);
   clip-path: inset(0 0 100% 0);
-  /* Selten: ein kurzer Akzent alle gut 40 Sekunden statt alle zehn. */
-  animation: footer-signal-distortion 42s steps(1, end) infinite;
+  animation: footer-signal-distortion 14s steps(1, end) infinite;
+  animation-delay: -9s;
 }
+
+.foot__crumb-item.is-distortion-target::before { animation-delay: -5s; }
 
 .foot__hint:hover .foot__hint-lead::after,
 .foot__hint:focus-visible .foot__hint-lead::after,
@@ -220,17 +261,17 @@
     transform: translateX(0);
   }
   92% {
-    opacity: 0.42;
+    opacity: 0.76;
     clip-path: inset(13% 0 69% 0);
     transform: translateX(-2px);
   }
   93% {
-    opacity: 0.22;
+    opacity: 0.52;
     clip-path: inset(59% 0 19% 0);
     transform: translateX(2px);
   }
   94% {
-    opacity: 0.38;
+    opacity: 0.7;
     clip-path: inset(34% 0 47% 0);
     transform: translateX(-1px);
   }
@@ -294,6 +335,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .nav__label,
+  .nav__link:hover .nav__label,
+  .nav__link:focus-visible .nav__label {
+    animation: none;
+    transform: none;
+    text-shadow: none;
+  }
+
   .foot__hint-lead::after,
   .foot__crumb-item.is-distortion-target::before,
   .frame.is-section-prompt .nav__link[data-target] {

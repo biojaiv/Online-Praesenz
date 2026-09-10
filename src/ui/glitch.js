@@ -85,8 +85,8 @@ export function startBrandGlitch({ stage } = {}) {
 
   function schedule(delay) {
     if (stopped) return;
-    // Ein Ereignis etwa jede halbe Minute — ein Akzent, kein Dauerzustand.
-    timer = window.setTimeout(burst, delay ?? 24000 + Math.random() * 30000);
+    // Kurze lokale Stoerungen bleiben beim normalen Besuch wahrnehmbar.
+    timer = window.setTimeout(burst, delay ?? 10000 + Math.random() * 10000);
   }
 
   /** Platzierung je Burst neu messen, damit Resizes nie danebenliegen. */
@@ -300,6 +300,10 @@ export function startBrandGlitch({ stage } = {}) {
 
   function burst() {
     if (stopped) return;
+    if (document.hidden) {
+      schedule();
+      return;
+    }
     measure();
 
     tl = gsap.timeline({ onComplete: () => schedule() });
@@ -330,7 +334,7 @@ export function startBrandGlitch({ stage } = {}) {
     tl.call(() => stage?.setGlitch(0), null, at);
   }
 
-  schedule();
+  schedule(3500 + Math.random() * 2500);
 
   return function stop() {
     stopped = true;
