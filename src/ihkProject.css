@@ -53,3 +53,5 @@
   .ihk-metrics { grid-template-columns: 1fr; }
   .ihk-panel .cv-hologram__actions { flex-wrap: wrap; }
 }
+
+.ihk-reader-toggle:not(.is-docked) { top: var(--s-4); }

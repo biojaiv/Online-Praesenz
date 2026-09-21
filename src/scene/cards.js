@@ -3,6 +3,7 @@ import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LIGHT_PALETTE, lightColor } from './palette.js';
 import { createResumeProjection, getCvAnchor } from './resumeProjection.js'; // DYNAMIC_CV_LANGUAGE_GEOMETRY_V3
+import { ihkProjectionSource, getIhkAnchor } from './ihkProjectionSource.js';
 import { t, onLanguageChange } from '../i18n.js';
 
 /**
@@ -34,10 +35,9 @@ const JET_SPREAD = 0.23;
 // Hoehe des "Coming soon"-Schriftzugs ueber der Sockeloberkante. Er steht
 // bewusst ueber der Partikelfahne, damit die Schrift lesbar bleibt.
 const TEASER_Y = 1.62;
-// Zusaetzliche Klickhoehe ueber der Sockeloberkante: die beiden
-// angekuendigten Bereiche nehmen ihren Schriftzug mit, der Lebenslauf sein
-// Dokument. Frueher hing hier ein 6 Einheiten hoher Trefferkoerper im Leeren.
-const HIT_HEADROOM = { abschluss: TEASER_Y + 0.6, projekte: TEASER_Y + 0.6, lebenslauf: JET_HEIGHT };
+// Zusaetzliche Klickhoehe ueber der Sockeloberkante: die Projekt- und
+// Lebenslaufbereiche nehmen ihr Dokument mit, private Projekte den Teaser.
+const HIT_HEADROOM = { abschluss: JET_HEIGHT, projekte: TEASER_Y + 0.6, lebenslauf: JET_HEIGHT };
 // Grenzen des Dokumentfensters in Welteinheiten. Das Fenster ist genau eine
 // Seite hoch; die Breite folgt daraus und bleibt hoechstens so breit wie der
 // Sockel.
@@ -51,6 +51,7 @@ const DOC_LIFT = JET_HEIGHT - 0.13;
 // vorderen Sockelrand aus dem Blick auf den Seitenfuss.
 const DOC_FRONT = 0.4;
 const RESUME_KEY = 'lebenslauf';
+const isDocumentKey = (key) => key === RESUME_KEY || key === 'abschluss';
 // Ruhehelligkeit der Lebenslauf-Vorschau, solange der Sockel nicht offen ist.
 // SACRED_CARD_LAYOUT_V4_2
 // The landing-page projection should be readable light, not a luminous plate.
@@ -748,7 +749,7 @@ function setHitBody(card, modelBox) {
   card.hitBounds.copy(modelBox);
   // Die dauerhaft sichtbare Lebenslauf-Vorschau soll selbst anklickbar sein,
   // nicht nur der Stein darunter.
-  const headroom = card.key === RESUME_KEY
+  const headroom = isDocumentKey(card.key)
     ? Math.max(
         HIT_HEADROOM[card.key],
         card.windowHeight * RESUME_IDLE_SCALE + DOC_LIFT,
@@ -764,6 +765,18 @@ function setHitBody(card, modelBox) {
     Math.max(_size.z, 0.5),
   );
   card.hit.position.copy(_center);
+}
+
+function applyDocumentSection(card, immediate = false) {
+  const projection = card?.resumeProjection;
+  if (!projection?.ready) {
+    if (card) card.pendingDocumentSection = true;
+    return;
+  }
+  const count = Math.max(1, projection.pageCount);
+  const anchor = card.key === 'abschluss' ? getIhkAnchor(card.documentSection) : getCvAnchor(card.documentSection);
+  projection.scrollToFraction(Math.min(count - 1, Math.floor(anchor * count)) / count, immediate);
+  card.pendingDocumentSection = false;
 }
 
 /**
@@ -1021,7 +1034,7 @@ export function createCards({ renderer, reduced = false } = {}) {
   const ready = new Promise((resolve) => { resolveReady = resolve; });
 
   for (const def of CARD_DEFS) {
-    const isResume = def.key === RESUME_KEY;
+    const isResume = isDocumentKey(def.key);
     const holder = new THREE.Group();
     holder.name = `card-${def.key}`;
     // Die endgueltige Position setzt setLayout, sobald das Bildformat bekannt
@@ -1047,9 +1060,16 @@ export function createCards({ renderer, reduced = false } = {}) {
           renderer,
           reduced,
           idleOpacity: RESUME_IDLE_OPACITY,
-          onReady() { if (card) updateResumeWindow(card); },
+          documentKey: def.key,
+          ...(def.key === 'abschluss' ? { sourceForLanguage: ihkProjectionSource } : {}),
+          onReady() {
+            if (!card) return;
+            updateResumeWindow(card, false);
+            if (card.pendingDocumentSection) applyDocumentSection(card, true);
+            card.notifyBoundsChange(card.key);
+          },
           onError(error) {
-            console.warn('Die Lebenslauf-Projektion konnte nicht aufgebaut werden:', error);
+            console.warn(`Die Projektion ${def.key} konnte nicht aufgebaut werden:`, error);
           },
         })
       : null;
@@ -1115,6 +1135,8 @@ export function createCards({ renderer, reduced = false } = {}) {
       // Die physische Seitengroesse bleibt beim Oeffnen unveraendert.
       docScale: 1,
       resumeOpen: false,
+      documentSection: 'uebersicht',
+      pendingDocumentSection: false,
       notifyBoundsChange(key) { boundsListener?.(key); },
       rotationOffset: 0,
       rotationVelocity: 0,
@@ -1131,7 +1153,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     cards.push(card);
   }
 
-  const resumeCard = cards.find((card) => card.key === RESUME_KEY) ?? null;
+  let resumeCard = cards.find((card) => card.key === RESUME_KEY) ?? null;
 
   loadSharedBases(
     cards,
@@ -1170,9 +1192,10 @@ export function createCards({ renderer, reduced = false } = {}) {
     /* ---------- Uebergang zur Lesefassung ---------- */
 
     /** Projektion und ihr Partikelrahmen treten ab, ohne zu verschwinden. */
-    setProjectionHidden(value) {
-      resumeCard?.resumeProjection?.setHidden(value);
-      resumeCard?.resumeFrame?.setHidden(value);
+    setProjectionHidden(value, key = resumeCard?.key) {
+      const card = cards.find((item) => item.key === key);
+      card?.resumeProjection?.setHidden(value);
+      card?.resumeFrame?.setHidden(value);
     },
 
     /* ---------- Dokumentfenster ---------- */
@@ -1206,14 +1229,9 @@ export function createCards({ renderer, reduced = false } = {}) {
      * Abschnitt traegt. Ein halbes Blatt waere kein Zielbild.
      */
     setDocumentSection(section, immediate = false) {
-      const projection = resumeCard?.resumeProjection;
-      if (!projection) return;
-      const pageCount = Math.max(1, projection.pageCount || 1);
-      const anchor = getCvAnchor(section);
-      // The active language owns both anchor data and page count. No German
-      // geometry is reused for the English document (or vice versa).
-      const page = Math.min(pageCount - 1, Math.floor(anchor * pageCount));
-      projection.scrollToFraction(page / pageCount, immediate);
+      if (!resumeCard) return;
+      resumeCard.documentSection = section;
+      applyDocumentSection(resumeCard, immediate);
     },
 
     get documentScroll() { return resumeCard?.resumeProjection?.scroll ?? 0; },
@@ -1292,7 +1310,7 @@ export function createCards({ renderer, reduced = false } = {}) {
         }
 
         card.resumeFrame?.setCompact(compact);
-        card.rimLight.intensity = card.key === RESUME_KEY
+        card.rimLight.intensity = isDocumentKey(card.key)
           ? (compact ? 10 : 16)
           : (compact ? 18 : 30);
 
@@ -1318,19 +1336,22 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     /** Im Fokus bleibt nur der gewaehlte Sockel im Kamerabild. */
     setOpened(key, _isolate = false) {
+      if (isDocumentKey(key)) resumeCard = cards.find((card) => card.key === key);
       for (const card of cards) {
         // Nachbarsockel verschwinden nicht schlagartig, sondern laufen
         // waehrend der Kamerafahrt aus dem Bild.
         card.holder.visible = true;
         card.resumeOpen =
           key === card.key
-          && card.key === RESUME_KEY;
+          && isDocumentKey(card.key);
 
         card.resumeProjection?.setOpen(card.resumeOpen);
         card.resumeFrame?.setOpen(card.resumeOpen);
         card.label?.setOpened(Boolean(key));
 
-        if (card.key === RESUME_KEY && !card.resumeOpen) {
+        if (isDocumentKey(card.key) && !card.resumeOpen) {
+          card.pendingDocumentSection = false;
+          card.documentSection = 'uebersicht';
           card.resumeProjection?.setScroll(0);
         }
 
@@ -1380,7 +1401,7 @@ export function createCards({ renderer, reduced = false } = {}) {
         card.holder.position.y = card.layoutY
           + Math.sin(elapsed * 0.18 + phase) * 0.11
           + card.hover * 0.16;
-        if (card.key === RESUME_KEY) {
+        if (isDocumentKey(card.key)) {
           if (
             !card.rotationDragging
             && Math.abs(card.rotationVelocity) > 0.000001

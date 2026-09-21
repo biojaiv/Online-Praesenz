@@ -1223,6 +1223,8 @@ export function createResumeProjection({
   idleOpacity = 0,
   onReady,
   onError,
+  sourceForLanguage = cvSource,
+  documentKey = 'lebenslauf',
 } = {}) {
   const uniforms = {
     uMap: { value: null },
@@ -1276,7 +1278,9 @@ export function createResumeProjection({
 
   const geometry = new THREE.PlaneGeometry(1, 1);
   const mesh = new THREE.Mesh(geometry, material);
+  // Existing hologram enhancement discovery uses this shared mesh name.
   mesh.name = 'resumeProjection';
+  mesh.userData.key = documentKey;
   mesh.visible = false;
   mesh.frustumCulled = false;
 
@@ -1288,7 +1292,7 @@ export function createResumeProjection({
   let loadError = null;
   let loading = null;
   let sourceLanguage = getLanguage();
-  let pageCount = getCvPageCount(sourceLanguage);
+  let pageCount = sourceForLanguage(sourceLanguage).pageCount;
   let loadRevision = 0;
   let scrollTarget = 0;
   let scroll = 0;
@@ -1319,7 +1323,7 @@ export function createResumeProjection({
   }
 
   async function load(language = getLanguage()) {
-    const source = cvSource(language);
+    const source = sourceForLanguage(language);
     // White-page English raster needs less shader gain than the already
     // transparency-processed German web projection.
     // Etwas mehr Zeichnung als frueher: das Blatt soll vor der dunklen
@@ -1413,7 +1417,7 @@ export function createResumeProjection({
     get language() { return sourceLanguage; },
     get pageCount() { return pageCount; },
     get pageAspect() {
-      return aspect ? aspect * pageCount : getCvPageAspect(sourceLanguage);
+      return aspect ? aspect * pageCount : sourceForLanguage(sourceLanguage).pageAspect;
     },
     get error() { return loadError; },
     get scroll() { return scrollTarget; },

@@ -339,7 +339,7 @@ export function createExperienceEnhancements({
   let route = getRoute();
   let readerOpen = isReaderOpen();
   const isResumeActive = () => (
-    String(route || '').split('/')[0] === 'lebenslauf'
+    ['lebenslauf', 'abschluss'].includes(String(route || '').split('/')[0])
     && !readerOpen
   );
   const guideDirector = createGuideDirector({ isResumeActive });

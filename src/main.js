@@ -84,14 +84,14 @@ function routeParts(target, { includeReader = false } = {}) {
     });
   });
 
-  if (includeReader && segments[0] === 'lebenslauf') {
+  if (includeReader && ['lebenslauf', 'abschluss'].includes(segments[0])) {
     // Lesefassung ist ein aufklappbarer Darstellungsmodus. Der Eintrag bleibt
     // deshalb als eigene, anklickbare Ebene im Pfad erhalten.
-    const cvIndex = parts.findIndex((part) => part.key === 'lebenslauf');
+    const cvIndex = parts.findIndex((part) => part.key === segments[0]);
     parts.splice(cvIndex + 1, 0, {
       key: 'lesefassung',
       label: t('route.readable'),
-      route: 'lebenslauf',
+      route: segments[0],
       action: 'reader',
     });
   }
@@ -162,7 +162,7 @@ function updateFooter() {
   if (hint instanceof HTMLButtonElement) {
     const lead = root === 'home'
       ? t('footer.selectSection')
-      : root === 'lebenslauf'
+      : ['lebenslauf', 'abschluss'].includes(root)
         ? readerIsOpen
           ? t('footer.readerLead')
           : t('footer.resumeLead')
@@ -286,13 +286,13 @@ const reader = createReader({
   container: stageEl,
   onNavigate: (target) => router.go(target),
   // Vor dem Erscheinen blendet die Buehne die Projektion kontrolliert ab.
-  onTransition: (open) => stage?.beginReaderTransition(open),
+  onTransition: (open) => stage?.beginReaderTransition(open, 'lebenslauf'),
   onOpenChange: (open) => {
-    readerIsOpen = open;
+    readerIsOpen = open || Boolean(ihkProjectRef?.isOpen);
     updateFooter();
-    stage?.setReaderOpen(open);
+    stage?.setReaderOpen(readerIsOpen);
     const activeEnhancements = open ? ensureEnhancements() : enhancements;
-    activeEnhancements?.setReaderOpen(open);
+    activeEnhancements?.setReaderOpen(readerIsOpen);
     download?.dock(open ? reader.actionSlot : null);
   },
 });
@@ -306,6 +306,13 @@ const unsubscribeExplored = onExploredChange(() => stage?.setExplored(getExplore
 
 const ihkProject = createIhkProject({
   container: stageEl,
+  onTransition: (open) => stage?.beginReaderTransition(open, 'abschluss'),
+  onOpenChange: (open) => {
+    readerIsOpen = open || Boolean(reader?.isOpen);
+    stage?.setReaderOpen(readerIsOpen);
+    enhancements?.setReaderOpen(readerIsOpen);
+    updateFooter();
+  },
   onNavigate: (target) => router.go(target),
 });
 
@@ -329,8 +336,9 @@ const router = createRouter({
     download?.setVisible(root === 'lebenslauf');
 
     currentRoute = target;
-    if (root !== 'lebenslauf') readerIsOpen = false;
-    if (root === 'lebenslauf' && !introRunning) ensureEnhancements();
+    readerIsOpen = Boolean(reader?.isOpen || ihkProject.isOpen);
+    stage?.setReaderOpen(readerIsOpen);
+    if (['lebenslauf', 'abschluss'].includes(root) && !introRunning) ensureEnhancements();
     enhancements?.setRoute(target);
     updateFooter();
   },
@@ -346,7 +354,7 @@ async function activateFooterHint() {
   }
 
   if (readerIsOpen) {
-    await reader?.close();
+    await (currentRoute.split('/')[0] === 'abschluss' ? ihkProject : reader)?.close();
     return;
   }
 
@@ -382,7 +390,7 @@ async function activateBreadcrumb(event) {
   // the route changes. This prevents HTML reader and 3D camera states from
   // diverging when Home is selected directly from the breadcrumb.
   if (action === 'route' && readerIsOpen) {
-    await reader?.close();
+    await (currentRoute.split('/')[0] === 'abschluss' ? ihkProject : reader)?.close();
   }
 
   if (target !== currentRoute) router.go(target);

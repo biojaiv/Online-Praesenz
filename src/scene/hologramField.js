@@ -492,7 +492,7 @@ export function createHologramField({ cards, reduced = false } = {}) {
       target: 0.48,
       localPulse: 0,
       surfaceY: -5.25,
-      height: key === 'lebenslauf' ? 13.0 : 11.6,
+      height: key !== 'projekte' ? 13.0 : 11.6,
       adjustmentStart: -1,
       adjustmentDuration: 1.45,
       seed: index + 2.618,
@@ -512,7 +512,7 @@ export function createHologramField({ cards, reduced = false } = {}) {
     for (const state of states) {
       const anchor = findPedestalTop(state.holder, state.key);
       state.surfaceY = anchor.surfaceY;
-      state.height = state.key === 'lebenslauf' ? 13.0 : 11.6;
+      state.height = state.key !== 'projekte' ? 13.0 : 11.6;
       state.volume.group.position.set(
         0,
         anchor.surfaceY + state.height * 0.5 + 0.008,
@@ -721,7 +721,7 @@ export function createHologramField({ cards, reduced = false } = {}) {
         }
 
         state.localPulse *= Math.pow(0.068, dt);
-        const readerFactor = readerOpen && state.key === 'lebenslauf' ? 0.46 : 1;
+        const readerFactor = readerOpen && state.key === activeRoot ? 0.46 : 1;
         const pulseBoost = Math.max(globalPulse * 0.48, state.localPulse * 0.52);
         const target = Math.min(1.52, (state.target + pulseBoost) * readerFactor);
         state.intensity += (target - state.intensity) * response;

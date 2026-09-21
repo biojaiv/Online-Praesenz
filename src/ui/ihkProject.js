@@ -11,7 +11,7 @@ const escapeHTML = (value) => String(value).replaceAll('&', '&amp;')
 const copy = (key) => escapeHTML(t(`ihk.${key}`));
 
 /** A native HTML reading layer inside the existing stage and hash router. */
-export function createIhkProject({ container, onNavigate }) {
+export function createIhkProject({ container, onNavigate, onTransition, onOpenChange }) {
   const overlay = document.createElement('section');
   overlay.className = 'ihk-project';
   overlay.hidden = true;
@@ -20,6 +20,72 @@ export function createIhkProject({ container, onNavigate }) {
   const frame = container.closest('.frame');
   let section = 'overview';
   let returnFocus = null;
+  let route = 'home';
+  let open = false;
+  let transition = 0;
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'cv-action ihk-reader-toggle';
+  toggle.hidden = true;
+  const download = document.createElement('a');
+  download.className = 'cv-action cv-download ihk-projection-download';
+  download.hidden = true;
+  container.append(toggle, download);
+
+  function refreshControls() {
+    const available = route.split('/')[0] === 'abschluss';
+    toggle.hidden = !available;
+    toggle.textContent = t(open ? 'reader.projection' : 'reader.readable');
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-controls', 'ihk-reader');
+    toggle.classList.toggle('is-docked', open);
+    download.hidden = !available || open;
+    download.href = getLanguage() === 'de' ? '/ihk/IHK_Projektarbeit_DE.pdf' : '/ihk/IHK_Project_Report_EN.pdf';
+    download.download = download.href.split('/').pop();
+    download.textContent = t('download.visible');
+    download.setAttribute('aria-label', copy(getLanguage() === 'de' ? 'downloadDE' : 'downloadEN'));
+  }
+  overlay.id = 'ihk-reader';
+
+  async function setOpen(value) {
+    const next = Boolean(value) && route.split('/')[0] === 'abschluss';
+    if (next === open) return;
+    open = next;
+    const ticket = ++transition;
+    refreshControls();
+    if (open) {
+      returnFocus = document.activeElement;
+      await onTransition?.(true);
+      if (ticket !== transition) return;
+      overlay.hidden = false;
+      render({ focus: true });
+      overlay.querySelector('.ihk-panel').classList.add('is-emerging');
+      onOpenChange?.(true);
+    } else {
+      const restore = overlay.contains(document.activeElement);
+      overlay.querySelector('.ihk-panel')?.classList.add('is-fading');
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !overlay.hidden) {
+        await new Promise((resolve) => setTimeout(resolve, 360));
+      }
+      if (ticket !== transition) return;
+      releaseVideo();
+      container.append(toggle);
+      overlay.hidden = true;
+      overlay.replaceChildren();
+      onTransition?.(false);
+      onOpenChange?.(false);
+      if (restore && route.split('/')[0] === 'abschluss' && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+    }
+  }
+  const clickToggle = () => setOpen(!open);
+  toggle.addEventListener('click', clickToggle);
+  function escapeReader(event) {
+    if (event.key !== 'Escape' || !open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(false);
+  }
+  window.addEventListener('keydown', escapeReader, true);
 
   function releaseVideo() {
     const video = overlay.querySelector('video');
@@ -78,7 +144,7 @@ export function createIhkProject({ container, onNavigate }) {
     overlay.innerHTML = `
       <article class="ihk-panel cv-hologram">
         <header class="ihk-toolbar cv-hologram__header">
-          <button type="button" class="ihk-close cv-back" data-ihk-route="home" aria-label="${copy('close')}">←</button>
+          <button type="button" class="ihk-close cv-back" data-ihk-close aria-label="${escapeHTML(t('reader.closeAria'))}">←</button>
           <div><span>${escapeHTML(t('route.finalProject'))}</span><small>${copy('kicker')}</small></div>
           <span class="cv-status">PoC</span>
         </header>
@@ -106,6 +172,7 @@ export function createIhkProject({ container, onNavigate }) {
           </div>
         </footer>
       </article>`;
+    overlay.querySelector('.cv-hologram__actions').prepend(toggle);
     overlay.querySelector('.ihk-body').scrollTop = scroll;
     if (focus) overlay.querySelector('#ihk-title').focus({ preventScroll: true });
     else if (focusedRoute) {
@@ -115,6 +182,7 @@ export function createIhkProject({ container, onNavigate }) {
   }
 
   function navigate(event) {
+    if (event.target.closest('[data-ihk-close]')) { setOpen(false); return; }
     const jump = event.target.closest('[data-ihk-scroll]');
     if (jump) {
       if (section !== 'overview') onNavigate('abschluss');
@@ -143,39 +211,37 @@ export function createIhkProject({ container, onNavigate }) {
   }
   overlay.addEventListener('keydown', navigateByKey);
   const unsubscribe = onLanguageChange(() => {
+    refreshControls();
     if (!overlay.hidden) render({ preserveScroll: true });
   });
 
+  refreshControls();
   return {
+    get isOpen() { return open; },
+    close() { return setOpen(false); },
     setRect(rect) {
       if (!rect?.width || !rect?.height) return;
       overlay.style.setProperty('--cv-doc-width', `${Math.round(rect.width)}px`);
       overlay.style.setProperty('--cv-doc-height', `${Math.round(rect.height)}px`);
     },
-    setRoute(route) {
+    setRoute(nextRoute) {
+      route = nextRoute;
       const [root, child] = route.split('/');
-      const visible = root === 'abschluss';
-      frame?.classList.toggle('is-ihk-open', visible);
-      const wasVisible = !overlay.hidden;
-      if (!visible) {
-        const restore = overlay.contains(document.activeElement);
-        releaseVideo();
-        overlay.hidden = true;
-        overlay.replaceChildren();
-        if (restore && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
-        return;
-      }
-      if (!wasVisible) returnFocus = document.activeElement instanceof HTMLElement
-        && document.activeElement !== document.body ? document.activeElement
-          : document.querySelector('.nav__link[data-target="abschluss"]');
+      const available = root === 'abschluss';
+      frame?.classList.toggle('is-ihk-open', available);
+      refreshControls();
+      if (!available) { setOpen(false); return; }
       const next = SECTIONS.includes(child) ? child : 'overview';
-      if (wasVisible && next === section) return;
+      if (section === next) return;
       section = next;
-      overlay.hidden = false;
-      render({ focus: true });
-      if (!wasVisible) overlay.querySelector('.ihk-panel').classList.add('is-emerging');
+      if (open && !overlay.hidden) render({ focus: true });
     },
     dispose() {
+      transition += 1;
+      window.removeEventListener('keydown', escapeReader, true);
+      toggle.removeEventListener('click', clickToggle);
+      toggle.remove();
+      download.remove();
       unsubscribe();
       releaseVideo();
       overlay.removeEventListener('keydown', navigateByKey);

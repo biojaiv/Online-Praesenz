@@ -5,6 +5,7 @@
 - Repository: `biojaiv/Online-Praesenz`, aktueller `main` bei Beginn: `6ec32b4`.
 - Sicherheitsbranch: `backup/main-before-ihk-integration-20260921-161305`.
 - Arbeitsbranch: `work/ihk-project-integration-2026-09-21`.
+- Anschließende 3D-Anpassung ab `a1e6871` auf `work/ihk-3d-projection-2026-09-21`.
 - Primäre Textquelle: `../Abschlussprojekt/Vladimir_Leicht_20260531_Projektarbeit_v1.docx`.
 - Visuelle Referenz: `Projektarbeit/Vladimir_Leicht_20260531_Projektarbeit_v1.pdf`, 50 Seiten; identisch mit der PDF im benachbarten Abschlussprojekt-Ordner.
 - Original-PDF SHA-256: `d5bdec2fbeae5673155677961eb0987ce624c436f77ebfc5511033780399b4e9`.
@@ -25,8 +26,10 @@ Zusätzlich: bearbeitbare, bereinigte DE-/EN-Endfassungen unter `Projektarbeit/W
 
 ## Webseite
 
-- Native HTML-Projektansicht innerhalb der bestehenden 3D-Bühne; unverändertes Hash-Routing für `abschluss`, `abschluss/server`, `abschluss/uem`, `abschluss/clients`, `abschluss/migration`.
-- Stil nach Nutzerkorrektur an die Lebenslauf-Leseansicht angeglichen: dieselben `cv-hologram`-, Navigations-, Typografie-, Fakten- und Zeitleistenklassen. Beide Ansichten erhalten ihre Dokumentmaße über denselben Bühnen-Callback. Zentrale schmale Lesespalte, blaue Leuchtkante, bernsteinfarbene Akzente und identische Einblendanimation. Keine Änderungen an der Lebenslaufansicht, Szenenbeleuchtung oder Partikeleffekten.
+- Nach Präzisierung per Screenshot: dauerhaft sichtbare 3D-Projektübersicht über dem linken Sockel, mit demselben Shader, Partikelrahmen, Maßstab, Ruheverhalten und derselben Bedienung wie die Lebenslaufprojektion. Fünf Seiten je Sprache (Überblick, Server, UEM, Clients, Migration); Quellen ausschließlich die bereits geprüften i18n-Texte. Zusätzliche lokale Texturen `IHK_Projection_DE.webp` und `IHK_Projection_EN.webp`, jeweils unter 1 MiB. Die vollständigen Berichte bleiben als PDF verfügbar.
+- Native HTML-Projektansicht über den Umschalter „Lesefassung“ innerhalb der bestehenden 3D-Bühne; unverändertes Hash-Routing für `abschluss`, `abschluss/server`, `abschluss/uem`, `abschluss/clients`, `abschluss/migration`.
+- Stil nach Nutzerkorrektur an die Lebenslauf-Leseansicht angeglichen: dieselben `cv-hologram`-, Navigations-, Typografie-, Fakten- und Zeitleistenklassen. Beide Ansichten erhalten ihre Dokumentmaße über denselben Bühnen-Callback. Zentrale schmale Lesespalte, blaue Leuchtkante, bernsteinfarbene Akzente und identische Einblendanimation. Die vorhandenen Dokumenteffekte, Lichtparameter und Bedienhinweise werden für den linken Sockel wiederverwendet; die Lebenslaufgestaltung bleibt erhalten.
+- Der direkte Projektaufruf öffnet die Projektion. Escape schließt zuerst die Leseansicht, danach den Projektbereich. Mausrad/Seitentasten blättern, Pfeiltasten bzw. gehaltene Maustaste plus Mausrad zoomen; horizontales Ziehen dreht; Touch unterstützt Wischen und Pinch. Aktives Dokument und Übergänge werden getrennt zugeordnet, damit CV und IHK einander nicht beeinflussen.
 - Projektfilm und Downloads zusätzlich über die Reader-Fußzeile erreichbar, auch aus Unterbereichen; Pfeiltasten sowie Pos1/Ende bedienen die Bereichsnavigation. Inhalt, PDFs und Filme bleiben unverändert.
 - Deutsche und englische Texte über das vorhandene `src/i18n.js`; eigene Nachrichtendatei, kein zweites Sprachsystem.
 - Klare Abgrenzung: Pilot / PoC, 40 h Nettozeit, fünf Referenzclients vorgesehen, vier vollständig durchgeführt; 100 % ausschließlich für diese vier abgeschlossenen Testläufe.
@@ -54,15 +57,16 @@ Zusätzlich: bearbeitbare, bereinigte DE-/EN-Endfassungen unter `Projektarbeit/W
 - Vier statische HTTP-GETs: jeweils 200 mit korrektem PDF-/MP4-Content-Type. Kein `file://`-Test. Keine PDF-/Film-Vorabrequests vor Interaktion; nur eine Filmquelle aktiv.
 - `check_artifacts.py`: PDF-Integrität, Original-DOCX-Textabgleich, DE-/EN-Bildunterschriften und TOC-Ziele, keine unerwarteten leeren Seiten; vollständiger MP4-Decodierlauf, Codec, Pixelformat, Laufzeit, Audiofreiheit und faststart geprüft. Alle Dateien in `dist/ihk/` bytegleich mit `public/ihk/`.
 - Sämtliche 90 finalen PDF-Seiten gerendert und visuell geprüft, einschließlich vollständiger Inhaltsverzeichnisse, Diagramme, Mehrfach-Screenshots, Testrollout, Soll-Ist-Vergleich, Zeitmanagement, Fazit und Glossar. Browseransichten mit dem vorherigen Design verglichen; Filmszenen in DE/EN visuell geprüft.
+- `npm run test:projection` gegen den lokalen Vite-Entwicklungsserver: echtes Anklicken der 3D-Fläche, Mausrad, Seitentasten, Zoom, Drehung, Pinch, DE/EN, Leseansichtwechsel, frischer Direktlink nach asynchronem Texturladen und CV-Regression auf Desktop und Smartphone bestanden. Belege unter `/tmp/ihk-projection-check/`.
 - Nach der Stilkorrektur Build und alle zehn Browserkombinationen erneut erfolgreich geprüft; zusätzlicher direkter Vergleich mit der Lebenslauf-Leseansicht und Prüfung der Fußzeilenaktionen. Belege unter `/tmp/ihk-style/`.
 - Renderbilder, Browser-Screenshots, Testresultate, virtuelle Python-Umgebung und Zwischenexporte liegen außerhalb des Repositories unter `/tmp/ihk-work/` bzw. `/tmp/ihk-browser-check/`; nicht Bestandteil des Commits.
 - Die lokale `.npmrc` erzeugt weiterhin eine npm-Meldung zur nicht unterstützten projektlokalen `prefix`-Einstellung. Installationen und Builds enden erfolgreich; die Datei bleibt wie beauftragt unangetastet.
 
 ## Wiederholung und Deployment
 
-Python-Abhängigkeiten: `scripts/ihk/requirements.txt`; zusätzlich LibreOffice und FFmpeg. Erzeugung mit `build_reports.py --source <Original-DOCX> --reference <Original-PDF>` und `build_films.py`. Der normale Webseitenbuild benötigt ausschließlich die fertigen Dateien im Repository.
+Python-Abhängigkeiten: `scripts/ihk/requirements.txt`; zusätzlich LibreOffice und FFmpeg. Erzeugung mit `build_reports.py --source <Original-DOCX> --reference <Original-PDF>` und `build_films.py`. Die Hologrammtexturen entstehen mit `node scripts/ihk/build_projection.mjs` (Playwright, Python/Pillow und die vorhandenen Webseitenfonts). Der normale Webseitenbuild benötigt ausschließlich die fertigen Dateien im Repository.
 
-Browserprüfung: `npm run preview`, anschließend `npm run test:ihk`. Bei Bedarf `CHROMIUM_PATH` auf einen vorhandenen Chromium-Browser setzen; ansonsten den zu Playwright gehörenden Browser installieren. Artefaktprüfung: `python scripts/ihk/check_artifacts.py` mit verfügbaren Python-Abhängigkeiten und lokaler Original-PDF; bei abweichendem Original-DOCX-Pfad `--source <Pfad>` übergeben.
+Browserprüfung: `npm run preview`, anschließend `npm run test:ihk`. Für die 3D-Prüfung zusätzlich `npm run dev` und `npm run test:projection`; sie verwendet den bereits vorhandenen Stage-Inspector des Entwicklungsbuilds. Bei Bedarf `CHROMIUM_PATH` auf einen vorhandenen Chromium-Browser setzen; ansonsten den zu Playwright gehörenden Browser installieren. Artefaktprüfung: `python scripts/ihk/check_artifacts.py` mit verfügbaren Python-Abhängigkeiten und lokaler Original-PDF; bei abweichendem Original-DOCX-Pfad `--source <Pfad>` übergeben.
 
 Kein manueller Cloudflare-Deploy: Im Repository und in den GitHub-Projektmetadaten ist kein eindeutig zugeordnetes Pages-Projekt angegeben; Wrangler ist nicht als bestehendes Projektwerkzeug eingerichtet. Es wurde kein Projektname geraten.
 

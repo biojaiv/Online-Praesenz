@@ -10,7 +10,10 @@ import {
 import { createBackground } from './background.js';
 import { createCards } from './cards.js';
 import { getCvPageAspect } from './resumeProjection.js';
+import { ihkProjectionSource } from './ihkProjectionSource.js';
 import { LIGHT_PALETTE } from './palette.js';
+
+const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
 
 /**
  * Die Buehne.
@@ -264,7 +267,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   guideHost?.append(keyboardZoomHint, mobileZoom);
 
   function syncDocumentInputHints() {
-    const active = opened === 'lebenslauf' && !readerOpen;
+    const active = isDocumentKey(opened) && !readerOpen;
     if (!active) {
       pinchGesture = null;
       touchPoints.clear();
@@ -297,10 +300,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function pulseDollyGuide(direction) {
     window.clearTimeout(dollyGuideTimer);
-    setDollyGuide(opened === 'lebenslauf' && !readerOpen, true, direction);
+    setDollyGuide(isDocumentKey(opened) && !readerOpen, true, direction);
     dollyGuideTimer = window.setTimeout(() => {
       if (!zoomHold) {
-        setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+        setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
       }
     }, 320);
   }
@@ -424,7 +427,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     const availableWidth = Math.max(220, view.width - DOC_GUTTER_X * 2);
     const availableHeight = Math.max(220, view.height - DOC_GUTTER_Y * 2);
     const width = Math.min(DOC_MAX_PX, availableWidth);
-    const pageAspect = getCvPageAspect();
+    const pageAspect = opened === 'abschluss' ? ihkProjectionSource().pageAspect : getCvPageAspect();
     const height = Math.min(width / pageAspect, availableHeight);
     if (Math.abs(width - docRect.width) < 0.5 && Math.abs(height - docRect.height) < 0.5) {
       return docRect;
@@ -495,7 +498,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     orbit.yaw = wrapAngle(orbit.yaw);
     orbit.yawVelocity = 0;
     orbit.pitchVelocity = 0;
-    const isDocument = key === 'lebenslauf';
+    const isDocument = isDocumentKey(key);
     setDollyGuide(isDocument && !readerOpen);
     syncDocumentInputHints();
     background.setDocumentOpen?.(isDocument);
@@ -554,7 +557,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   /* ---------- Dokument blaettern ---------- */
 
   function scrollDocument(pages) {
-    if (opened !== 'lebenslauf' || readerOpen) return false;
+    if (!isDocumentKey(opened) || readerOpen) return false;
     cards.scrollDocument(pages);
     updateDocumentLift();
     onDocumentScroll?.(cards.documentScroll);
@@ -583,7 +586,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function zoomDocument(step) {
-    if (opened !== 'lebenslauf' || readerOpen || !(docFitDistance > 0)) return;
+    if (!isDocumentKey(opened) || readerOpen || !(docFitDistance > 0)) return;
 
     // Erst die tatsaechliche Radbewegung uebernimmt die Kamera. Ein blosses
     // Gedrueckthalten der linken Taste unterbricht die Anfahrt nicht.
@@ -597,7 +600,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function beginDocumentWheelZoom() {
-    if (opened !== 'lebenslauf' || readerOpen || !(docFitDistance > 0)) return;
+    if (!isDocumentKey(opened) || readerOpen || !(docFitDistance > 0)) return;
     zoomHold = true;
     setDollyGuide(true, true, null);
     canvas.style.cursor = 'ns-resize';
@@ -605,12 +608,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function endDocumentWheelZoom() {
     zoomHold = false;
-    setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+    setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
     canvas.style.cursor = '';
   }
 
   function onWheel(event) {
-    if (opened !== 'lebenslauf' || readerOpen) return;
+    if (!isDocumentKey(opened) || readerOpen) return;
     const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
       ? 18
       : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
@@ -630,7 +633,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onKeydown(event) {
-    if (opened !== 'lebenslauf' || readerOpen || event.defaultPrevented) return;
+    if (!isDocumentKey(opened) || readerOpen || event.defaultPrevented) return;
     const target = event.target;
     if (target instanceof HTMLElement
       && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
@@ -674,7 +677,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       event.pointerType === 'touch'
       && pinchGesture
       && touchPoints.size >= 2
-      && opened === 'lebenslauf'
+      && isDocumentKey(opened)
       && !readerOpen
     ) {
       event.preventDefault();
@@ -715,7 +718,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
             >= Math.abs(event.clientY - drag.startY)
           ) {
             drag.axis = 'x';
-            if (opened === 'lebenslauf') {
+            if (isDocumentKey(opened)) {
               takeOverDocumentCamera();
               cards.beginResumeRotation();
             }
@@ -727,7 +730,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         }
       }
 
-      if (drag.moved && opened === 'lebenslauf') {
+      if (drag.moved && isDocumentKey(opened)) {
         if (drag.axis === 'x') {
           cards.rotateResume(dx);
           if (Math.abs(dx) > 0.01) {
@@ -767,7 +770,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     if (
       event.pointerType === 'touch'
-      && opened === 'lebenslauf'
+      && isDocumentKey(opened)
       && !readerOpen
     ) {
       touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -791,10 +794,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       }
     }
 
-    const onDocument = opened === 'lebenslauf' && hitsDocument();
+    const onDocument = isDocumentKey(opened) && hitsDocument();
     const canWheelZoom = event.button === 0
       && event.pointerType !== 'touch'
-      && opened === 'lebenslauf'
+      && isDocumentKey(opened)
       && !readerOpen;
 
     drag = {
@@ -821,7 +824,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         if (touchPoints.size < 2) pinchGesture = null;
         drag = null;
         cards.endResumeRotation();
-        setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+        setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
         return;
       }
     }
@@ -835,7 +838,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     endOrbit();
 
     if (moved || wheelUsed) return;
-    if (hovered) listener?.('select', hovered);
+    // Resolve the actual click, even if it arrives before the next hover frame.
+    updatePointerFromEvent(event);
+    const selected = pick();
+    if (selected) listener?.('select', selected);
     else if (opened && !onDocument) listener?.('select', 'home');
   }
 
@@ -860,19 +866,19 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function hitsDocument() {
     if (ndc.x < -1.5 || !cards.documentPickables.length) return false;
     raycaster.setFromCamera(ndc, camera);
-    return raycaster.intersectObjects(cards.documentPickables, false).length > 0;
+    return raycaster.intersectObjects(cards.documentPickables.filter((mesh) => mesh.userData.key === opened && mesh.visible), false).length > 0;
   }
 
   function pick() {
     if (ndc.x < -1.5 || opened) return null;
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects(cards.pickables, false);
+    const hits = raycaster.intersectObjects([...cards.pickables, ...cards.documentPickables.filter((mesh) => mesh.visible)], false);
     return hits.length ? hits[0].object.userData.key : null;
   }
 
   function setRoute(target) {
     const [root, section] = String(target || '').split('/');
-    if (root !== 'lebenslauf') return;
+    if (!isDocumentKey(root)) return;
     cards.setDocumentSection(section || 'uebersicht');
     updateDocumentLift();
   }
@@ -893,7 +899,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     // CV_BLOOM_CONTROL_V4_2
     // The document carries its own luminous ink. Global bloom must not turn
     // the page into a white light panel when the camera moves into CV focus.
-    bloomBaseTarget = opened === 'lebenslauf'
+    bloomBaseTarget = isDocumentKey(opened)
       ? base * 0.24
       : base;
   }
@@ -979,7 +985,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     cards.update(t, dt);
 
     if (
-      opened === 'lebenslauf'
+      isDocumentKey(opened)
       && !readerOpen
       && !viewMoving
     ) {
@@ -1092,7 +1098,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     setReaderOpen(value) {
       readerOpen = Boolean(value);
       if (zoomHold) endDocumentWheelZoom();
-      setDollyGuide(opened === 'lebenslauf' && !readerOpen, false, null);
+      setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
       syncDocumentInputHints();
       if (readerOpen) cards.endResumeRotation();
     },
@@ -1103,10 +1109,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
      * Die 3D-Projektion blendet kontrolliert ab, danach erscheint die
      * Lesefassung ohne zusaetzliche Spiral- oder DNA-Geometrie.
      */
-    async beginReaderTransition(open) {
+    async beginReaderTransition(open, key = opened) {
       readerSequence += 1;
       const ticket = readerSequence;
-      cards.setProjectionHidden(open);
+      cards.setProjectionHidden(open, key);
 
       if (!open || reduced) return;
 
