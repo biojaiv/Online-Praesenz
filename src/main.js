@@ -213,6 +213,7 @@ function startAmbientUi() {
 }
 // Die Buehne meldet die Flaeche des Dokuments, bevor die Lesefassung existiert.
 let readerRef = null;
+let ihkProjectRef = null;
 
 function ensureEnhancements() {
   if (enhancements || !stage || !(canvas instanceof HTMLCanvasElement)) {
@@ -246,7 +247,10 @@ function scheduleEnhancements(delay = 180) {
 
 try {
   stage = createStage(canvas, {
-    onDocumentRect: (rect) => readerRef?.setRect(rect),
+    onDocumentRect: (rect) => {
+      readerRef?.setRect(rect);
+      ihkProjectRef?.setRect(rect);
+    },
   });
 } catch (err) {
   console.error('WebGL konnte nicht initialisiert werden:', err);
@@ -304,6 +308,9 @@ const ihkProject = createIhkProject({
   container: stageEl,
   onNavigate: (target) => router.go(target),
 });
+
+ihkProjectRef = ihkProject;
+if (stage) ihkProject.setRect(stage.documentRect());
 
 const router = createRouter({
   onEnter(target) {

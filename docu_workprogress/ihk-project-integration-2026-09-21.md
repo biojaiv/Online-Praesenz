@@ -26,7 +26,8 @@ Zusätzlich: bearbeitbare, bereinigte DE-/EN-Endfassungen unter `Projektarbeit/W
 ## Webseite
 
 - Native HTML-Projektansicht innerhalb der bestehenden 3D-Bühne; unverändertes Hash-Routing für `abschluss`, `abschluss/server`, `abschluss/uem`, `abschluss/clients`, `abschluss/migration`.
-- Bestehende Palette, Barlow-Schriften, Rahmen und Reader-Prinzip weiterverwendet. Keine separate Unterseite, keine Änderungen an Szenenbeleuchtung oder Partikeleffekten.
+- Stil nach Nutzerkorrektur an die Lebenslauf-Leseansicht angeglichen: dieselben `cv-hologram`-, Navigations-, Typografie-, Fakten- und Zeitleistenklassen. Beide Ansichten erhalten ihre Dokumentmaße über denselben Bühnen-Callback. Zentrale schmale Lesespalte, blaue Leuchtkante, bernsteinfarbene Akzente und identische Einblendanimation. Keine Änderungen an der Lebenslaufansicht, Szenenbeleuchtung oder Partikeleffekten.
+- Projektfilm und Downloads zusätzlich über die Reader-Fußzeile erreichbar, auch aus Unterbereichen; Pfeiltasten sowie Pos1/Ende bedienen die Bereichsnavigation. Inhalt, PDFs und Filme bleiben unverändert.
 - Deutsche und englische Texte über das vorhandene `src/i18n.js`; eigene Nachrichtendatei, kein zweites Sprachsystem.
 - Klare Abgrenzung: Pilot / PoC, 40 h Nettozeit, fünf Referenzclients vorgesehen, vier vollständig durchgeführt; 100 % ausschließlich für diese vier abgeschlossenen Testläufe.
 - Statische PDF-Downloadlinks; natives Video mit `controls`, `playsinline`, `preload="none"`, ohne Autoplay. Sprachwechsel stoppt und entfernt die alte Filmquelle.
@@ -53,6 +54,7 @@ Zusätzlich: bearbeitbare, bereinigte DE-/EN-Endfassungen unter `Projektarbeit/W
 - Vier statische HTTP-GETs: jeweils 200 mit korrektem PDF-/MP4-Content-Type. Kein `file://`-Test. Keine PDF-/Film-Vorabrequests vor Interaktion; nur eine Filmquelle aktiv.
 - `check_artifacts.py`: PDF-Integrität, Original-DOCX-Textabgleich, DE-/EN-Bildunterschriften und TOC-Ziele, keine unerwarteten leeren Seiten; vollständiger MP4-Decodierlauf, Codec, Pixelformat, Laufzeit, Audiofreiheit und faststart geprüft. Alle Dateien in `dist/ihk/` bytegleich mit `public/ihk/`.
 - Sämtliche 90 finalen PDF-Seiten gerendert und visuell geprüft, einschließlich vollständiger Inhaltsverzeichnisse, Diagramme, Mehrfach-Screenshots, Testrollout, Soll-Ist-Vergleich, Zeitmanagement, Fazit und Glossar. Browseransichten mit dem vorherigen Design verglichen; Filmszenen in DE/EN visuell geprüft.
+- Nach der Stilkorrektur Build und alle zehn Browserkombinationen erneut erfolgreich geprüft; zusätzlicher direkter Vergleich mit der Lebenslauf-Leseansicht und Prüfung der Fußzeilenaktionen. Belege unter `/tmp/ihk-style/`.
 - Renderbilder, Browser-Screenshots, Testresultate, virtuelle Python-Umgebung und Zwischenexporte liegen außerhalb des Repositories unter `/tmp/ihk-work/` bzw. `/tmp/ihk-browser-check/`; nicht Bestandteil des Commits.
 - Die lokale `.npmrc` erzeugt weiterhin eine npm-Meldung zur nicht unterstützten projektlokalen `prefix`-Einstellung. Installationen und Builds enden erfolgreich; die Datei bleibt wie beauftragt unangetastet.
 

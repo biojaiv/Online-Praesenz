@@ -32,19 +32,19 @@ export function createIhkProject({ container, onNavigate }) {
   function overview() {
     return `
       <div class="ihk-summary">
-        <div><p class="ihk-lead">${copy('description')}</p><p>${copy('implementation')}</p></div>
-        <dl class="ihk-metrics">
+        <div><p class="ihk-lead cv-lead">${copy('description')}</p><p>${copy('implementation')}</p></div>
+        <dl class="ihk-metrics cv-facts">
           ${[['40 h', 'time'], ['4', 'clientsMetric'], ['100 %', 'success'], ['Windows 11', 'deployment']]
             .map(([value, label]) => `<div><dt>${value}</dt><dd>${copy(label)}</dd></div>`).join('')}
         </dl>
       </div>
-      <p class="ihk-result">${copy('result')}</p>
+      <p class="ihk-result cv-focus">${copy('result')}</p>
       <section class="ihk-tech" aria-labelledby="ihk-tech-title">
         <h3 id="ihk-tech-title">${copy('technologies')}</h3>
-        <ul>${TECHNOLOGIES.map((name) => `<li>${name}</li>`).join('')}</ul>
+        <p class="cv-signature__tools">${TECHNOLOGIES.map((name) => `<span>${name}</span>`).join('<i aria-hidden="true">·</i>')}</p>
       </section>
       <div class="ihk-media">
-        <section aria-labelledby="ihk-film-title">
+        <section id="ihk-film" aria-labelledby="ihk-film-title">
           <h3 id="ihk-film-title">${copy('film')}</h3>
           <video controls playsinline preload="none" poster="${POSTERS[getLanguage()]}"
             src="${FILMS[getLanguage()]}" aria-labelledby="ihk-film-title" aria-describedby="ihk-film-caption">
@@ -52,22 +52,22 @@ export function createIhkProject({ container, onNavigate }) {
           </video>
           <p class="ihk-note" id="ihk-film-caption">${copy('filmCaption')}</p>
         </section>
-        <section class="ihk-downloads" aria-labelledby="ihk-download-title">
+        <section id="ihk-downloads" class="ihk-downloads" aria-labelledby="ihk-download-title">
           <h3 id="ihk-download-title">${copy('downloads')}</h3>
           <p>${copy('downloadIntro')}</p>
-          <a href="/ihk/IHK_Projektarbeit_DE.pdf" download lang="de">${copy('downloadDE')}<span aria-hidden="true">↓</span></a>
-          <a href="/ihk/IHK_Project_Report_EN.pdf" download lang="en">${copy('downloadEN')}<span aria-hidden="true">↓</span></a>
+          <a class="cv-primary-action" href="/ihk/IHK_Projektarbeit_DE.pdf" download lang="de">${copy('downloadDE')}<span aria-hidden="true">↓</span></a>
+          <a class="cv-primary-action" href="/ihk/IHK_Project_Report_EN.pdf" download lang="en">${copy('downloadEN')}<span aria-hidden="true">↓</span></a>
         </section>
       </div>`;
   }
 
   function details() {
-    return `<p class="ihk-lead">${copy(`${section}.lead`)}</p>
-      <div class="ihk-details">${['a', 'b', 'c'].map((part, i) => `
-        <section><span class="ihk-step" aria-hidden="true">0${i + 1}</span>
+    return `<p class="ihk-lead cv-lead">${copy(`${section}.lead`)}</p>
+      <ol class="ihk-details cv-timeline cv-timeline--work">${['a', 'b', 'c'].map((part, i) => `
+        <li><span class="ihk-step" aria-hidden="true">0${i + 1}</span><div>
           <h3>${copy(`${section}.${part}.title`)}</h3>
-          <p>${copy(`${section}.${part}.text`)}</p></section>`).join('')}</div>
-      <a class="ihk-return" href="#abschluss" data-ihk-route="abschluss">← ${copy('overview')}</a>`;
+          <p>${copy(`${section}.${part}.text`)}</p></div></li>`).join('')}</ol>
+      <a class="ihk-return cv-primary-action" href="#abschluss" data-ihk-route="abschluss">← ${copy('overview')}</a>`;
   }
 
   function render({ focus = false, preserveScroll = false } = {}) {
@@ -76,22 +76,35 @@ export function createIhkProject({ container, onNavigate }) {
       ? document.activeElement.dataset.ihkRoute : null;
     releaseVideo();
     overlay.innerHTML = `
-      <article class="ihk-panel">
-        <header class="ihk-toolbar"><p>${copy('kicker')}</p>
-          <button type="button" class="ihk-close" data-ihk-route="home" aria-label="${copy('close')}">×</button>
+      <article class="ihk-panel cv-hologram">
+        <header class="ihk-toolbar cv-hologram__header">
+          <button type="button" class="ihk-close cv-back" data-ihk-route="home" aria-label="${copy('close')}">←</button>
+          <div><span>${escapeHTML(t('route.finalProject'))}</span><small>${copy('kicker')}</small></div>
+          <span class="cv-status">PoC</span>
         </header>
-        <nav class="ihk-nav" aria-label="${copy('nav')}">
-          ${SECTIONS.map((key) => `<a href="#abschluss${key === 'overview' ? '' : `/${key}`}"
+        <nav class="ihk-nav cv-nav" aria-label="${copy('nav')}">
+          ${SECTIONS.map((key) => `<button type="button"
             data-ihk-route="abschluss${key === 'overview' ? '' : `/${key}`}"
-            ${section === key ? 'aria-current="page"' : ''}>${copy(key)}</a>`).join('')}
+            ${section === key ? 'class="is-active" aria-current="page"' : ''}>${copy(key)}</button>`).join('')}
         </nav>
-        <div class="ihk-body" tabindex="0" role="region" aria-label="${copy('content')}">
-          <div class="ihk-heading"><span class="ihk-scope">${copy('scope')}</span>
-            <h2 id="ihk-title" tabindex="-1">${copy(section === 'overview' ? 'title' : `${section}.title`)}</h2>
-            ${section === 'overview' ? `<p class="ihk-subtitle">${copy('subtitle')}</p>` : ''}
-          </div>
-          ${section === 'overview' ? overview() : details()}
+        <div class="ihk-body cv-hologram__body" tabindex="0" role="region" aria-label="${copy('content')}">
+          <section class="cv-section" aria-labelledby="ihk-title">
+            <div class="ihk-heading cv-id">
+              <div class="cv-id__meta"><p class="cv-kicker">${copy('scope')}</p>
+                <h2 id="ihk-title" tabindex="-1">${copy(section === 'overview' ? 'title' : `${section}.title`)}</h2>
+              </div>
+              ${section === 'overview' ? '<span class="cv-id__stamp" aria-hidden="true">VL<br><small>IHK // 01</small></span>' : ''}
+            </div>
+            ${section === 'overview' ? `<p class="ihk-subtitle cv-lead">${copy('subtitle')}</p>` : ''}
+            ${section === 'overview' ? overview() : details()}
+          </section>
         </div>
+        <footer class="cv-hologram__footer"><span>VL // IHK · 2026</span>
+          <div class="cv-hologram__actions">
+            <button type="button" class="cv-action is-docked" data-ihk-scroll="ihk-film">${copy('filmAction')}</button>
+            <button type="button" class="cv-action is-docked" data-ihk-scroll="ihk-downloads">${copy('downloads')}</button>
+          </div>
+        </footer>
       </article>`;
     overlay.querySelector('.ihk-body').scrollTop = scroll;
     if (focus) overlay.querySelector('#ihk-title').focus({ preventScroll: true });
@@ -102,17 +115,43 @@ export function createIhkProject({ container, onNavigate }) {
   }
 
   function navigate(event) {
+    const jump = event.target.closest('[data-ihk-scroll]');
+    if (jump) {
+      if (section !== 'overview') onNavigate('abschluss');
+      const target = overlay.querySelector(`#${jump.dataset.ihkScroll}`);
+      const body = overlay.querySelector('.ihk-body');
+      body.scrollTo({ top: target.offsetTop - 8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      target.querySelector('video, a')?.focus({ preventScroll: true });
+      return;
+    }
     const control = event.target.closest('[data-ihk-route]');
     if (!control || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     onNavigate(control.dataset.ihkRoute);
   }
   overlay.addEventListener('click', navigate);
+  function navigateByKey(event) {
+    if (!event.target.closest('.ihk-nav') || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabs = [...overlay.querySelectorAll('.ihk-nav button')];
+    const current = Math.max(0, tabs.indexOf(document.activeElement));
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+      : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault();
+    const target = tabs[next].dataset.ihkRoute;
+    onNavigate(target);
+    overlay.querySelector(`.ihk-nav [data-ihk-route="${target}"]`)?.focus();
+  }
+  overlay.addEventListener('keydown', navigateByKey);
   const unsubscribe = onLanguageChange(() => {
     if (!overlay.hidden) render({ preserveScroll: true });
   });
 
   return {
+    setRect(rect) {
+      if (!rect?.width || !rect?.height) return;
+      overlay.style.setProperty('--cv-doc-width', `${Math.round(rect.width)}px`);
+      overlay.style.setProperty('--cv-doc-height', `${Math.round(rect.height)}px`);
+    },
     setRoute(route) {
       const [root, child] = route.split('/');
       const visible = root === 'abschluss';
@@ -134,10 +173,12 @@ export function createIhkProject({ container, onNavigate }) {
       section = next;
       overlay.hidden = false;
       render({ focus: true });
+      if (!wasVisible) overlay.querySelector('.ihk-panel').classList.add('is-emerging');
     },
     dispose() {
       unsubscribe();
       releaseVideo();
+      overlay.removeEventListener('keydown', navigateByKey);
       overlay.removeEventListener('click', navigate);
       overlay.remove();
       frame?.classList.remove('is-ihk-open');
