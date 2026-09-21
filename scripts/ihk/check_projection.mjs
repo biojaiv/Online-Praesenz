@@ -9,8 +9,13 @@ const browser = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { execut
 const results = [];
 try {
   for (const mobile of [false, true]) {
-    const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }, reducedMotion: 'reduce', hasTouch: mobile, isMobile: mobile });
+    const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }, reducedMotion: mobile ? 'reduce' : 'no-preference', hasTouch: mobile, isMobile: mobile });
     const page = await context.newPage();
+    const waitForProjectFocus = () => page.waitForFunction(() => {
+      const { cards, camera } = window.__stage;
+      const mesh = cards.documentPickables.find((item) => item.userData.key === 'abschluss');
+      return mesh?.visible && Math.abs(mesh.getWorldPosition(camera.position.clone()).project(camera).x) < 0.08;
+    });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.addInitScript(() => localStorage.setItem('vl-language', 'de'));
@@ -36,15 +41,13 @@ try {
       const rect = document.querySelector('#scene').getBoundingClientRect();
       return { x: rect.left + (point.x + 1) * rect.width / 2, y: rect.top + (1 - point.y) * rect.height / 2 };
     });
+    const homeCamera = await page.evaluate(() => window.__stage.camera.position.toArray());
     await page.mouse.click(centre.x, centre.y);
     await page.waitForURL('**/#abschluss');
-    await page.locator('.ihk-project:not([hidden])').waitFor();
-    assert.equal(await page.locator('video[preload="none"]').count(), 1);
-    assert.equal(await page.locator('.ihk-downloads a[download]').count(), 2);
-    await page.locator('.ihk-reader-toggle').click();
-    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.ihk-project').isVisible(), false);
     await page.waitForTimeout(2100);
+    await waitForProjectFocus();
+    assert.notDeepEqual(await page.evaluate(() => window.__stage.camera.position.toArray()), homeCamera, 'Click zooms into the document');
     const canvas = await page.locator('#scene').boundingBox();
     const x = canvas.x + canvas.width / 2, y = canvas.y + canvas.height / 2;
     await page.mouse.move(x, y);
@@ -57,7 +60,7 @@ try {
     assert.equal(await page.evaluate(() => window.__stage.cards.documentScroll), 0);
     const cameraBefore = await page.evaluate(() => window.__stage.camera.position.toArray());
     await page.keyboard.press('ArrowUp');
-    await page.waitForTimeout(550);
+    await page.waitForFunction((before) => Math.abs(window.__stage.camera.position.z - before[2]) > 0.01, cameraBefore);
     const cameraAfter = await page.evaluate(() => window.__stage.camera.position.toArray());
     assert.notDeepEqual(cameraAfter, cameraBefore);
     await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x + 65, y, { steps: 8 }); await page.mouse.up();
@@ -78,13 +81,10 @@ try {
     await page.keyboard.press('Escape');
     await page.locator('.cv-reader').waitFor({ state: 'hidden' });
     await page.locator('.nav__link[data-target="abschluss"]').click();
-    await page.locator('.ihk-project:not([hidden])').waitFor();
-    await page.locator('.ihk-reader-toggle').click();
-    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     for (const language of ['de', 'en']) {
       if (language === 'en') await page.locator('#language-switch').click();
       await page.waitForFunction(() => window.__stage.cards.documentPickables.every((mesh) => mesh.visible && mesh.material.uniforms.uMap.value));
-      await page.waitForTimeout(1200);
+      await waitForProjectFocus();
       await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-${language}-projection.png` });
       await page.locator('.ihk-reader-toggle').click();
       await page.locator('.ihk-project:not([hidden])').waitFor();
@@ -97,15 +97,17 @@ try {
     // A fresh deep link must survive asynchronous image loading.
     await page.goto(`${base}/#abschluss/clients`);
     await page.reload();
-    await page.locator('.ihk-project:not([hidden])').waitFor();
-    await page.locator('.ihk-reader-toggle').click();
-    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     await page.waitForFunction(() => {
       const mesh = window.__stage?.cards.documentPickables.find((item) => item.userData.key === 'abschluss');
       return mesh?.visible && Math.abs(mesh.material.uniforms.uOffset.value - 0.6) < 0.001;
     });
     await page.keyboard.press('Escape');
     await page.waitForURL('**/#');
+    await page.locator('.nav__link[data-target="abschluss"]').click();
+    await page.locator('.ihk-film-toggle').click();
+    await page.waitForFunction(() => document.activeElement?.tagName === 'VIDEO');
+    assert.equal(await page.locator('.ihk-media > section:last-child').getAttribute('id'), 'ihk-film');
+    assert.equal(await page.locator('.ihk-downloads a[download]').count(), 2);
     assert.deepEqual(errors, []);
     results.push({ mobile, scroll, projectionClick: true, zoom: true, rotation: true, pinch: mobile, readerToggle: true, cvRegression: true, deepLink: true, errors });
     console.log(`PASS: ${mobile ? 'mobile + pinch' : 'desktop'} projection controls, DE/EN and CV regression`);

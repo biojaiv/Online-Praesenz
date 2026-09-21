@@ -32,9 +32,8 @@ try {
       assert(await expanded(name));
       assert.equal(await page.locator('.nav__group.is-open').count(), 1);
       if (name === 'abschluss') {
-        await page.locator('.ihk-project:not([hidden])').waitFor();
-        assert.equal(await page.locator('video[preload="none"]').count(), 1);
-        assert.equal(await page.locator('.ihk-downloads a[download]').count(), 2);
+        assert.equal(await page.locator('.ihk-project').isVisible(), false);
+        assert.equal(await page.locator('.ihk-film-toggle').isVisible(), true);
       }
       const route = page.url();
       const box = await page.locator('.nav__group.is-open .nav__sub').boundingBox();
@@ -61,7 +60,9 @@ try {
     assert.equal(await expanded('abschluss'), false);
     assert(await expanded('lebenslauf'));
     await activate(root('abschluss'));
+    await activate(page.locator('.ihk-reader-toggle'));
     await page.locator('.ihk-project:not([hidden])').waitFor();
+    await activate(root('abschluss'));
     await activate(page.locator('#nav-sub-abschluss [data-target="abschluss/migration"]'));
     await page.waitForURL('**/#abschluss/migration');
     assert.equal(await page.locator('.nav__group.is-open').count(), 0);

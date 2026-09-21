@@ -16,10 +16,19 @@
 .ihk-heading { align-items: start; }
 .ihk-heading h2 { overflow-wrap: anywhere; }
 .ihk-subtitle { margin-bottom: 22px; }
-.ihk-summary > div > p + p { margin-top: 14px; color: #8eacbc; font-size: 16px; line-height: 1.55; }
+.ihk-icon { width: 24px; height: 24px; flex: 0 0 24px; color: var(--amber); }
+.ihk-symbol-heading { display: flex; align-items: center; gap: 12px; }
+.ihk-areas { margin-block: 24px; }
+.ihk-areas h3 { color: var(--amber); font: 500 18px/1.3 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; }
+.ihk-areas ul { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin-top: 18px; }
+.ihk-areas a { display: flex; align-items: start; gap: 12px; color: inherit; text-decoration: none; }
+.ihk-areas strong { display: block; color: var(--amber); font: 500 17px/1.25 var(--font-display); text-transform: uppercase; }
+.ihk-areas small { display: block; margin-top: 5px; color: #8eacbc; font-size: 12px; line-height: 1.45; }
+.ihk-areas a:hover strong { color: var(--cyan); }
 .ihk-metrics { margin-block: 24px; }
-.ihk-metrics div { grid-template-columns: 85px minmax(0, 1fr); }
+.ihk-metrics div { grid-template-columns: 130px minmax(0, 1fr); }
 .ihk-metrics dt { color: var(--amber); font: 500 20px/1.2 var(--font-display); letter-spacing: 0.03em; text-transform: none; }
+.ihk-metrics dt { display: flex; align-items: center; gap: 10px; }
 .ihk-metrics dd { font-size: 13px; }
 .ihk-tech { margin-top: 32px; }
 .ihk-project .ihk-tech h3,
@@ -38,8 +47,8 @@
 .ihk-return { min-height: 44px; display: inline-flex; align-items: center; }
 .ihk-panel .cv-hologram__footer { flex-wrap: wrap; }
 @media (max-width: 680px), (max-height: 620px) {
-  .ihk-summary > div > p + p, .ihk-downloads p { font-size: 12px; }
-  .ihk-panel .ihk-metrics div { grid-template-columns: 72px minmax(0, 1fr); }
+  .ihk-downloads p { font-size: 12px; }
+  .ihk-panel .ihk-metrics div { grid-template-columns: 116px minmax(0, 1fr); }
   .ihk-panel .ihk-metrics dt { font-size: 18px; letter-spacing: 0.02em; }
   .ihk-panel .ihk-details li { grid-template-columns: 14px 24px minmax(0, 1fr); }
 }
@@ -51,7 +60,9 @@
   .ihk-heading { grid-template-columns: minmax(0, 1fr); }
   .ihk-heading .cv-id__stamp { display: none; }
   .ihk-metrics { grid-template-columns: 1fr; }
+  .ihk-areas ul { grid-template-columns: 1fr; }
   .ihk-panel .cv-hologram__actions { flex-wrap: wrap; }
 }
 
 .ihk-reader-toggle:not(.is-docked) { top: var(--s-4); }
+.ihk-film-toggle { top: calc(var(--s-4) + 44px); }

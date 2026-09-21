@@ -1,5 +1,7 @@
 # IHK-Projektintegration · 21.09.2026
 
+Aktuelle Präsentationskorrektur (gekürzte Inhalte, Symbole, Zoom zuerst, Film zuletzt): [IHK im Lebenslauf-Stil](ihk-cv-presentation-2026-09-21.md). Die folgenden Angaben dokumentieren auch die vorausgegangenen Integrationsstände.
+
 ## Ausgangsstand und Quellen
 
 - Repository: `biojaiv/Online-Praesenz`, aktueller `main` bei Beginn: `6ec32b4`.

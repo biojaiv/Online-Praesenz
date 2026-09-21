@@ -1,0 +1,12 @@
+# Kompakte IHK-Präsentation im Lebenslauf-Stil
+
+- Ausgangspunkt: `e377418` auf `main`; Arbeitsbranch `work/ihk-compact-cv-style-20260921-181248`.
+- Aktuelles Verhalten nach Nutzerkorrektur: Ein Klick auf den Projektbereich zoomt wie beim Lebenslauf in die schwebende Projektion. Die Lesefassung öffnet ausschließlich über ihren Umschalter; keine automatisch darübergelegte Ansicht verdeckt die Kamerafahrt.
+- Dieselben gekürzten i18n-Inhalte in Projektion und HTML-Lesefassung. Fließtextumfang DE 358 → 239, EN 429 → 296 Wörter, zusätzlich entfällt der bisherige Implementierungsabsatz. Kennzahlen, Pilotabgrenzung sowie fünf geplante und vier erfolgreiche abgeschlossene Testläufe bleiben explizit erhalten. Die vollständigen PDF-Berichte bleiben unverändert.
+- Kupferfarbene Liniensymbole für Server, UEM, Clients, Migration, Kennzahlen, Technik und Medien. Gemeinsame lokale SVG-Funktion für Lesefassung und Texturerzeugung; keine Icon-Bibliothek oder externe Assets ergänzt. Verlinkte Themenübersicht statt zusätzlicher Fließtextblöcke, vorhandene CV-Typografie und Zeitleisten wiederverwendet.
+- Beide Projektions-WebPs mit den kürzeren Texten und Symbolen lokal neu erzeugt, jeweils unter 0,7 MiB. Alle zehn Seiten auf Überläufe und visuell geprüft.
+- Reihenfolge der Hauptansicht: Einordnung → Kennzahlen → Projektbereiche → Ergebnis → Technologien → PDF-Downloads → Film. Der native Videobereich ist das letzte Inhaltselement. Der zusätzliche „Projektfilm“-Knopf in der Projektion öffnet die Lesefassung direkt am Film; kein Autoplay, weiterhin `preload="none"`.
+- PDF-Dateien, MP4-Filme und Poster unverändert; Originalquellen unangetastet. Die zuletzt korrigierte Menübedienung und die auf kurze Sockel-Jets reduzierten Effekte bleiben erhalten.
+- Qualitätssicherung: Build; `test:ihk` für zehn Viewport-/Sprachkombinationen, reale Downloadklicks und Videowiedergabe; `test:projection` mit normaler Zoomanimation auf Desktop und reduzierter Bewegung/Pinch mobil; `test:navigation` für Menü, Tastatur und Medien-Sprünge. Zusätzlich Dateigleichheit `public/ihk` ↔ `dist/ihk`, Größenlimit und HTTP 200 für alle acht IHK-Artefakte.
+- Ergebnis: alle genannten Prüfungen bestanden; kein horizontaler Überlauf. Die mobile Aktionsleiste zusätzlich am Film überprüft. Vorhandene Vite-Bundlewarnung und lokale npm-`prefix`-Meldung unverändert, beide ohne Buildfehler.
+- Testbilder und Resultate ausschließlich unter `/tmp/ihk-compact-*` bzw. `/tmp/ihk-projection-render/`; kein Testmaterial im Commit. Nutzer-Screenshot und lokale `.npmrc` bleiben unangetastet.

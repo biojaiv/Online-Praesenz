@@ -1,4 +1,5 @@
 import { getLanguage, onLanguageChange, t } from '../i18n.js';
+import { ihkIcon, IHK_SECTION_ICONS } from './ihkIcons.js';
 
 const SECTIONS = ['overview', 'server', 'uem', 'clients', 'migration'];
 const TECHNOLOGIES = ['VMware vSphere', 'Windows Server 2022', 'Active Directory',
@@ -30,7 +31,11 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   const download = document.createElement('a');
   download.className = 'cv-action cv-download ihk-projection-download';
   download.hidden = true;
-  container.append(toggle, download);
+  const film = document.createElement('button');
+  film.type = 'button';
+  film.className = 'cv-action ihk-film-toggle';
+  film.hidden = true;
+  container.append(toggle, download, film);
 
   function refreshControls() {
     const available = route.split('/')[0] === 'abschluss';
@@ -40,6 +45,8 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     toggle.setAttribute('aria-controls', 'ihk-reader');
     toggle.classList.toggle('is-docked', open);
     download.hidden = !available || open;
+    film.hidden = !available || open;
+    film.textContent = t('ihk.filmAction');
     download.href = getLanguage() === 'de' ? '/ihk/IHK_Projektarbeit_DE.pdf' : '/ihk/IHK_Project_Report_EN.pdf';
     download.download = download.href.split('/').pop();
     download.textContent = t('download.visible');
@@ -79,6 +86,8 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   }
   const clickToggle = () => setOpen(!open);
   toggle.addEventListener('click', clickToggle);
+  const clickFilm = () => openMedia('ihk-film');
+  film.addEventListener('click', clickFilm);
   function escapeReader(event) {
     if (event.key !== 'Escape' || !open || document.querySelector('.nav__group.is-open')) return;
     event.preventDefault();
@@ -98,31 +107,36 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   function overview() {
     return `
       <div class="ihk-summary">
-        <div><p class="ihk-lead cv-lead">${copy('description')}</p><p>${copy('implementation')}</p></div>
+        <p class="ihk-lead cv-lead">${copy('description')}</p>
         <dl class="ihk-metrics cv-facts">
-          ${[['40 h', 'time'], ['4', 'clientsMetric'], ['100 %', 'success'], ['Windows 11', 'deployment']]
-            .map(([value, label]) => `<div><dt>${value}</dt><dd>${copy(label)}</dd></div>`).join('')}
+          ${[['40 h', 'time', 'clock'], ['4', 'clientsMetric', 'clients'], ['100 %', 'success', 'check'], ['Windows 11', 'deployment', 'network']]
+            .map(([value, label, icon]) => `<div><dt>${ihkIcon(icon)}<span>${value}</span></dt><dd>${copy(label)}</dd></div>`).join('')}
         </dl>
       </div>
+      <section class="ihk-areas" aria-labelledby="ihk-areas-title">
+        <h3 id="ihk-areas-title" class="ihk-symbol-heading">${ihkIcon('migration')}${copy('areas')}</h3>
+        <ul>${SECTIONS.slice(1).map((key) => `<li><a href="#abschluss/${key}" data-ihk-route="abschluss/${key}">
+          ${ihkIcon(key)}<span><strong>${copy(key)}</strong><small>${copy(`${key}.summary`)}</small></span></a></li>`).join('')}</ul>
+      </section>
       <p class="ihk-result cv-focus">${copy('result')}</p>
       <section class="ihk-tech" aria-labelledby="ihk-tech-title">
-        <h3 id="ihk-tech-title">${copy('technologies')}</h3>
+        <h3 id="ihk-tech-title" class="ihk-symbol-heading">${ihkIcon('tools')}${copy('technologies')}</h3>
         <p class="cv-signature__tools">${TECHNOLOGIES.map((name) => `<span>${name}</span>`).join('<i aria-hidden="true">·</i>')}</p>
       </section>
       <div class="ihk-media">
+        <section id="ihk-downloads" class="ihk-downloads" aria-labelledby="ihk-download-title">
+          <h3 id="ihk-download-title" class="ihk-symbol-heading">${ihkIcon('file')}${copy('downloads')}</h3>
+          <p>${copy('downloadIntro')}</p>
+          <a class="cv-primary-action" href="/ihk/IHK_Projektarbeit_DE.pdf" download lang="de">${copy('downloadDE')}<span aria-hidden="true">↓</span></a>
+          <a class="cv-primary-action" href="/ihk/IHK_Project_Report_EN.pdf" download lang="en">${copy('downloadEN')}<span aria-hidden="true">↓</span></a>
+        </section>
         <section id="ihk-film" aria-labelledby="ihk-film-title">
-          <h3 id="ihk-film-title">${copy('film')}</h3>
+          <h3 id="ihk-film-title" class="ihk-symbol-heading">${ihkIcon('play')}${copy('film')}</h3>
           <video controls playsinline preload="none" poster="${POSTERS[getLanguage()]}"
             src="${FILMS[getLanguage()]}" aria-labelledby="ihk-film-title" aria-describedby="ihk-film-caption">
             <a href="${FILMS[getLanguage()]}" download>${copy('filmFallback')}</a>
           </video>
           <p class="ihk-note" id="ihk-film-caption">${copy('filmCaption')}</p>
-        </section>
-        <section id="ihk-downloads" class="ihk-downloads" aria-labelledby="ihk-download-title">
-          <h3 id="ihk-download-title">${copy('downloads')}</h3>
-          <p>${copy('downloadIntro')}</p>
-          <a class="cv-primary-action" href="/ihk/IHK_Projektarbeit_DE.pdf" download lang="de">${copy('downloadDE')}<span aria-hidden="true">↓</span></a>
-          <a class="cv-primary-action" href="/ihk/IHK_Project_Report_EN.pdf" download lang="en">${copy('downloadEN')}<span aria-hidden="true">↓</span></a>
         </section>
       </div>`;
   }
@@ -130,7 +144,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   function details() {
     return `<p class="ihk-lead cv-lead">${copy(`${section}.lead`)}</p>
       <ol class="ihk-details cv-timeline cv-timeline--work">${['a', 'b', 'c'].map((part, i) => `
-        <li><span class="ihk-step" aria-hidden="true">0${i + 1}</span><div>
+        <li><span class="ihk-step" aria-hidden="true">${ihkIcon(IHK_SECTION_ICONS[section][i])}</span><div>
           <h3>${copy(`${section}.${part}.title`)}</h3>
           <p>${copy(`${section}.${part}.text`)}</p></div></li>`).join('')}</ol>
       <a class="ihk-return cv-primary-action" href="#abschluss" data-ihk-route="abschluss">← ${copy('overview')}</a>`;
@@ -181,15 +195,21 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     }
   }
 
+  async function openMedia(id) {
+    if (section !== 'overview') onNavigate('abschluss');
+    await setOpen(true);
+    if (!open || overlay.hidden) return;
+    const target = overlay.querySelector(`#${id}`);
+    const body = overlay.querySelector('.ihk-body');
+    body.scrollTo({ top: target.offsetTop - 8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    target.querySelector('video, a')?.focus({ preventScroll: true });
+  }
+
   function navigate(event) {
     if (event.target.closest('[data-ihk-close]')) { setOpen(false); return; }
     const jump = event.target.closest('[data-ihk-scroll]');
     if (jump) {
-      if (section !== 'overview') onNavigate('abschluss');
-      const target = overlay.querySelector(`#${jump.dataset.ihkScroll}`);
-      const body = overlay.querySelector('.ihk-body');
-      body.scrollTo({ top: target.offsetTop - 8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      target.querySelector('video, a')?.focus({ preventScroll: true });
+      openMedia(jump.dataset.ihkScroll);
       return;
     }
     const control = event.target.closest('[data-ihk-route]');
@@ -225,7 +245,6 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       overlay.style.setProperty('--cv-doc-height', `${Math.round(rect.height)}px`);
     },
     setRoute(nextRoute) {
-      const entering = route.split('/')[0] !== 'abschluss';
       route = nextRoute;
       const [root, child] = route.split('/');
       const available = root === 'abschluss';
@@ -235,13 +254,14 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       const next = SECTIONS.includes(child) ? child : 'overview';
       const changed = section !== next;
       section = next;
-      if (entering) setOpen(true);
-      else if (changed && open && !overlay.hidden) render({ focus: true });
+      if (changed && open && !overlay.hidden) render({ focus: true });
     },
     dispose() {
       transition += 1;
       window.removeEventListener('keydown', escapeReader, true);
       toggle.removeEventListener('click', clickToggle);
+      film.removeEventListener('click', clickFilm);
+      film.remove();
       toggle.remove();
       download.remove();
       unsubscribe();

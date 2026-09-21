@@ -1,5 +1,5 @@
 /** Render the reviewed website copy as five transparent hologram pages per language.
- * Run while npm run preview is serving. Intermediate PNGs stay outside the repo.
+ * Intermediate PNGs stay outside the repo. No running website is needed.
  * Uses the site's own fonts; no runtime PDF requests or conversions are needed.
  */
 import assert from 'node:assert/strict';
@@ -7,7 +7,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { chromium } from 'playwright';
 import { ihkMessages } from '../../src/data/ihk.messages.js';
-const base = process.env.IHK_TEST_URL || 'http://127.0.0.1:4173';
+import { ihkIcon, IHK_SECTION_ICONS } from '../../src/ui/ihkIcons.js';
 const temporary = process.env.IHK_RENDER_OUTPUT || '/tmp/ihk-projection-render';
 await mkdir(temporary, { recursive: true });
 const browser = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}), args: ['--no-sandbox'] });
@@ -18,7 +18,6 @@ try {
   for (const language of ['de', 'en']) {
     const t = (key) => escape(ihkMessages[language][`ihk.${key}`]);
     const page = await browser.newPage({ viewport: { width: 1258, height: 1920 }, deviceScaleFactor: 1 });
-    await page.goto(base);
     const sections = ['overview', 'server', 'uem', 'clients', 'migration'];
     const pages = sections.map((section, index) => `<section class="sheet">
       <header><span>VL // IHK</span><span>${t('kicker')}</span></header>
@@ -27,12 +26,13 @@ try {
       ${section === 'overview' ? `
         <p class="subtitle">${t('subtitle')}</p>
         <p>${t('description')}</p>
-        <div class="facts">${[['40 h', 'time'], ['4', 'clientsMetric'], ['100 %', 'success'], ['Windows 11', 'deployment']].map(([value, key]) => `<div><strong>${value}</strong><small>${t(key)}</small></div>`).join('')}</div>
-        <p>${t('implementation')}</p>
+        <div class="facts">${[['40 h', 'time', 'clock'], ['4', 'clientsMetric', 'clients'], ['100 %', 'success', 'check'], ['Windows 11', 'deployment', 'network']].map(([value, key, icon]) => `<div>${ihkIcon(icon)}<strong>${value}</strong><small>${t(key)}</small></div>`).join('')}</div>
+        <h2 class="symbol-heading">${ihkIcon('migration')}${t('areas')}</h2>
+        <div class="areas">${sections.slice(1).map((key) => `<div>${ihkIcon(key)}<div><h3>${t(key)}</h3><p>${t(`${key}.summary`)}</p></div></div>`).join('')}</div>
         <p class="result">${t('result')}</p>
-        <h2>${t('technologies')}</h2><p class="signature">VMware vSphere · Windows Server 2022 · Active Directory · MSSQL · baramundi · DIP · PXE · TFTP · WinPE · Windows ADK · DISM · bDeploy · TLS · VLAN · DHCP</p>
+        <h2 class="symbol-heading">${ihkIcon('tools')}${t('technologies')}</h2><p class="signature">VMware vSphere · Windows Server 2022 · Active Directory · MSSQL · baramundi · DIP · PXE · TFTP · WinPE · Windows ADK · DISM · bDeploy · TLS · VLAN · DHCP</p>
         ` : `<p class="subtitle">${t(`${section}.lead`)}</p>
-        <ol>${['a', 'b', 'c'].map((part, i) => `<li><span class="number">0${i + 1}</span><div><h2>${t(`${section}.${part}.title`)}</h2><p>${t(`${section}.${part}.text`)}</p></div></li>`).join('')}</ol>`}
+        <ol>${['a', 'b', 'c'].map((part, i) => `<li>${ihkIcon(IHK_SECTION_ICONS[section][i])}<div><h2>${t(`${section}.${part}.title`)}</h2><p>${t(`${section}.${part}.text`)}</p></div></li>`).join('')}</ol>`}
       <footer><span>${t(section)}</span><span>0${index + 1} / 05</span></footer>
     </section>`).join('');
     await page.setContent(`<html lang="${language}"><head>${fontLink}<style>
@@ -43,8 +43,10 @@ try {
       .kicker{color:#e5a05c;font:500 25px 'Barlow Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase;margin:0 0 16px}
       h1{color:#edfaff;font:500 65px/1.04 'Barlow Condensed',sans-serif;letter-spacing:2px;margin:0 0 25px;text-transform:uppercase}
       h2{color:#e5a05c;font:500 38px/1.2 'Barlow Condensed',sans-serif;margin:0 0 18px}
+      .ihk-icon{width:54px;height:54px;flex:0 0 54px;color:#e5a05c}.symbol-heading{display:flex;align-items:center;gap:25px}
+      .areas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:28px 0 38px}.areas>div{display:flex;gap:25px}.areas h3{color:#e5a05c;font:500 35px 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 10px}.areas p{font-size:28px;line-height:1.4;margin:0}
       p{font:400 30px/1.5 Barlow,sans-serif;margin:0 0 24px}.subtitle{color:#9fc2d5;font-size:32px;margin-bottom:36px}
-      .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin:36px 0}.facts strong{display:block;color:#e5a05c;font:500 47px 'Barlow Condensed',sans-serif}.facts small{display:block;color:#9fc2d5;font-size:23px;line-height:1.4;margin-top:12px}
+      .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin:36px 0 44px}.facts .ihk-icon{margin-bottom:14px}.facts strong{display:block;color:#e5a05c;font:500 47px 'Barlow Condensed',sans-serif}.facts small{display:block;color:#9fc2d5;font-size:23px;line-height:1.4;margin-top:12px}
       .result{border-left:2px solid #e5a05c;padding-left:25px;font-size:28px}.signature{color:#e5a05c;font-size:26px;line-height:1.6}
       ol{list-style:none;padding:0;margin-top:65px;position:relative}ol:before{content:'';position:absolute;left:8px;top:0;bottom:30px;width:2px;background:linear-gradient(transparent,#e5a05c,transparent)}
       li{position:relative;display:grid;grid-template-columns:85px 1fr;gap:20px;padding:38px 0 38px 42px;border-top:1px solid #456a8444}li:before{content:'';position:absolute;left:0;top:47px;width:18px;height:18px;border:3px solid #e5a05c;border-radius:50%;box-shadow:0 0 18px #e5a05c88}

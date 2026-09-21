@@ -22,11 +22,16 @@ try {
     page.on('request', (request) => { if (/\.(mp4|pdf)(\?|$)/.test(request.url()) && request.url().includes('/ihk/')) requests.push(request.url()); });
     await page.addInitScript(() => localStorage.setItem('vl-language', 'de'));
     await page.goto(`${base}/#abschluss`);
+    assert.equal(await page.locator('.ihk-project').isVisible(), false);
+    await page.locator('.ihk-reader-toggle').click();
     await page.locator('.ihk-project:not([hidden])').waitFor();
     await page.waitForFunction(() => document.querySelector('#boot').classList.contains('is-done'));
     assert.equal(await page.locator('video').getAttribute('preload'), 'none');
     assert.equal(await page.locator('video').getAttribute('autoplay'), null);
     assert.equal(requests.length, 0, 'No PDF or film should preload');
+    assert.equal(await page.locator('.ihk-media > section:last-child').getAttribute('id'), 'ihk-film');
+    assert.equal(await page.locator('.ihk-areas a svg').count(), 4);
+    assert.equal(await page.locator('.ihk-metrics svg').count(), 4);
 
     for (const lang of ['de', 'en']) {
       if (lang === 'en') await page.locator('#language-switch').click();
@@ -34,6 +39,7 @@ try {
       assert.match(await page.locator('video').getAttribute('src'), lang === 'de' ? /Projektfilm_DE/ : /Project_Film_EN/);
       assert.equal(await page.locator('video').count(), 1);
       await page.locator('.ihk-body').evaluate((el) => { el.scrollTop = 0; });
+      await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.ihk-panel')).opacity) > 0.99);
       await page.screenshot({ path: `${output}/${width}-${lang}-overview.png` });
       const overflow = await page.evaluate(() => {
         const elements = [document.documentElement, document.querySelector('.ihk-body'), document.querySelector('.ihk-panel'), document.querySelector('.head__brand'), document.querySelector('.foot__crumb')];
@@ -92,6 +98,7 @@ try {
     await page.locator('.cv-reader-toggle').click();
     await page.waitForFunction(() => document.querySelector('.cv-reader-toggle').getAttribute('aria-expanded') === 'true');
     await page.locator('.nav__link[data-target="abschluss"]').click();
+    await page.locator('.ihk-reader-toggle').click();
     await page.locator('.ihk-project:not([hidden])').waitFor();
     await page.locator('.cv-reader').waitFor({ state: 'hidden' });
     await context.close();
@@ -100,6 +107,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`${base}/#abschluss/server`);
+  await page.locator('.ihk-reader-toggle').click();
   await page.locator('#ihk-title').waitFor();
   assert.match(await page.locator('#ihk-title').textContent(), /foundation/);
   for (const file of ['IHK_Projektarbeit_DE.pdf', 'IHK_Project_Report_EN.pdf', 'IHK_Projektfilm_DE.mp4', 'IHK_Project_Film_EN.mp4']) {
