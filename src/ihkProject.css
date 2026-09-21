@@ -68,3 +68,8 @@
 
 .ihk-reader-toggle:not(.is-docked) { top: var(--s-4); }
 .ihk-film-toggle { top: calc(var(--s-4) + 44px); }
+
+/* Place the project projection's zoom guidance on the left. */
+.frame.is-ihk-open .camera-dolly-guide { left: var(--s-4); right: auto; }
+.frame.is-ihk-open .cv-keyboard-zoom-hint { left: 84px; right: auto; }
+.frame.is-ihk-open .cv-mobile-zoom { left: 13px; right: auto; }
