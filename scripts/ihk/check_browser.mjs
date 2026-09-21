@@ -57,7 +57,7 @@ try {
       await page.waitForFunction(() => {
         const v = document.querySelector('video');
         return !v.paused && v.currentTime > 0.2 && v.videoWidth === 1280;
-      }, { timeout: 20000 });
+      }, null, { timeout: 20000 });
       await video.evaluate((el) => { el.pause(); el.currentTime = 12; });
       await page.waitForFunction(() => !document.querySelector('video').seeking);
       await page.screenshot({ path: `${output}/${width}-${lang}-playing.png` });
@@ -93,6 +93,7 @@ try {
     assert.equal(await page.locator('.ihk-project').isVisible(), true);
     await page.locator('.cv-reader').waitFor({ state: 'hidden' });
     await context.close();
+    console.log(`PASS: ${width} × ${height}, DE/EN, downloads, playback and navigation`);
   }
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.on('pageerror', (error) => errors.push(error.message));

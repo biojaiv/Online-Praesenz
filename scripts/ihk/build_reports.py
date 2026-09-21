@@ -11,9 +11,11 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from zipfile import ZipFile
 
 import pymupdf
 from docx import Document
+from docx.text.paragraph import Paragraph
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -70,14 +72,18 @@ def export(docx, folder):
     return pdf
 
 
-def chart(kind):
-    """Translate the report's diagrams from its numeric data, retaining their palette."""
+def chart(kind, language="EN", source=None):
+    """Retain German source charts or render labels from the original numeric data."""
+    if language == "DE" and kind in ("cost", "process"):
+        with ZipFile(source) as archive:
+            return archive.read("word/media/image1.png" if kind == "cost" else "word/media/image47.png")
     buf = io.BytesIO()
     w, h = (960, 510) if kind == 'cost' else (960, 360) if kind == 'time' else (1200, 260)
     c = canvas.Canvas(buf, pagesize=(w, h))
     c.setFillColorRGB(1,1,1); c.rect(0,0,w,h,fill=1,stroke=0)
     c.setFillColorRGB(.12,.16,.2); c.setFont('Helvetica-Bold',20)
     title = {'cost':'Five-year cost comparison (net of VAT)', 'time':'Distribution of project time (40.0 h)', 'process':'WINDOWS OS DEPLOYMENT PROCESS'}[kind]
+    if language == 'DE':title='Zeitverteilung der Projektarbeit (40,0 h)'
     c.drawCentredString(w/2,h-35,title)
     if kind == 'cost':
         values=[160200,175715,187620,200480,221280,231715]
@@ -101,19 +107,21 @@ def chart(kind):
                    'Purchase + maintenance · 3 years','Subscription · 1 year','Purchase + maintenance · 1 year']
                   if kind=='cost' else ['Implementation','Documentation','Contingency, research and coordination'])
         values = [160200,175715,187620,200480,221280,231715] if kind=='cost' else [21.6,10.4,8.0]
+        if language=='DE':labels=['Realisierung','Dokumentation','Puffer, Recherche und Abstimmung']
         x = 340 if kind=='cost' else 380
         usable=w-x-45; maxval=max(values)
         for i,(label,value) in enumerate(zip(labels,values)):
             y=h-105-i*(62 if kind=='cost' else 80)
             c.setFillColorRGB(.12,.16,.2); c.setFont('Helvetica',16)
             # Long labels are wrapped instead of clipped as in the source time chart.
-            if len(label)>37:
-                a,b=label.rsplit(' and ',1); c.drawRightString(x-15,y+19,a+' and');c.drawRightString(x-15,y,b)
+            if len(label)>30:
+                separator=' und ' if language=='DE' else ' and '
+                a,b=label.rsplit(separator,1); c.drawRightString(x-15,y+19,a+separator.rstrip());c.drawRightString(x-15,y,b)
             else:c.drawRightString(x-15,y+8,label)
             colours=[(.12,.30,.46),(.34,.61,.79),(.62,.62,.62)]
             c.setFillColorRGB(*colours[min(i,2)]); c.roundRect(x,y-4,usable*value/maxval,36,5,fill=1,stroke=0)
             c.setFillColorRGB(1,1,1); c.setFont('Helvetica-Bold',16)
-            c.drawRightString(x+usable*value/maxval-12,y+8,f'€{value:,.2f}' if kind=='cost' else f'{value:.1f} h')
+            c.drawRightString(x+usable*value/maxval-12,y+8,f'€{value:,.2f}' if kind=='cost' else (f'{value:.1f} h'.replace('.',',') if language=='DE' else f'{value:.1f} h'))
     else:
         rows=[['Step 1','Windows ISO','integration','ISO import → install.wim'],
               ['Step 2','WIM preparation','/ base image','Edition → mount → bOCT'],
@@ -144,7 +152,11 @@ def main():
     text=lambda i: ''.join(ps[i].xpath('.//w:t/text()'))
     missing=[i for i in range(39,397) if text(i).strip() and str(i) not in TRANSLATION and i not in UNCHANGED]
     assert not missing, f'Missing translations: {missing}'
-    en=lambda i: TRANSLATION.get(str(i),text(i))
+    def german(i):
+        value=Paragraph(ps[i],None).text.strip()
+        if i==39:return '1. Einleitung'
+        if i==266:return '\n'.join(line.strip() for line in value.splitlines() if line.strip())
+        return value
     # The PDF contains deliberate covers/redactions absent from the DOCX images.
     # Flatten each visible screenshot area from that reference, never expose the
     # unmasked DOCX image assets in the public translation or its editable source.
@@ -165,180 +177,158 @@ def main():
         screenshots[number]=(pix.tobytes('png'),rect.width,rect.height)
     with tempfile.TemporaryDirectory(prefix='ihk-report-') as temp:
         folder=Path(temp)
-        # Remove the section in a working copy of the editable primary source.
-        de=Document(args.source); dps=de.element.body.xpath('.//w:p')
-        for child in list(dps[39]):
-            for tab in child.xpath('.//w:tab'):
-                tab.getparent().remove(tab)
-            for tnode in child.xpath('.//w:t'):
-                if tnode.text in ('Verwendete Hilfsmittel','50'):tnode.text=''
-        for p in dps[397:]:p.getparent().remove(p)
-        de_path=folder/'IHK_Projektarbeit_DE.docx';de.save(de_path)
-        candidate=export(de_path,folder)
-        # The source is laid out with floating images. Verify the complete retained text.
-        rendered=pymupdf.open(candidate); original=pymupdf.open(args.reference)
-        assert len(rendered)==49
-        for i in range(49):
-            expected=original[i].get_text()
-            if i==2:expected=re.sub(r'Verwendete Hilfsmittel[^\n]*\n','',expected)
-            if i==48:expected=expected[:expected.index('Verwendete Hilfsmittel')]
-            normalise=lambda t: re.sub(r'\s+','',t)
-            assert normalise(rendered[i].get_text())==normalise(expected), f'DE text shifted on page {i+1}'
-        # Preserve the reference PDF's rendering exactly outside the requested removal.
-        pdf=pymupdf.open(args.reference)
-        for i in [2,48]:
-            page=pdf[i]; rect=page.search_for('Verwendete Hilfsmittel')[0]
-            if i==2:rect=pymupdf.Rect(65,rect.y0-1,560,rect.y1+1)
-            else:rect=pymupdf.Rect(0,rect.y0-2,page.rect.width,page.rect.height)
-            page.add_redact_annot(rect,fill=(1,1,1));page.apply_redactions()
-        pdf.delete_page(49)
-        pdf.save(OUT/'IHK_Projektarbeit_DE.pdf',garbage=4,deflate=True)
+        for language,stem in [('DE','IHK_Projektarbeit_DE'),('EN','IHK_Project_Report_EN')]:
+            content=lambda i: german(i) if language=='DE' else TRANSLATION.get(str(i),text(i))
+            doc=Document()
+            section=doc.sections[0];source_section=src.sections[0]
+            section.different_first_page_header_footer=True
+            for attr in ['page_width','page_height','top_margin','bottom_margin','left_margin','right_margin']:
+                setattr(section,attr,getattr(source_section,attr))
+            normal=doc.styles['Normal'];normal.font.name='Times New Roman';normal.font.size=Pt(11)
+            normal.paragraph_format.line_spacing=1.5;normal.paragraph_format.space_after=Pt(6)
+            normal.paragraph_format.widow_control=True
+            normal.element.get_or_add_rPr().append(element('w:lang',w_val='de-DE' if language=='DE' else 'en-GB'))
+            for name,size in [('Heading 1',14),('Heading 2',12),('Heading 3',12)]:
+                s=doc.styles[name];s.font.name='Times New Roman';s.font.size=Pt(size);s.font.color.rgb=RGBColor(0,0,0)
+                s.font.bold=True;s.paragraph_format.space_before=Pt(18);s.paragraph_format.space_after=Pt(9)
+                s.paragraph_format.keep_with_next=True;s.paragraph_format.keep_together=True
+            cap=doc.styles['Caption'];cap.font.name='Times New Roman';cap.font.size=Pt(11);cap.font.italic=True;cap.font.bold=False
+            cap.font.color.rgb=RGBColor.from_string('1F4E79');cap.paragraph_format.line_spacing=1.15
+            cap.paragraph_format.space_before=Pt(6);cap.paragraph_format.space_after=Pt(16.5);cap.paragraph_format.keep_together=True
+            cap.paragraph_format.alignment=WD_ALIGN_PARAGRAPH.CENTER
+            doc.core_properties.author='Vladimir Leicht';doc.core_properties.title=content(0).replace('\n',' ')
+            doc.core_properties.language='de-DE' if language=='DE' else 'en-GB'
+            doc.core_properties.subject='IHK-Projektarbeit — Webseitenfassung' if language=='DE' else 'IHK Project Report — English translation'
 
-        doc=Document()
-        section=doc.sections[0];source_section=src.sections[0]
-        section.different_first_page_header_footer=True
-        for attr in ['page_width','page_height','top_margin','bottom_margin','left_margin','right_margin']:
-            setattr(section,attr,getattr(source_section,attr))
-        normal=doc.styles['Normal'];normal.font.name='Times New Roman';normal.font.size=Pt(11)
-        normal.paragraph_format.line_spacing=1.5;normal.paragraph_format.space_after=Pt(6)
-        normal.paragraph_format.widow_control=True
-        normal.element.get_or_add_rPr().append(element('w:lang',w_val='en-GB'))
-        for name,size in [('Heading 1',14),('Heading 2',12),('Heading 3',12)]:
-            s=doc.styles[name];s.font.name='Times New Roman';s.font.size=Pt(size);s.font.color.rgb=RGBColor(0,0,0)
-            s.font.bold=True;s.paragraph_format.space_before=Pt(18);s.paragraph_format.space_after=Pt(9)
-            s.paragraph_format.keep_with_next=True;s.paragraph_format.keep_together=True
-        cap=doc.styles['Caption'];cap.font.name='Times New Roman';cap.font.size=Pt(11);cap.font.italic=True;cap.font.bold=False
-        cap.font.color.rgb=RGBColor.from_string('1F4E79');cap.paragraph_format.line_spacing=1.15
-        cap.paragraph_format.space_before=Pt(6);cap.paragraph_format.space_after=Pt(16.5);cap.paragraph_format.keep_together=True
-        cap.paragraph_format.alignment=WD_ALIGN_PARAGRAPH.CENTER
-        doc.core_properties.author='Vladimir Leicht';doc.core_properties.title=en(0).replace('\n',' ')
-        doc.core_properties.language='en-GB';doc.core_properties.subject='IHK Project Report — English translation'
-
-        p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-        r=p.add_run(en(0));r.bold=True;r.font.size=Pt(22)
-        p=doc.add_paragraph(en(1));p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-        for r in p.runs:r.italic=True;r.font.size=Pt(12)
-        p=doc.add_paragraph(en(2));p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-        doc.add_page_break();doc.add_paragraph('Contents','Heading 1')
-        toc=[]
-        for n,i in enumerate(HEADINGS):
-            if n==24:doc.add_page_break()
-            title=en(i).split('\n')[-1] if i==266 else en(i)
-            p=doc.add_paragraph();p.paragraph_format.space_after=Pt(11)
-            p.paragraph_format.line_spacing=Pt(16);p.paragraph_format.keep_together=True
-            p.paragraph_format.tab_stops.add_tab_stop(Pt(482),WD_TAB_ALIGNMENT.RIGHT,WD_TAB_LEADER.DOTS)
-            link(p,title,f'section_{i}',colour='000000');p.add_run('\t');num=p.add_run('00');toc.append((i,title,num))
-        doc.add_page_break()
-        # Numbers refer to physical PDF pages, so readers and download viewers agree.
-        footer=section.footer.paragraphs[0];footer.alignment=WD_ALIGN_PARAGRAPH.RIGHT
-        footer.add_run()._r.append(element('w:fldChar',w_fldCharType='begin'))
-        r=footer.add_run();it=element('w:instrText');it.text=' PAGE ';r._r.append(it)
-        footer.add_run()._r.append(element('w:fldChar',w_fldCharType='end'))
-
-        seen_refs=set()
-        def paragraph(value,style=None,index=None):
-            p=doc.add_paragraph(style=style)
-            if index in HEADINGS:bookmark(p,f'section_{index}',1000+index)
-            if index and index>=372:bookmark(p,f'def_{index-371}',2000+index)
-            # Retain both glossary cross-references and the source's external links.
-            source_url=None
-            if index and index>=372:
-                h=ps[index].xpath('./w:hyperlink[@r:id]')
-                if h:source_url=src.part.rels[h[0].get(qn('r:id'))].target_ref
-            for token in re.split(r'(\[\d+\]|Source: .*?(?=\. \[Return)|\[Return to the reference in the report\])',value):
-                m=re.fullmatch(r'\[(\d+)\]',token)
-                if m:
-                    n=m.group(1)
-                    if n not in seen_refs:bookmark(p,f'ref_{n}',3000+int(n));seen_refs.add(n)
-                    link(p,token,f'def_{n}')
-                elif token.startswith('Source: ') and source_url:link(p,token,source_url,True)
-                elif token=='[Return to the reference in the report]':link(p,token,f'ref_{index-371}')
-                else:p.add_run(token)
-            return p
-
-        def picture(blob,width,height,caption=None):
             p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-            p.paragraph_format.space_before=Pt(16.5);p.paragraph_format.space_after=Pt(0)
-            p.paragraph_format.line_spacing=1;p.paragraph_format.keep_with_next=bool(caption)
-            p.paragraph_format.keep_together=True
-            scale=min(1,482/width,460/height)
-            p.add_run().add_picture(io.BytesIO(blob),width=Pt(width*scale),height=Pt(height*scale))
-            if caption:paragraph(caption,'Caption')
+            r=p.add_run(content(0));r.bold=True;r.font.size=Pt(22)
+            p=doc.add_paragraph(content(1));p.alignment=WD_ALIGN_PARAGRAPH.CENTER
+            for r in p.runs:r.italic=True;r.font.size=Pt(12)
+            p=doc.add_paragraph(content(2));p.alignment=WD_ALIGN_PARAGRAPH.CENTER
+            doc.add_page_break();doc.add_paragraph('Inhaltsverzeichnis' if language=='DE' else 'Contents','Heading 1')
+            toc=[]
+            for n,i in enumerate(HEADINGS):
+                if n==24:doc.add_page_break()
+                title=content(i).split('\n')[-1] if i==266 else content(i)
+                p=doc.add_paragraph();p.paragraph_format.space_after=Pt(11)
+                p.paragraph_format.line_spacing=Pt(16);p.paragraph_format.keep_together=True
+                p.paragraph_format.tab_stops.add_tab_stop(Pt(482),WD_TAB_ALIGNMENT.RIGHT,WD_TAB_LEADER.DOTS)
+                link(p,title,f'section_{i}',colour='000000');p.add_run('\t');num=p.add_run('00');toc.append((i,title,num))
+            doc.add_page_break()
+            # Numbers refer to physical PDF pages, so readers and download viewers agree.
+            footer=section.footer.paragraphs[0];footer.alignment=WD_ALIGN_PARAGRAPH.RIGHT
+            footer.add_run()._r.append(element('w:fldChar',w_fldCharType='begin'))
+            r=footer.add_run();it=element('w:instrText');it.text=' PAGE ';r._r.append(it)
+            footer.add_run()._r.append(element('w:fldChar',w_fldCharType='end'))
 
-        def figure(number,caption):
-            picture(*screenshots[number],caption)
+            seen_refs=set()
+            def paragraph(value,style=None,index=None):
+                p=doc.add_paragraph(style=style)
+                if index in HEADINGS:bookmark(p,f'section_{index}',1000+index)
+                if index and index>=372:
+                    bookmark(p,f'def_{index-371}',2000+index)
+                    if language=='DE':
+                        p.paragraph_format.line_spacing=1.4
+                        p.paragraph_format.space_after=Pt(5)
+                        p.paragraph_format.keep_together=True
+                # Retain both glossary cross-references and the source's external links.
+                source_url=None
+                if index and index>=372:
+                    h=ps[index].xpath('./w:hyperlink[@r:id]')
+                    if h:source_url=src.part.rels[h[0].get(qn('r:id'))].target_ref
+                for token in re.split(r'(\[\d+\]|(?:Source:|Quelle:) .*?(?=\. \[)|\[Return to the reference in the report\]|\[zurück zur Stelle im Dokument\])',value):
+                    m=re.fullmatch(r'\[(\d+)\]',token)
+                    if m:
+                        n=m.group(1)
+                        if n not in seen_refs:bookmark(p,f'ref_{n}',3000+int(n));seen_refs.add(n)
+                        link(p,token,f'def_{n}')
+                    elif token.startswith(('Source: ','Quelle: ')) and source_url:link(p,token,source_url,True)
+                    elif token in ('[Return to the reference in the report]','[zurück zur Stelle im Dokument]'):link(p,token,f'ref_{index-371}')
+                    else:p.add_run(token)
+                return p
 
-        # Caption 23 intentionally repeats the same source screenshot as caption 21.
-        figure_map=dict(zip(CAPTIONS,range(1,43)))
-        assert len(figure_map)==42
-        skip=set(range(274,301))
-        for i in range(39,397):
-            if i in skip or not text(i).strip():continue
-            if i==88:
-                picture(chart('cost'),482,256,en(i));continue
-            if i in figure_map:figure(figure_map[i],en(i));continue
-            if i==266:
-                # image43 is fully obscured by image45 in the reference PDF.
-                # Use the visible completed rollout evidence, followed by the client list.
-                a,b,h=en(i).split('\n');figure(43,a);figure(44,b)
-                paragraph(h,'Heading 1',i);continue
-            if i==302:picture(chart('time'),482,181,en(i));continue
-            if i==342:picture(chart('process'),482,104)
-            if i==271:
-                paragraph(en(i),'Heading 2',i);continue
-            if i==273:
-                paragraph(en(i),index=i)
-                table=doc.add_table(rows=0,cols=3);table.autofit=False
-                widths=[171,242,69]
-                for col,width in zip(table.columns,widths):col.width=Pt(width)
-                for row_idx in range(9):
-                    cells=table.add_row().cells
-                    for col,cell in enumerate(cells):
-                        cell.width=Pt(widths[col]);j=274+row_idx*3+col
-                        cell.text=en(j)
-                        for p in cell.paragraphs:
-                            p.paragraph_format.line_spacing=1.15;p.paragraph_format.space_after=Pt(7)
-                            if row_idx==0:
-                                for r in p.runs:r.bold=True
-                    table.rows[-1]._tr.get_or_add_trPr().append(element('w:cantSplit'))
-                    if row_idx==0:table.rows[-1]._tr.get_or_add_trPr().append(element('w:tblHeader'))
-                continue
-            value=en(i)
-            if i in HEADINGS:
-                depth=len(value.split()[0].rstrip('.').split('.')) if not value.startswith('Appendix') else 1
-                paragraph(value,f'Heading {min(3,depth)}',i)
-            elif i in [342,347,352,357,362,367]:paragraph(value,'Heading 3',i)
-            elif 316<=i<=337:
-                p=paragraph(value,'List Bullet' if i in [316,319,323,327,332,335] else 'List Bullet 2',i)
-                p.paragraph_format.space_after=Pt(2)
-                if i in [316,319,323,327,332,335]:p.paragraph_format.keep_with_next=True
-            elif i in [125,126,127,255,256,257] or 343<=i<=370:
-                paragraph(value,'List Bullet',i)
-            else:paragraph(value,index=i)
+            def picture(blob,width,height,caption=None):
+                p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
+                p.paragraph_format.space_before=Pt(16.5);p.paragraph_format.space_after=Pt(0)
+                p.paragraph_format.line_spacing=1;p.paragraph_format.keep_with_next=bool(caption)
+                p.paragraph_format.keep_together=True
+                scale=min(1,482/width,460/height)
+                p.add_run().add_picture(io.BytesIO(blob),width=Pt(width*scale),height=Pt(height*scale))
+                if caption:paragraph(caption,'Caption')
 
-        path=folder/'IHK_Project_Report_EN.docx'
-        # Iterative export resolves all TOC entries against the final pagination.
-        old=None
-        for iteration in range(5):
-            doc.save(path);pdfpath=export(path,folder);pdf=pymupdf.open(pdfpath)
-            assert '1. Introduction' in pdf[3].get_text(), 'Contents must occupy exactly two pages'
-            found={}
-            for page_no,page in enumerate(pdf):
-                if page_no<3:continue
-                flat=re.sub(r'\s+','',page.get_text())
-                for i,title,_ in toc:
-                    if re.sub(r'\s+','',title) in flat and i not in found:found[i]=page_no+1
-            assert len(found)==len(toc),f'Headings not found: {set(HEADINGS)-found.keys()}'
-            for i,_,r in toc:r.text=str(found[i])
-            if found==old:break
-            old=found
-        else:raise RuntimeError('TOC pagination did not converge')
-        (OUT/'IHK_Project_Report_EN.pdf').write_bytes(pdfpath.read_bytes())
-        # Only the English editable source contains the flattened reference covers.
-        # Never publish the working German DOCX: its underlying images are unmasked.
-        editable=ROOT/'Projektarbeit/Webfassungen';editable.mkdir(parents=True,exist_ok=True)
-        (editable/path.name).write_bytes(path.read_bytes())
-        print(json.dumps({'de_pages':49,'en_pages':len(pdf),'toc':found},indent=2))
+            def figure(number,caption):
+                picture(*screenshots[number],caption)
+
+            # Caption 23 intentionally repeats the same source screenshot as caption 21.
+            figure_map=dict(zip(CAPTIONS,range(1,43)))
+            assert len(figure_map)==42
+            skip=set(range(274,301))
+            for i in range(39,397):
+                if i in skip or not text(i).strip():continue
+                if i==88:
+                    picture(chart('cost',language,args.source),482,263 if language=='DE' else 256,content(i));continue
+                if i in figure_map:figure(figure_map[i],content(i));continue
+                if i==266:
+                    # image43 is fully obscured by image45 in the reference PDF.
+                    # Use the visible completed rollout evidence, followed by the client list.
+                    a,b,h=content(i).split('\n');figure(43,a);figure(44,b)
+                    paragraph(h,'Heading 1',i);continue
+                if i==302:picture(chart('time',language,args.source),482,181,content(i));continue
+                if i==342:picture(chart('process',language,args.source),482,109 if language=='DE' else 104)
+                if i==271:
+                    paragraph(content(i),'Heading 2',i);continue
+                if i==273:
+                    paragraph(content(i),index=i)
+                    table=doc.add_table(rows=0,cols=3);table.autofit=False
+                    widths=[171,242,69]
+                    for col,width in zip(table.columns,widths):col.width=Pt(width)
+                    for row_idx in range(9):
+                        cells=table.add_row().cells
+                        for col,cell in enumerate(cells):
+                            cell.width=Pt(widths[col]);j=274+row_idx*3+col
+                            cell.text=content(j)
+                            for p in cell.paragraphs:
+                                p.paragraph_format.line_spacing=1.15;p.paragraph_format.space_after=Pt(7)
+                                if row_idx==0:
+                                    for r in p.runs:r.bold=True
+                        table.rows[-1]._tr.get_or_add_trPr().append(element('w:cantSplit'))
+                        if row_idx==0:table.rows[-1]._tr.get_or_add_trPr().append(element('w:tblHeader'))
+                    continue
+                value=content(i)
+                if i in HEADINGS:
+                    depth=len(value.split()[0].rstrip('.').split('.')) if not value.startswith('Appendix') else 1
+                    paragraph(value,f'Heading {min(3,depth)}',i)
+                elif i in [342,347,352,357,362,367]:paragraph(value,'Heading 3',i)
+                elif 316<=i<=337:
+                    p=paragraph(value,'List Bullet' if i in [316,319,323,327,332,335] else 'List Bullet 2',i)
+                    p.paragraph_format.space_after=Pt(2)
+                    if i in [316,319,323,327,332,335]:p.paragraph_format.keep_with_next=True
+                elif i in [125,126,127,255,256,257] or 343<=i<=370:
+                    paragraph(value,'List Bullet',i)
+                else:paragraph(value,index=i)
+
+            path=folder/(stem+'.docx')
+            # Iterative export resolves all TOC entries against the final pagination.
+            old=None
+            for iteration in range(5):
+                doc.save(path);pdfpath=export(path,folder);pdf=pymupdf.open(pdfpath)
+                assert content(39) in pdf[3].get_text(), 'Contents must occupy exactly two pages'
+                found={}
+                for page_no,page in enumerate(pdf):
+                    if page_no<3:continue
+                    flat=re.sub(r'\s+','',page.get_text())
+                    for i,title,_ in toc:
+                        if re.sub(r'\s+','',title) in flat and i not in found:found[i]=page_no+1
+                assert len(found)==len(toc),f'Headings not found: {set(HEADINGS)-found.keys()}'
+                for i,_,r in toc:r.text=str(found[i])
+                if found==old:break
+                old=found
+            else:raise RuntimeError('TOC pagination did not converge')
+            (OUT/(stem+'.pdf')).write_bytes(pdfpath.read_bytes())
+            # Both rebuilt editable sources contain only the flattened, masked screenshots.
+            editable=ROOT/'Projektarbeit/Webfassungen';editable.mkdir(parents=True,exist_ok=True)
+            (editable/path.name).write_bytes(path.read_bytes())
+            print(json.dumps({'language':language,'pages':len(pdf),'toc':found},indent=2))
 
 
 if __name__=='__main__':main()
