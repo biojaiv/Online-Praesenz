@@ -17,6 +17,16 @@ try {
     await page.goto(`${base}/#home`);
     await page.waitForFunction(() => window.__stage?.cards.documentPickables.length === 2 && window.__stage.cards.documentPickables.every((mesh) => mesh.visible && mesh.material.uniforms.uMap.value));
     await page.waitForFunction(() => document.querySelector('#boot').classList.contains('is-done'));
+    await page.waitForTimeout(1200);
+    const effects = await page.evaluate(() => {
+      let jets = 0, tallVolumes = 0;
+      window.__stage.cards.group.traverse((node) => {
+        if (node.userData.kind === 'ring-jet') jets += 1;
+        if (node.name === 'pedestal-hologram-volume' || node.name === 'pedestal-hologram-particles') tallVolumes += 1;
+      });
+      return { jets, tallVolumes };
+    });
+    assert.deepEqual(effects, { jets: 3, tallVolumes: 0 });
     await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-home.png` });
     // Click the real world-space document above the left pedestal.
     const centre = await page.evaluate(() => {
@@ -28,6 +38,11 @@ try {
     });
     await page.mouse.click(centre.x, centre.y);
     await page.waitForURL('**/#abschluss');
+    await page.locator('.ihk-project:not([hidden])').waitFor();
+    assert.equal(await page.locator('video[preload="none"]').count(), 1);
+    assert.equal(await page.locator('.ihk-downloads a[download]').count(), 2);
+    await page.locator('.ihk-reader-toggle').click();
+    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.ihk-project').isVisible(), false);
     await page.waitForTimeout(2100);
     const canvas = await page.locator('#scene').boundingBox();
@@ -63,6 +78,9 @@ try {
     await page.keyboard.press('Escape');
     await page.locator('.cv-reader').waitFor({ state: 'hidden' });
     await page.locator('.nav__link[data-target="abschluss"]').click();
+    await page.locator('.ihk-project:not([hidden])').waitFor();
+    await page.locator('.ihk-reader-toggle').click();
+    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     for (const language of ['de', 'en']) {
       if (language === 'en') await page.locator('#language-switch').click();
       await page.waitForFunction(() => window.__stage.cards.documentPickables.every((mesh) => mesh.visible && mesh.material.uniforms.uMap.value));
@@ -78,6 +96,10 @@ try {
     }
     // A fresh deep link must survive asynchronous image loading.
     await page.goto(`${base}/#abschluss/clients`);
+    await page.reload();
+    await page.locator('.ihk-project:not([hidden])').waitFor();
+    await page.locator('.ihk-reader-toggle').click();
+    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     await page.waitForFunction(() => {
       const mesh = window.__stage?.cards.documentPickables.find((item) => item.userData.key === 'abschluss');
       return mesh?.visible && Math.abs(mesh.material.uniforms.uOffset.value - 0.6) < 0.001;

@@ -394,7 +394,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   toggle.addEventListener('click', () => setOpen(!open));
 
   function onKeydown(event) {
-    if (event.key !== 'Escape' || !open) return;
+    if (event.key !== 'Escape' || !open || document.querySelector('.nav__group.is-open')) return;
     event.stopPropagation();
     event.preventDefault();
     setOpen(false);

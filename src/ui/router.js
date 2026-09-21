@@ -11,6 +11,25 @@ import { playSound } from './audio.js';
 export function createRouter({ onEnter }) {
   const nav = document.getElementById('nav');
   const navLinks = [...nav.querySelectorAll('.nav__link')];
+  const groups = [...nav.querySelectorAll('.nav__group')];
+  let openGroup = null;
+
+  function setOpenGroup(next) {
+    openGroup = next;
+    for (const group of groups) {
+      const expanded = group === next;
+      group.classList.toggle('is-open', expanded);
+      group.querySelector('.nav__link').setAttribute('aria-expanded', String(expanded));
+      group.querySelector('.nav__sub').inert = !expanded;
+    }
+  }
+
+  for (const group of groups) {
+    const button = group.querySelector('.nav__link');
+    const submenu = group.querySelector('.nav__sub');
+    submenu.id = `nav-sub-${button.dataset.target}`;
+    button.setAttribute('aria-controls', submenu.id);
+  }
 
   function normalise(raw) {
     return (raw || '').replace(/^#/, '').trim() || 'home';
@@ -25,6 +44,7 @@ export function createRouter({ onEnter }) {
 
   function go(target, push = true) {
     const t = normalise(target);
+    setOpenGroup(null);
     current = t;
     markActive(t);
     if (push && normalise(location.hash) !== t) {
@@ -37,7 +57,52 @@ export function createRouter({ onEnter }) {
   nav.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-target]');
     if (!btn) return;
+    const group = btn.closest('.nav__group');
+    if (btn.classList.contains('nav__link') && group) {
+      if (openGroup === group) {
+        setOpenGroup(null);
+        return;
+      }
+      go(btn.dataset.target);
+      setOpenGroup(group);
+      return;
+    }
     go(btn.dataset.target);
+  });
+
+  // Outside activation closes the disclosure without changing the route.
+  document.addEventListener('click', (event) => {
+    if (openGroup && !openGroup.contains(event.target)) setOpenGroup(null);
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !openGroup) return;
+    const button = openGroup.querySelector('.nav__link');
+    setOpenGroup(null);
+    button.focus({ preventScroll: true });
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  nav.addEventListener('keydown', (event) => {
+    const group = event.target.closest('.nav__group');
+    if (!group) return;
+    const button = group.querySelector('.nav__link');
+    const items = [...group.querySelectorAll('.nav__sub button')];
+    if (event.target === button && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+      event.preventDefault();
+      setOpenGroup(group);
+      items[event.key === 'ArrowDown' ? 0 : items.length - 1]?.focus();
+    } else if (items.includes(event.target) && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const index = items.indexOf(event.target);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[next].focus();
+    }
+    if (event.key === 'Tab') requestAnimationFrame(() => {
+      if (openGroup && !openGroup.contains(document.activeElement)) setOpenGroup(null);
+    });
   });
 
   document.querySelector('.head__brand')?.addEventListener('click', (e) => {
@@ -61,14 +126,6 @@ export function createRouter({ onEnter }) {
     // Auch die Fluchttaste faehrt aus dem Sockel heraus und klingt so.
     if (current !== 'home') playSound('release');
     go('home');
-  });
-
-  // Tastaturbedienung der Untermenues: Fokus oeffnet die zugehoerige Gruppe.
-  navLinks.forEach((el) => {
-    el.addEventListener('focus', () => {
-      for (const group of nav.querySelectorAll('.nav__group')) group.classList.remove('is-open');
-      el.closest('.nav__group')?.classList.add('is-open');
-    });
   });
 
   go(location.hash, false);

@@ -1,6 +1,5 @@
 // HOLOGRAM_FOREGROUND_ENHANCEMENTS_V5_5_2
 import { createPedestalEnergyField } from './pedestalEnergyField.js';
-import { createHologramField } from './hologramField.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const GUIDE_DEMO_STEP = 1120;
@@ -318,13 +317,7 @@ export function createExperienceEnhancements({
       reduced,
     })
   ));
-  const holograms = safeField('Pedestal hologram volume', () => (
-    createHologramField({
-      cards: stage.cards,
-      renderer: stage.renderer,
-      reduced,
-    })
-  ));
+  // The short ring jets live in cards.js. Do not add a tall particle volume.
   const calibrationMarker = safeField(
     'Header calibration marker',
     createHeaderCalibrationMarker,
@@ -334,7 +327,6 @@ export function createExperienceEnhancements({
     || window.devicePixelRatio
     || 1;
   energy.setPixelRatio(pixelRatio);
-  holograms.setPixelRatio(pixelRatio);
 
   let route = getRoute();
   let readerOpen = isReaderOpen();
@@ -365,10 +357,8 @@ export function createExperienceEnhancements({
     if (nextCompact !== compact) {
       compact = nextCompact;
       energy.setCompact?.(compact);
-      holograms.setCompact(compact);
     }
     energy.refreshAnchors();
-    holograms.refreshAnchors();
     calibrationMarker.sync();
   }
 
@@ -424,17 +414,13 @@ export function createExperienceEnhancements({
     if (Math.abs(nextPixelRatio - pixelRatio) > 0.01) {
       pixelRatio = nextPixelRatio;
       energy.setPixelRatio(pixelRatio);
-      holograms.setPixelRatio(pixelRatio);
     }
     energy.update(elapsed, delta);
-    holograms.update(elapsed, delta);
   }
 
   const initialRoot = String(route || 'home').split('/')[0] || 'home';
   energy.setRoute(initialRoot);
   energy.setReaderOpen(readerOpen);
-  holograms.setRoute(initialRoot);
-  holograms.setReaderOpen(readerOpen);
   scheduleQualitySync();
   if (isResumeActive()) guideDirector.startDemo();
   raf = requestAnimationFrame(frame);
@@ -445,7 +431,6 @@ export function createExperienceEnhancements({
       route = nextRoute || 'home';
       const root = String(route).split('/')[0] || 'home';
       energy.setRoute(root);
-      holograms.setRoute(root);
       calibrationMarker.sync();
       clearPrompt();
       if (isResumeActive()) guideDirector.startDemo();
@@ -456,7 +441,6 @@ export function createExperienceEnhancements({
       if (disposed) return;
       readerOpen = Boolean(value);
       energy.setReaderOpen(readerOpen);
-      holograms.setReaderOpen(readerOpen);
       if (isResumeActive()) guideDirector.startDemo();
       else guideDirector.cancelDemo();
     },
@@ -465,7 +449,6 @@ export function createExperienceEnhancements({
       if (disposed) return;
       clearPrompt();
       energy.pulseAll(2200);
-      holograms.pulseAll(2200);
       frameElement?.classList.add('is-section-prompt');
       const sequence = ['abschluss', 'projekte', 'lebenslauf'];
       sequence.forEach((key, index) => {
@@ -494,7 +477,6 @@ export function createExperienceEnhancements({
         coarseQuery?.removeListener?.(scheduleQualitySync);
       }
       calibrationMarker.dispose();
-      holograms.dispose();
       energy.dispose();
     },
   };

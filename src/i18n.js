@@ -20,6 +20,7 @@ const MESSAGES = Object.freeze({
     'nav.education': 'Education',
     'nav.skills': 'Skills',
     'nav.contact': 'Contact',
+    'scene.label': 'Interactive 3D portfolio',
     'boot.initialising': 'Initialising',
     'intro.skip': 'Skip intro',
     'card.abschluss.title': 'Final Project',
@@ -113,6 +114,7 @@ const MESSAGES = Object.freeze({
     'nav.education': 'Bildungsweg',
     'nav.skills': 'Fähigkeiten',
     'nav.contact': 'Kontakt',
+    'scene.label': 'Interaktives 3D-Portfolio',
     'boot.initialising': 'Initialisiere',
     'intro.skip': 'Intro überspringen',
     'card.abschluss.title': 'Abschlussprojekt',
@@ -245,6 +247,7 @@ export function applyStaticTranslations() {
   for (const element of document.querySelectorAll('[data-i18n]')) {
     element.textContent = t(element.dataset.i18n);
   }
+  document.getElementById('scene')?.setAttribute('aria-label', t('scene.label'));
 
   const switcher = document.getElementById('language-switch');
   if (switcher) {

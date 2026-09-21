@@ -614,6 +614,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function onWheel(event) {
     if (!isDocumentKey(opened) || readerOpen) return;
+    // Keyboard controls follow the document after interacting with its canvas.
+    canvas.focus({ preventScroll: true });
     const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
       ? 18
       : event.deltaMode === WheelEvent.DOM_DELTA_PAGE

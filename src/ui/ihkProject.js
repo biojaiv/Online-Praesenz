@@ -80,7 +80,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   const clickToggle = () => setOpen(!open);
   toggle.addEventListener('click', clickToggle);
   function escapeReader(event) {
-    if (event.key !== 'Escape' || !open) return;
+    if (event.key !== 'Escape' || !open || document.querySelector('.nav__group.is-open')) return;
     event.preventDefault();
     event.stopPropagation();
     setOpen(false);
@@ -225,6 +225,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       overlay.style.setProperty('--cv-doc-height', `${Math.round(rect.height)}px`);
     },
     setRoute(nextRoute) {
+      const entering = route.split('/')[0] !== 'abschluss';
       route = nextRoute;
       const [root, child] = route.split('/');
       const available = root === 'abschluss';
@@ -232,9 +233,10 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       refreshControls();
       if (!available) { setOpen(false); return; }
       const next = SECTIONS.includes(child) ? child : 'overview';
-      if (section === next) return;
+      const changed = section !== next;
       section = next;
-      if (open && !overlay.hidden) render({ focus: true });
+      if (entering) setOpen(true);
+      else if (changed && open && !overlay.hidden) render({ focus: true });
     },
     dispose() {
       transition += 1;

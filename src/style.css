@@ -98,7 +98,7 @@ body {
 
 .head {
   position: relative;
-  z-index: 4;
+  z-index: 5; /* Submenus must remain above the stage's reading overlays. */
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -464,7 +464,8 @@ body {
   opacity: 0;
   transform: translateY(-4px);
   pointer-events: none;
-  transition: opacity 0.5s var(--ease-ritual), transform 0.5s var(--ease-ritual);
+  visibility: hidden;
+  transition: opacity 0.5s var(--ease-ritual), transform 0.5s var(--ease-ritual), visibility 0s 0.5s;
 }
 /* Verbindungsstrich zwischen Instrument und Tafel. */
 .nav__sub::before {
@@ -476,12 +477,12 @@ body {
   height: var(--s-2);
   background: var(--line-hot);
 }
-.nav__group:hover .nav__sub,
-.nav__group.is-open .nav__sub,
-.nav__group:focus-within .nav__sub {
+.nav__group.is-open .nav__sub {
   opacity: 1;
   transform: none;
   pointer-events: auto;
+  visibility: visible;
+  transition: opacity 0.5s var(--ease-ritual), transform 0.5s var(--ease-ritual);
 }
 
 .nav__sub button {
@@ -1651,7 +1652,9 @@ body {
   .head { flex-direction: column; gap: var(--s-4); }
   .nav { width: 100%; justify-content: space-between; gap: var(--s-4); }
   .nav__group { text-align: left; }
-  .nav__sub { display: none; }
+  .nav__sub { align-items: stretch; }
+  .nav__group:first-child .nav__sub { left: 0; right: auto; }
+  .nav__sub button { min-height: 44px; text-align: left; }
   .head { padding: var(--s-4) var(--s-5) var(--s-3); }
   .foot { padding-inline: var(--s-5); }
 }
@@ -1680,6 +1683,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .nav__sub { transition-delay: 0s; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
