@@ -1,0 +1,88 @@
+/* The project reader shares the existing stage, palette and type system. */
+.ihk-project {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 8px 5%;
+  background: rgb(3 6 13 / 0.64);
+  animation: cv-veil 0.45s var(--ease-ritual) both;
+}
+.ihk-project[hidden] { display: none; }
+.ihk-panel {
+  width: min(1120px, 100%);
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid rgb(var(--amber-rgb) / 0.35);
+  background: linear-gradient(135deg, rgb(10 20 34 / 0.98), rgb(3 6 13 / 0.97));
+  box-shadow: 0 15px 70px rgb(0 0 0 / 0.45), inset 0 1px rgb(var(--amber-rgb) / 0.15);
+}
+.ihk-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 13px; padding: 5px 21px; }
+.ihk-toolbar p { color: var(--amber); font: 500 12px/1.4 var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; }
+.ihk-close { flex: 0 0 44px; width: 44px; height: 44px; border: 0; color: var(--ink); background: transparent; cursor: pointer; font-size: 26px; }
+.ihk-nav { display: flex; flex-wrap: wrap; gap: 3px; padding: 0 21px 8px; border-bottom: 1px solid var(--line); }
+.ihk-nav a { display: grid; place-items: center; min-height: 44px; padding: 8px 17px; color: var(--ink-dim); font: 500 14px/1.3 var(--font-display); letter-spacing: 0.07em; text-decoration: none; text-transform: uppercase; border-bottom: 1px solid transparent; }
+.ihk-nav a[aria-current] { color: var(--amber); border-color: var(--amber); background: rgb(var(--amber-rgb) / 0.06); }
+.ihk-nav a:hover, .ihk-close:hover { color: var(--amber); }
+.ihk-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 26px 34px 34px; scrollbar-width: thin; scrollbar-color: var(--amber-dim) var(--deep); }
+.ihk-project :is(a, button, [tabindex]):focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; }
+.ihk-heading { margin-bottom: 21px; }
+.ihk-scope { display: inline-block; margin-bottom: 9px; color: var(--amber); font: 500 11px/1.5 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.ihk-project h2 { max-width: 850px; color: var(--ink); font: 500 clamp(25px, 2.2vw, 36px)/1.12 var(--font-display); }
+.ihk-project #ihk-title:focus { outline: none; }
+.ihk-project h3 { color: var(--amber); font: 500 20px/1.25 var(--font-display); margin-bottom: 12px; }
+.ihk-project .ihk-subtitle { margin-top: 8px; color: #9db1c4; font-size: 15px; }
+.ihk-body p { font-size: 14px; line-height: 1.65; color: #a9bacb; }
+.ihk-body p + p { margin-top: 12px; }
+.ihk-body .ihk-lead { color: var(--ink); font-size: 15px; }
+.ihk-summary { display: grid; grid-template-columns: 1.3fr 1fr; gap: 34px; }
+.ihk-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 21px; align-content: start; }
+.ihk-metrics div { padding: 0 0 12px; border-bottom: 1px solid var(--line); }
+.ihk-metrics dt { color: var(--amber); font: 500 30px/1.1 var(--font-display); margin-bottom: 6px; }
+.ihk-metrics dd { font-size: 12px; line-height: 1.45; color: #a9bacb; }
+.ihk-body .ihk-result { margin: 21px 0; border-left: 2px solid var(--amber-dim); padding: 3px 0 3px 15px; font-size: 13px; }
+.ihk-tech { padding-bottom: 25px; }
+.ihk-tech ul { display: flex; flex-wrap: wrap; gap: 7px; list-style: none; }
+.ihk-tech li { padding: 5px 9px; border: 1px solid var(--line); background: rgb(120 191 255 / 0.03); font-size: 11px; color: #b2c4d5; }
+.ihk-media { display: grid; grid-template-columns: 1.6fr 1fr; gap: 26px; padding-top: 23px; border-top: 1px solid var(--line); }
+.ihk-media > section { min-width: 0; }
+.ihk-media video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--void); border: 1px solid var(--line); }
+.ihk-body .ihk-note { font-size: 11px; margin-top: 8px; }
+.ihk-downloads a { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; margin-top: 12px; padding: 12px; border: 1px solid rgb(var(--amber-rgb) / 0.4); color: var(--ink); font-size: 13px; line-height: 1.4; text-decoration: none; }
+.ihk-downloads a:hover { background: rgb(var(--amber-rgb) / 0.08); border-color: var(--amber); }
+.ihk-downloads a span { color: var(--amber); font-size: 20px; }
+.ihk-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 21px; margin-top: 26px; }
+.ihk-details section { border-top: 1px solid rgb(var(--amber-rgb) / 0.4); padding-top: 17px; }
+.ihk-step { display: block; margin-bottom: 13px; color: var(--amber-dim); font: 300 30px/1 var(--font-display); }
+.ihk-return { display: inline-block; min-height: 44px; padding: 15px 0; margin-top: 21px; color: var(--amber); font-size: 14px; text-decoration: none; }
+@media (max-width: 900px) {
+  .ihk-project { padding: 5px 13px; }
+  .ihk-body { padding: 21px; }
+  .ihk-summary { gap: 21px; }
+  .ihk-details { grid-template-columns: 1fr; gap: 17px; }
+  .ihk-step { float: left; margin: 0 13px 0 0; }
+}
+@media (max-width: 600px) {
+  .frame.is-ihk-open .head__brand { max-width: 100%; grid-template-columns: auto minmax(0, 1fr); }
+  .frame.is-ihk-open .head__role { white-space: normal; line-height: 1.4; }
+  .foot[data-section="abschluss"] { flex-direction: column; align-items: stretch; gap: 7px; padding-block: 8px; }
+  .foot[data-section="abschluss"] .foot__crumb { max-width: 100%; align-self: flex-end; flex-wrap: wrap; white-space: normal; overflow: visible; row-gap: 5px; }
+  .ihk-project { padding: 3px 5px; }
+  .ihk-toolbar { padding: 0 12px; }
+  .ihk-toolbar p { font-size: 10px; letter-spacing: 0.09em; }
+  .ihk-nav { padding: 0 5px 5px; gap: 0; }
+  .ihk-nav a { flex: 1 1 auto; padding: 8px 7px; font-size: 12px; }
+  .ihk-body { padding: 18px 16px 26px; }
+  .ihk-project h2 { font-size: 27px; }
+  .ihk-summary, .ihk-media { grid-template-columns: 1fr; gap: 21px; }
+  .ihk-metrics { gap: 13px; }
+  .ihk-body p { font-size: 13px; }
+  .ihk-body .ihk-lead { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ihk-project { animation: none; }
+}

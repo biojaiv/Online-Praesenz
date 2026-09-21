@@ -1,3 +1,5 @@
+import { ihkMessages } from './data/ihk.messages.js';
+
 const STORAGE_KEY = 'vl-language';
 const SESSION_STORAGE_KEY = 'vl-language-session';
 const DEFAULT_LANGUAGE = 'en';
@@ -7,6 +9,7 @@ let currentLanguage = null;
 
 const MESSAGES = Object.freeze({
   en: Object.freeze({
+    ...ihkMessages.en,
     'meta.title': 'Vladimir Leicht — Information Technology Specialist - Systems Integration',
     'meta.description': 'Portfolio of Vladimir Leicht, Information Technology Specialist - Systems Integration. Final project, private IT projects and CV.',
     'brand.role': 'Information Technology Specialist - Systems Integration',
@@ -99,6 +102,7 @@ const MESSAGES = Object.freeze({
     'card.cv.subtitle': 'Employment History, Skills, Contact',
   }),
   de: Object.freeze({
+    ...ihkMessages.de,
     'meta.title': 'Vladimir Leicht — Fachinformatiker für Systemintegration',
     'meta.description': 'Portfolio von Vladimir Leicht, Fachinformatiker für Systemintegration. Abschlussprojekt, private IT-Projekte und Lebenslauf.',
     'brand.role': 'Fachinformatiker für Systemintegration',

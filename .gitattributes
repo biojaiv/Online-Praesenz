@@ -1,0 +1,5 @@
+# Preserve generated document and media bytes on every checkout.
+public/ihk/*.pdf binary
+public/ihk/*.mp4 binary
+public/ihk/*.webp binary
+Projektarbeit/Webfassungen/*.docx binary

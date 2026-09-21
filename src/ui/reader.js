@@ -253,6 +253,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   let data = activeData();
   let open = false;
   let switching = false;
+  let requestedOpen = false;
   let lastFocus = null;
 
   function applyChromeTranslations() {
@@ -315,6 +316,8 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
 
   async function setOpen(next) {
     const value = Boolean(next) && route.split('/')[0] === ROOT;
+    // A route change during the opening animation must still close the reader.
+    requestedOpen = value;
     if (value === open || switching) return;
     switching = true;
     open = value;
@@ -327,7 +330,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
       if (open) {
         lastFocus = document.activeElement;
         await onTransition?.(true);
-        if (!open) return;
+        if (!open || route.split('/')[0] !== ROOT) return;
         article.classList.remove('is-fading');
         panel.classList.remove('is-fading');
         article.classList.add('is-emerging');
@@ -340,6 +343,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
         await afterAnimation(article, 720);
         article.classList.remove('is-emerging');
       } else {
+        const restoreFocus = panel.contains(document.activeElement);
         article.classList.remove('is-emerging');
         article.classList.add('is-fading');
         panel.classList.add('is-fading');
@@ -350,15 +354,16 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
         container.prepend(toggle);
         onOpenChange?.(false);
         onTransition?.(false);
-        if (lastFocus instanceof HTMLElement) {
+        if (restoreFocus && route.split('/')[0] === ROOT && lastFocus instanceof HTMLElement) {
           lastFocus.focus({ preventScroll: true });
-          lastFocus = null;
         }
+        lastFocus = null;
       }
     } finally {
       switching = false;
       toggle.disabled = false;
       applyChromeTranslations();
+      if (requestedOpen !== open) await setOpen(requestedOpen);
     }
   }
 

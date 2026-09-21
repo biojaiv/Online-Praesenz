@@ -1035,8 +1035,8 @@ export function createCards({ renderer, reduced = false } = {}) {
     // Jeder Sockel traegt denselben Partikelstrahl. Er tritt ausschliesslich
     // aus dem weissen Ring der Oberflaeche aus.
     const ringJet = makeRingJet(time, { originY: BASE_TOP + 0.04 });
-    // Die beiden noch unfertigen Bereiche kuendigen sich selbst an.
-    const comingSoon = isResume ? null : makeComingSoon(def.accent, maxAnisotropy);
+    // Only the private projects section still uses the coming-soon teaser.
+    const comingSoon = def.key === 'projekte' ? makeComingSoon(def.accent, maxAnisotropy) : null;
     const label = makeCardLabel(def, maxAnisotropy);
     label.setOrigin(BASE_TOP);
     const resumeFrame = isResume

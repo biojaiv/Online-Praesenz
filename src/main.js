@@ -1,6 +1,7 @@
 import './style.css';
 import './effects.css';
 import './experienceEnhancements.css';
+import './ihkProject.css';
 import { applyStaticTranslations, onLanguageChange, setLanguage, t } from './i18n.js';
 import { createStage } from './scene/stage.js';
 import { createExperienceEnhancements } from './scene/experienceEnhancements.js';
@@ -10,6 +11,7 @@ import { shouldPlayIntro, playIntro } from './ui/intro.js';
 import { startBrandGlitch } from './ui/glitch.js';
 import { startHeaderSymbols } from './ui/headerSymbol.js';
 import { createReader } from './ui/reader.js';
+import { createIhkProject } from './ui/ihkProject.js';
 import { createDownloadButton } from './ui/download.js';
 import { getExplored, onExploredChange } from './state/explored.js';
 import { primeSounds, playSound } from './ui/audio.js';
@@ -298,6 +300,11 @@ const download = createDownloadButton({ container: stageEl });
 
 const unsubscribeExplored = onExploredChange(() => stage?.setExplored(getExplored()));
 
+const ihkProject = createIhkProject({
+  container: stageEl,
+  onNavigate: (target) => router.go(target),
+});
+
 const router = createRouter({
   onEnter(target) {
     const root = target.split('/')[0];
@@ -311,6 +318,7 @@ const router = createRouter({
     stage?.setRoute(target);
     stage?.setExplored(getExplored());
     reader?.setRoute(target);
+    ihkProject.setRoute(target);
     download?.setVisible(root === 'lebenslauf');
 
     currentRoute = target;
@@ -471,6 +479,7 @@ if (import.meta.hot) {
     window.clearTimeout(enhancementTimer);
     enhancements?.dispose();
     reader?.dispose();
+    ihkProject.dispose();
     download?.dispose();
     stage?.dispose();
   });
