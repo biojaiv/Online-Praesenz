@@ -11,7 +11,8 @@
 }
 .ihk-project[hidden] { display: none; }
 .ihk-panel { min-width: 0; }
-.ihk-project :is(a, button, [tabindex]):focus-visible { outline: 1px solid var(--cyan); outline-offset: -3px; }
+.ihk-project :is(a, button, video, [tabindex]):focus-visible,
+.ihk-project video:focus-within { outline: 1px solid var(--cyan); outline-offset: -3px; }
 .ihk-project #ihk-title:focus { outline: none; }
 .ihk-heading { align-items: start; }
 .ihk-heading h2 { overflow-wrap: anywhere; }
@@ -35,6 +36,7 @@
 .ihk-media h3 { margin-bottom: 16px; color: #dcecf4; font: 500 20px/1.2 var(--font-display); letter-spacing: 0.07em; text-transform: uppercase; }
 .ihk-tech .cv-signature__tools { width: 100%; margin-left: 0; }
 .ihk-media { display: grid; gap: 32px; margin-top: 32px; }
+.ihk-media--lead { margin-top: 0; margin-bottom: 32px; }
 .ihk-media > section { min-width: 0; }
 .ihk-media video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--void); border: 1px solid rgb(var(--fiber-blue-rgb) / 0.2); }
 .ihk-note { margin-top: 10px; color: #7192a8; font-size: 11px; line-height: 1.5; }

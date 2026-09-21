@@ -1,6 +1,6 @@
 # IHK-Projektintegration · 21.09.2026
 
-Aktuelle Präsentationskorrektur (gekürzte Inhalte, Symbole, Zoom zuerst, Film zuletzt): [IHK im Lebenslauf-Stil](ihk-cv-presentation-2026-09-21.md). Die folgenden Angaben dokumentieren auch die vorausgegangenen Integrationsstände.
+Aktueller Stand: [visueller Netzwerkfilm vor dem Projekttext](ihk-network-film-2026-09-21.md), aufbauend auf [IHK im Lebenslauf-Stil](ihk-cv-presentation-2026-09-21.md). Die folgenden Angaben dokumentieren auch die vorausgegangenen Integrationsstände.
 
 ## Ausgangsstand und Quellen
 

@@ -104,6 +104,19 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     video.load();
   }
 
+  function projectFilm() {
+    return `<div class="ihk-media ihk-media--lead">
+        <section id="ihk-film" aria-labelledby="ihk-film-title">
+          <h3 id="ihk-film-title" class="ihk-symbol-heading">${ihkIcon('play')}${copy('film')}</h3>
+          <video controls playsinline preload="none" poster="${POSTERS[getLanguage()]}"
+            src="${FILMS[getLanguage()]}" aria-labelledby="ihk-film-title" aria-describedby="ihk-film-caption">
+            <a href="${FILMS[getLanguage()]}" download>${copy('filmFallback')}</a>
+          </video>
+          <p class="ihk-note" id="ihk-film-caption">${copy('filmCaption')}</p>
+        </section>
+      </div>`;
+  }
+
   function overview() {
     return `
       <div class="ihk-summary">
@@ -129,14 +142,6 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
           <p>${copy('downloadIntro')}</p>
           <a class="cv-primary-action" href="/ihk/IHK_Projektarbeit_DE.pdf" download lang="de">${copy('downloadDE')}<span aria-hidden="true">↓</span></a>
           <a class="cv-primary-action" href="/ihk/IHK_Project_Report_EN.pdf" download lang="en">${copy('downloadEN')}<span aria-hidden="true">↓</span></a>
-        </section>
-        <section id="ihk-film" aria-labelledby="ihk-film-title">
-          <h3 id="ihk-film-title" class="ihk-symbol-heading">${ihkIcon('play')}${copy('film')}</h3>
-          <video controls playsinline preload="none" poster="${POSTERS[getLanguage()]}"
-            src="${FILMS[getLanguage()]}" aria-labelledby="ihk-film-title" aria-describedby="ihk-film-caption">
-            <a href="${FILMS[getLanguage()]}" download>${copy('filmFallback')}</a>
-          </video>
-          <p class="ihk-note" id="ihk-film-caption">${copy('filmCaption')}</p>
         </section>
       </div>`;
   }
@@ -168,6 +173,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
             ${section === key ? 'class="is-active" aria-current="page"' : ''}>${copy(key)}</button>`).join('')}
         </nav>
         <div class="ihk-body cv-hologram__body" tabindex="0" role="region" aria-label="${copy('content')}">
+          ${section === 'overview' ? projectFilm() : ''}
           <section class="cv-section" aria-labelledby="ihk-title">
             <div class="ihk-heading cv-id">
               <div class="cv-id__meta"><p class="cv-kicker">${copy('scope')}</p>

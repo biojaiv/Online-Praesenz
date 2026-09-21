@@ -106,7 +106,7 @@ try {
     await page.locator('.nav__link[data-target="abschluss"]').click();
     await page.locator('.ihk-film-toggle').click();
     await page.waitForFunction(() => document.activeElement?.tagName === 'VIDEO');
-    assert.equal(await page.locator('.ihk-media > section:last-child').getAttribute('id'), 'ihk-film');
+    assert.equal(await page.locator('.ihk-body > :first-child > section:first-child').getAttribute('id'), 'ihk-film');
     assert.equal(await page.locator('.ihk-downloads a[download]').count(), 2);
     assert.deepEqual(errors, []);
     results.push({ mobile, scroll, projectionClick: true, zoom: true, rotation: true, pinch: mobile, readerToggle: true, cvRegression: true, deepLink: true, errors });

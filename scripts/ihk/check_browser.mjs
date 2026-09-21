@@ -5,6 +5,10 @@ import { chromium } from 'playwright';
 // Run against `npm run preview`; evidence goes outside the repository by default.
 const base = process.env.IHK_TEST_URL || 'http://127.0.0.1:4173';
 const output = process.env.IHK_TEST_OUTPUT || '/tmp/ihk-browser-check';
+// Allow bounded runs on machines that render the 3D scene in software.
+const viewports = [[1920, 1080], [1440, 900], [1366, 768], [768, 1024], [390, 844]];
+const selectedWidths = process.env.IHK_TEST_WIDTHS?.split(',').map(Number);
+assert(!selectedWidths || selectedWidths.every((width) => viewports.some(([value]) => value === width)), 'Unknown IHK_TEST_WIDTHS');
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
@@ -14,7 +18,7 @@ const browser = await chromium.launch({
 const results = [];
 const errors = [];
 try {
-  for (const [width, height] of [[1920, 1080], [1440, 900], [1366, 768], [768, 1024], [390, 844]]) {
+  for (const [width, height] of viewports.filter(([width]) => !selectedWidths || selectedWidths.includes(width))) {
     const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', acceptDownloads: true });
     const page = await context.newPage();
     page.on('pageerror', (error) => errors.push(error.message));
@@ -29,7 +33,7 @@ try {
     assert.equal(await page.locator('video').getAttribute('preload'), 'none');
     assert.equal(await page.locator('video').getAttribute('autoplay'), null);
     assert.equal(requests.length, 0, 'No PDF or film should preload');
-    assert.equal(await page.locator('.ihk-media > section:last-child').getAttribute('id'), 'ihk-film');
+    assert.equal(await page.locator('.ihk-body > :first-child > section:first-child').getAttribute('id'), 'ihk-film');
     assert.equal(await page.locator('.ihk-areas a svg').count(), 4);
     assert.equal(await page.locator('.ihk-metrics svg').count(), 4);
 
@@ -40,6 +44,13 @@ try {
       assert.equal(await page.locator('video').count(), 1);
       await page.locator('.ihk-body').evaluate((el) => { el.scrollTop = 0; });
       await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.ihk-panel')).opacity) > 0.99);
+      const filmPosition = await page.locator('video').evaluate((video) => {
+        const body = video.closest('.ihk-body').getBoundingClientRect();
+        const film = video.getBoundingClientRect();
+        const title = document.querySelector('#ihk-title').getBoundingClientRect();
+        return film.top >= body.top && film.top < body.bottom && film.bottom < title.top;
+      });
+      assert(filmPosition, 'Film starts visibly at the top, before the project text');
       await page.screenshot({ path: `${output}/${width}-${lang}-overview.png` });
       const overflow = await page.evaluate(() => {
         const elements = [document.documentElement, document.querySelector('.ihk-body'), document.querySelector('.ihk-panel'), document.querySelector('.head__brand'), document.querySelector('.foot__crumb')];

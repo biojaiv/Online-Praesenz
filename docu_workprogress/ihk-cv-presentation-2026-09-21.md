@@ -1,5 +1,7 @@
 # Kompakte IHK-Präsentation im Lebenslauf-Stil
 
+Nachfolgende Nutzerkorrektur: [neuer Netzwerkfilm jetzt vor dem Text](ihk-network-film-2026-09-21.md). Die nachstehende Filmposition beschreibt den vorherigen Stand.
+
 - Ausgangspunkt: `e377418` auf `main`; Arbeitsbranch `work/ihk-compact-cv-style-20260921-181248`.
 - Aktuelles Verhalten nach Nutzerkorrektur: Ein Klick auf den Projektbereich zoomt wie beim Lebenslauf in die schwebende Projektion. Die Lesefassung öffnet ausschließlich über ihren Umschalter; keine automatisch darübergelegte Ansicht verdeckt die Kamerafahrt.
 - Dieselben gekürzten i18n-Inhalte in Projektion und HTML-Lesefassung. Fließtextumfang DE 358 → 239, EN 429 → 296 Wörter, zusätzlich entfällt der bisherige Implementierungsabsatz. Kennzahlen, Pilotabgrenzung sowie fünf geplante und vier erfolgreiche abgeschlossene Testläufe bleiben explizit erhalten. Die vollständigen PDF-Berichte bleiben unverändert.
