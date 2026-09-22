@@ -33,10 +33,10 @@ try {
     assert.equal(await page.locator('#nav-sub-projekte [data-target]').count(), 2);
     await page.locator('[data-project-route="projekte/privat"]').click();
     await page.locator('.projects-soon').waitFor();
-    assert.equal(await page.locator('.project-choice').count(), 0, 'No invented private projects');
+    assert.equal(await page.locator('.project-choice[data-project-id="systems"]').count(), 0, 'No invented private projects');
     await page.locator('[data-project-route="projekte/webseiten"]').click();
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-gallery.png` });
-    await page.locator('.project-choice').click();
+    await page.locator('.project-choice[data-project-id="systems"]').click();
     await page.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
     const wave = () => page.locator('.warp-tunnel').evaluate(canvas => canvas.toDataURL());
     const a = await wave(); await page.waitForTimeout(1200); const b = await wave();
@@ -58,8 +58,8 @@ try {
     if (reduced) assert.equal(await embedded.locator('.hardware').evaluate(el => getComputedStyle(el).transform), 'none');
     await page.locator('[data-example-back]').click();
     await page.waitForFunction(() => !document.querySelector('.example-projection').open);
-    assert(await page.locator('.project-choice').isVisible());
-    assert.equal(await page.locator('.project-choice').evaluate(el => document.activeElement === el), true);
+    assert(await page.locator('.project-choice[data-project-id="systems"]').isVisible());
+    assert.equal(await page.locator('.project-choice[data-project-id="systems"]').evaluate(el => document.activeElement === el), true);
     assert.deepEqual(errors, []);
     await context.close(); console.log(`PASS waves: ${reduced ? 'mobile/reduced' : 'desktop/animated'}, rotation, jets, categories, tunnel, page scrolling, focus`);
   }

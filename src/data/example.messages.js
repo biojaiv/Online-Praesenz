@@ -1,5 +1,9 @@
 export const exampleMessages = {
   de: {
+    'knallblau.title': 'KnallBlauMedia · Der Tropfen',
+    'knallblau.note': 'Freies Gestaltungskonzept · Rot, Facetten und ruhige Übergänge',
+    'projects.direct': 'Direkt öffnen ↗',
+    'projects.collection': 'Webseiten-Konzepte',
     'projects.websites': 'Webseiten',
     'projects.private': 'Private Projekte',
     'projects.soon': 'Weitere private Projekte folgen.',
@@ -39,6 +43,10 @@ export const exampleMessages = {
     'example.top': 'Nach oben ↑',
   },
   en: {
+    'knallblau.title': 'KnallBlauMedia · The Drop',
+    'knallblau.note': 'Independent design concept · Red facets and quiet transitions',
+    'projects.direct': 'Open directly ↗',
+    'projects.collection': 'Website concepts',
     'projects.websites': 'Websites',
     'projects.private': 'Private projects',
     'projects.soon': 'More private projects will follow.',

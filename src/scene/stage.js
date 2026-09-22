@@ -573,7 +573,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     background.setDocumentOpen?.(isDocument);
     applyBloom();
 
-    if (isDocument) syncDocumentAspect();
+    if (isDocument || key === 'projekte') syncDocumentAspect();
     const document3d = isDocument ? cards.documentBounds(bounds) : key === 'projekte' ? cards.projectBounds(bounds) : cards.worldBounds(key, bounds);
     if (document3d.isEmpty()) return;
 
@@ -601,6 +601,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       docHalfWidth = focusSize.x * 0.5;
       docZoomTarget = docZoom;
       updateDocumentLift();
+    } else if (key === 'projekte') {
+      // Use the same viewport height and headroom as the adjacent documents.
+      distance = focusSize.y * (view.height / docRect.height)
+        / (2 * tan) * DOCUMENT_ZOOM_DEFAULT;
+      visibleHeight = 2 * distance * tan;
+      focusCenter.y -= focusSize.y * 0.04;
     } else {
       distance = Math.max(
         (focusSize.y * 1.2) / (2 * tan),
@@ -1066,9 +1072,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let raf = 0;
   let running = false;
   let lastFrameAt = 0;
+  let projectionIdle = false;
 
   function frame(now = performance.now()) {
     raf = requestAnimationFrame(frame);
+    // Hold the last space frame behind a settled HTML project; the return flight resumes it.
+    if (projectionIdle) return;
     if (now - lastFrameAt < FRAME_BUDGET) return;
     lastFrameAt = now;
     timer.update(now);
@@ -1168,13 +1177,20 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       camera, view.width, view.height, opened === 'abschluss' && !readerOpen && !exampleFlight.active);
     if (examplePreviewUpdate) {
       const mesh = cards.group.getObjectByName('example-preview');
-      if (mesh) {
-        mesh.localToWorld(examplePreviewPoint.set(0, -2.05, .03)).project(camera);
-        examplePreviewUpdate({ x: (examplePreviewPoint.x + 1) * view.width / 2,
-          y: (1 - examplePreviewPoint.y) * view.height / 2,
-          visible: !exampleFlight.active && (!opened || opened === 'projekte')
-            && cards.group.visible && !document.querySelector(".frame.is-intro") && mesh.parent.visible && mesh.parent.parent?.visible !== false && Math.abs(examplePreviewPoint.x) < .95
-            && Math.abs(examplePreviewPoint.y) < .92 && examplePreviewPoint.z < 1 });
+      if (mesh && opened === 'projekte' && !exampleFlight.active) {
+        // The HTML panel replaces this plane, even while its texture is hidden.
+        const { width, height } = mesh.geometry.parameters;
+        let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+        for (const x of [-width / 2, width / 2]) {
+          for (const y of [-height / 2, height / 2]) {
+            mesh.localToWorld(examplePreviewPoint.set(x, y, 0)).project(camera);
+            const sx = (examplePreviewPoint.x + 1) * view.width / 2;
+            const sy = (1 - examplePreviewPoint.y) * view.height / 2;
+            left = Math.min(left, sx); right = Math.max(right, sx);
+            top = Math.min(top, sy); bottom = Math.max(bottom, sy);
+          }
+        }
+        examplePreviewUpdate({ left, top, width: right - left, height: bottom - top });
       }
     }
   }
@@ -1191,6 +1207,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     focusCard,
     toHome,
     exampleFlight,
+    setProjectionIdle(value) { projectionIdle = Boolean(value); },
     get isMoving() { return viewMoving; },
     setExamplePreviewUpdate(callback) { examplePreviewUpdate = callback; },
     setRoute,

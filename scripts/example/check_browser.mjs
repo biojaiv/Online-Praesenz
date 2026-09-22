@@ -39,7 +39,7 @@ try {
     if (mobile) await page.touchscreen.tap(centre.x, centre.y);
     else await page.mouse.click(centre.x, centre.y);
     await page.waitForURL('**/#projekte');
-    await page.locator('.project-choice').waitFor({ state: 'visible' });
+    await page.locator('.project-choice[data-project-id="systems"]').waitFor({ state: 'visible' });
     await page.waitForTimeout(400);
     assert.equal(await page.locator('.example-projection').isVisible(), false, 'First click opens the project collection');
     const before = await pose(page);
@@ -52,8 +52,8 @@ try {
         window.__exampleSamples.push({ at: performance.now(), state: exampleFlight.state, yaw: exampleFlight.yaw, position: camera.position.toArray(), direction: camera.getWorldDirection(camera.position.clone()).toArray() });
       }, 30);
     });
-    await page.locator('.project-choice').click();
-    await page.evaluate(() => document.querySelector('.project-choice').click()); // Guard a queued second activation.
+    await page.locator('.project-choice[data-project-id="systems"]').click();
+    await page.evaluate(() => document.querySelector('.project-choice[data-project-id="systems"]').click()); // Guard a queued second activation.
     await page.waitForSelector('.example-projection[data-state="open"]', { timeout: 30000 }).catch(async error => {
       console.error(await page.evaluate(() => ({ flight: window.__stage.exampleFlight.state,
         dialog: document.querySelector('.example-projection').dataset.state,
@@ -164,7 +164,7 @@ try {
     assert(distance((await pose(page)).rotation, before.rotation) < .02, 'Return restores the saved viewing direction');
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains('project-choice')), true, 'Return restores focus to the scene trigger');
     // Keyboard opening from the scene and closing via the touch-sized return control.
-    await page.locator('.project-choice').focus();
+    await page.locator('.project-choice[data-project-id="systems"]').focus();
     await page.keyboard.press('Enter');
     await page.waitForSelector('.example-projection[data-state="open"]');
     await page.locator('[data-example-back]').click();

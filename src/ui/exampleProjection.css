@@ -65,3 +65,7 @@
 .example-projection__controls kbd { border: 0; padding: 0; font: inherit; }
 .example-projection__screen { box-shadow: 0 0 4px var(--cyan), 0 0 32px rgb(var(--fiber-blue-rgb) / .3); }
 .example-projection__controls { background: linear-gradient(90deg, transparent, rgb(3 6 13 / .9) 30% 70%, transparent); }
+.example-projection__controls:has([data-example-separate]) { gap: 30px; }
+.example-projection__controls [data-example-separate] { display: flex; align-items: center; min-height: 44px; border: 0; border-radius: 0; background: transparent; color: var(--ink-dim); font: 500 12px var(--font-body); letter-spacing: var(--tracking-label); text-transform: uppercase; padding: 12px; }
+.example-projection__controls [data-example-separate]:hover { color: var(--amber); }
+@media(max-width:600px) { .example-projection__controls:has([data-example-separate]) { gap: 6px; inset-inline: 12px; } .example-projection__controls:has([data-example-separate]) button,.example-projection__controls [data-example-separate] { padding: 10px 6px; font-size: 10px; letter-spacing: .08em; } .example-projection__controls:has([data-example-separate]) button::before { display:none; } }

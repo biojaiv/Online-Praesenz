@@ -180,12 +180,12 @@ function sampleBackground(model, x, y, width, height, output) {
 }
 
 /**
- * Entfernt nur den eingebrannten Hintergrund von Seite eins.
+ * Entfernt den eingebrannten Hintergrund einer einzelnen Projektionsseite.
  * RGB-Werte und Pixelpositionen aller Informationen bleiben unverändert;
  * ausschliesslich der Alphakanal wird aus dem lokalen Hintergrund abgeleitet.
  */
-function makeFirstPageTransparent(context, width, pageHeight) {
-  const image = context.getImageData(0, 0, width, pageHeight);
+function makePageTransparent(context, width, pageHeight, pageTop = 0) {
+  const image = context.getImageData(0, pageTop, width, pageHeight);
   const pixels = image.data;
   const background = buildBackgroundGrid(pixels, width, pageHeight);
   const mask = new Uint8Array(width * pageHeight);
@@ -260,8 +260,9 @@ function makeFirstPageTransparent(context, width, pageHeight) {
     if (pixels[alphaOffset] <= 2) transparent += 1;
   }
 
-  context.putImageData(image, 0, 0);
-  console.info('Webprojektion: Hintergrund von Seite eins entfernt.', {
+  context.putImageData(image, 0, pageTop);
+  console.info('Webprojektion: Seitenhintergrund entfernt.', {
+    pageTop,
     transparentRatio: transparent / expanded.length,
   });
 }
@@ -1063,7 +1064,7 @@ function detectLinkBoxCut(context, width, height) {
 
 /**
  * Nur die WebGL-Textur wird geändert:
- * Auf Seite 1 wird ausschliesslich der eingebrannte Hintergrund transparent;
+ * Auf beiden Seiten wird ausschliesslich der eingebrannte Hintergrund transparent;
  * Seite 2 verliert den Linkkasten und der darunterliegende Inhalt rückt hoch.
  * PDF, RGB-Inhalte und Pixelpositionen der ersten Seite bleiben unangetastet.
  */
@@ -1100,7 +1101,7 @@ function createWebProjectionCanvas(image, size) {
     0, 0, size.width, pageHeight,
     0, 0, size.width, pageHeight,
   );
-  makeFirstPageTransparent(context, size.width, pageHeight);
+  makePageTransparent(context, size.width, pageHeight);
   alignFirstPageBottomRule(context, size.width, pageHeight);
 
   context.drawImage(
@@ -1134,6 +1135,8 @@ function createWebProjectionCanvas(image, size) {
     pageTwoTop,
     cut,
   );
+
+  makePageTransparent(context, size.width, pageHeight, pageTwoTop);
 
   console.info(
     `Webprojektion: Linkkasten ${cut.detected ? 'erkannt' : 'per Ersatzbereich'} entfernt.`,
@@ -1324,6 +1327,16 @@ export function createResumeProjection({
         const canvas = source.webTransform
           ? createWebProjectionCanvas(image, size)
           : createDirectProjectionCanvas(image, size);
+        // The English source now uses the same dark two-page layout. Apply
+        // the same per-page alpha treatment, without the German link-box edits.
+        if (documentKey === 'lebenslauf' && !source.webTransform) {
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          for (let page = 0; page < source.pageCount; page += 1) {
+            const top = Math.floor(page * size.height / source.pageCount);
+            const bottom = Math.floor((page + 1) * size.height / source.pageCount);
+            makePageTransparent(context, size.width, bottom - top, top);
+          }
+        }
         if (disposed || revision !== loadRevision) return false;
 
         const nextTexture = new THREE.Texture(canvas);

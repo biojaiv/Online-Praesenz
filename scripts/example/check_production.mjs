@@ -50,7 +50,7 @@ try {
   await fallbackPage.goto(`${base}/#home`);
   await fallbackPage.locator('.stage.is-fallback').waitFor();
   await fallbackPage.locator('.nav__link[data-target="projekte"]').click();
-  await fallbackPage.locator('.project-choice').click();
+  await fallbackPage.locator('.project-choice[data-project-id="systems"]').click();
   await fallbackPage.waitForURL('**/beispiel/');
   await fallbackPage.locator('h1').waitFor();
   results.push({ webglFallback: true });
@@ -63,7 +63,7 @@ try {
   await scene.goto(`${base}/#projekte`);
   await scene.waitForFunction(() => document.querySelector('#boot.is-done'));
   await scene.locator('.nav__link[data-target="projekte"]').click();
-  await scene.locator('.project-choice').click();
+  await scene.locator('.project-choice[data-project-id="systems"]').click();
   await scene.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
   const embedded = scene.frameLocator('.example-projection iframe');
   await embedded.locator('h1').click();

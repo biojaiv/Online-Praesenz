@@ -427,7 +427,10 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
   return {
     group,
     uniforms,
-    setOrigin(y) { originY = y; },
+    setOrigin(y) {
+      originY = y;
+      group.position.y = originY + DOC_LIFT + uniforms.uHalfHeight.value;
+    },
     setWindow(width, height) {
       // Der dynamische Partikelrahmen folgt exakt den vier physikalischen
       // Dokumentkanten. Dadurch kann kein Dokumentinhalt unterhalb der
@@ -1286,6 +1289,11 @@ export function createCards({ renderer, reduced = false } = {}) {
         // waehrend der Kamerafahrt aus dem Bild.
         card.holder.visible = mobileSelection === null || (key ? card.key === key : card.layoutIndex === mobileSelection);
         card.active = (temporaryActive || key) === card.key;
+        if (key === 'projekte' && card.key === key) {
+          // Settle before focusCard measures the bounds for the camera flight.
+          card.holder.position.y = card.layoutY;
+          card.holder.rotation.y = 0;
+        }
         card.resumeOpen =
           key === card.key
           && isDocumentKey(card.key);
@@ -1352,9 +1360,11 @@ export function createCards({ renderer, reduced = false } = {}) {
         // Mirrored side elements also breathe in phase; the centre uses
         // the complementary golden-ratio phase instead of a key-length accident.
         const phase = card.layoutIndex === 1 ? Math.PI / LAYOUT_PHI : 0;
-        card.holder.position.y = card.layoutY
-          + Math.sin(elapsed * 0.18 + phase) * 0.11
-          + card.hover * 0.16;
+        // The HTML controls share this plane: hold it still while browsing.
+        // The pedestal bodies retain their independent slow rotation.
+        card.holder.position.y = card.layoutY + (card.key === 'projekte' && openedKey === card.key
+          ? 0
+          : Math.sin(elapsed * 0.18 + phase) * 0.11 + card.hover * 0.16);
         if (isDocumentKey(card.key)) {
           if (
             !card.rotationDragging
@@ -1393,7 +1403,7 @@ export function createCards({ renderer, reduced = false } = {}) {
           }
         } else {
           card.holder.rotation.y =
-            Math.sin(elapsed * 0.09 + phase) * 0.022;
+            openedKey === card.key ? 0 : Math.sin(elapsed * 0.09 + phase) * 0.022;
         }
         const baseScaleTarget = layoutScale;
         const scaleResponse = reduced
