@@ -289,7 +289,6 @@ export const SACRED_FIGURES = [
   { name: 'Seed of Life',         round: true,  strokes: seedOfLife() },
   { name: 'Tree of Life',         round: false, strokes: treeOfLife() },
   { name: 'Flower of Life',       round: true,  strokes: flowerOfLife() },
-  { name: 'Star Tetrahedron',     round: false, strokes: starTetrahedron() },
   { name: 'Egg of Life',          round: true,  strokes: eggOfLife() },
   { name: 'Metatrons Cube',       round: true,  strokes: metatronCube() },
   { name: 'Fruit of Life',        round: true,  strokes: fruitOfLife() },

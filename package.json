@@ -8,8 +8,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:ihk": "node scripts/ihk/check_browser.mjs",
+    "test:hologram": "node scripts/ihk/check_hologram_film.mjs",
     "test:projection": "node scripts/ihk/check_projection.mjs",
-    "test:navigation": "node scripts/ihk/check_navigation.mjs"
+    "test:navigation": "node scripts/ihk/check_navigation.mjs",
+    "test:example": "node scripts/example/check_browser.mjs",
+    "test:example:production": "node scripts/example/check_production.mjs",
+    "build:cv": "node scripts/cv/build_legacy_projection.mjs",
+    "test:harmony": "node scripts/ui/check_harmony.mjs",
+    "test:refinements": "node scripts/ui/check_refinements.mjs",
+    "test:waves": "node scripts/ui/check_waves.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",

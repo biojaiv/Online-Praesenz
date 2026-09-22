@@ -1,0 +1,26 @@
+{
+  "de": {
+    "pageCount": 2,
+    "pageAspect": 0.6555731642894875,
+    "webTransform": true,
+    "anchors": {
+      "uebersicht": 0,
+      "bildungsweg": 0.185,
+      "faehigkeiten": 0.355,
+      "kontakt": 0.415,
+      "arbeitsleben": 0.525
+    }
+  },
+  "en": {
+    "pageCount": 2,
+    "pageAspect": 0.6552083333333333,
+    "webTransform": false,
+    "anchors": {
+      "uebersicht": 0,
+      "bildungsweg": 0.184,
+      "faehigkeiten": 0.354,
+      "kontakt": 0.417,
+      "arbeitsleben": 0.514
+    }
+  }
+}

@@ -4,7 +4,7 @@ import gsap from 'gsap';
  * Wiederkehrende Tokyo-Verzerrung auf dem Markenzug oben links.
  *
  * Stilvorlage ist die Glitch-Frame-Sammlung: der weisse Grundzug bleibt
- * stehen, waehrend farbige Kopien (Cyan, Magenta, Limette) in schmale,
+ * stehen, waehrend farbige Kopien (Faserblau und Bernstein) in schmale,
  * versetzte Slices zerschnitten aufblitzen. Kein Filter-Blur, nur
  * Compositing — dieselbe Technik wie der Intro-Signalbruch.
  *

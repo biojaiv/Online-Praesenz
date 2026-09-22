@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { traceExecution } from '../state/runtimeTrace.js';
-import { onLanguageChange } from '../i18n.js';
+import { onLanguageChange, t as translate } from '../i18n.js';
 import {
   EffectComposer, RenderPass, EffectPass,
   BloomEffect, VignetteEffect, NoiseEffect, SMAAEffect,
@@ -11,7 +11,9 @@ import { createBackground } from './background.js';
 import { createCards } from './cards.js';
 import { getCvPageAspect } from './resumeProjection.js';
 import { ihkProjectionSource } from './ihkProjectionSource.js';
+import { createIhkHologramFilm } from '../ui/ihkHologramFilm.js';
 import { LIGHT_PALETTE } from './palette.js';
+import { createExampleFlight } from './exampleFlight.js';
 
 const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
 
@@ -29,8 +31,8 @@ const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
  */
 
 const HOME = {
-  cam:  new THREE.Vector3(0, 0, 18),
-  look: new THREE.Vector3(0, -3.5, -8),
+  cam:  new THREE.Vector3(0, 0, 21.5),
+  look: new THREE.Vector3(0, 0, -8),
 };
 
 // Projektion und Lesefassung nehmen genau dieselbe Flaeche ein: ein Rechteck
@@ -178,6 +180,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   // getBoundingClientRect() je Zeigerbewegung erzwingt sonst Layout.
   const view = { width: 1, height: 1, left: 0, top: 0, aspect: 1, compact: false };
 
+  let mobileSelection = 0;
+  let introActive = false;
   let hovered = null;
   let opened = null;
   let listener = null;
@@ -217,7 +221,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const touchPoints = new Map();
   let pinchGesture = null;
 
-  const guideHost = canvas.parentElement;
+  const hologramFilm = createIhkHologramFilm(canvas);
+  const guideHost = document.getElementById('foot-tools') || canvas.parentElement;
   const dollyGuide = document.createElement('div');
   dollyGuide.className = 'camera-dolly-guide';
   dollyGuide.setAttribute('aria-hidden', 'true');
@@ -373,6 +378,65 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     orbit.pitchVelocity *= damping;
   }
 
+  let examplePreviewUpdate = null;
+  const examplePreviewPoint = new THREE.Vector3();
+  const exampleFlight = createExampleFlight({
+    camera, cards, scene,
+    capture() {
+      const saved = { camPos: camPos.clone(), look: look.clone(), orbit: { ...orbit },
+        drift: drift.clone(), pointer: pointer.clone(), scrollLift, scrollLiftTarget };
+      gsap.killTweensOf([camPos, look]);
+      viewMoveTicket += 1;
+      viewMoving = false;
+      onWindowBlur();
+      return saved;
+    },
+    restore(saved) {
+      camPos.copy(saved.camPos); look.copy(saved.look);
+      Object.assign(orbit, saved.orbit, { dragging: false, yawVelocity: 0, pitchVelocity: 0 });
+      drift.copy(saved.drift); pointer.copy(saved.pointer);
+      scrollLift = saved.scrollLift; scrollLiftTarget = saved.scrollLiftTarget;
+    },
+  });
+
+  const mobileKeys = ['abschluss', 'projekte', 'lebenslauf'];
+  const mobileDots = document.createElement('nav');
+  mobileDots.className = 'mobile-pedestals';
+  mobileDots.setAttribute('aria-label', translate('footer.selectSection'));
+  mobileDots.innerHTML = mobileKeys.map((key, index) => `<button type="button" data-pedestal="${index}" aria-label="${translate(`card.${key}.title`)}" aria-pressed="${index === mobileSelection}"></button>`).join('');
+  canvas.parentElement.append(mobileDots);
+  function syncMobileHome() {
+    if (view.mobile) {
+      const holder = cards.group.getObjectByName(`card-${mobileKeys[mobileSelection]}`);
+      HOME.cam.set(holder?.position.x || 0, -.5, 16.3);
+      HOME.look.set(holder?.position.x || 0, -1, 0);
+    } else {
+      HOME.cam.set(0, 0, view.compact ? 34 : 21.5);
+      HOME.look.set(0, 0, -8);
+    }
+    cards.setMobileSelection(view.mobile ? mobileSelection : null);
+    mobileDots.hidden = !view.mobile || Boolean(opened) || introActive || exampleFlight.active;
+    mobileDots.setAttribute('aria-label', translate('footer.selectSection'));
+    mobileDots.querySelectorAll('button').forEach((button, index) => {
+      button.setAttribute('aria-pressed', String(index === mobileSelection));
+      button.setAttribute('aria-label', translate(`card.${mobileKeys[index]}.title`));
+    });
+  }
+  function selectMobile(index) {
+    if (!view.mobile || opened || exampleFlight.active || introActive) return;
+    mobileSelection = (index + mobileKeys.length) % mobileKeys.length;
+    syncMobileHome();
+    pointer.set(0, 0); drift.set(0, 0);
+    orbit.yaw = 0; orbit.pitch = 0; orbit.yawVelocity = 0; orbit.pitchVelocity = 0;
+    moveView(HOME.cam, HOME.look, .8);
+  }
+  function onMobileSelect(event) {
+    const button = event.target.closest('[data-pedestal]');
+    if (button) selectMobile(Number(button.dataset.pedestal));
+  }
+  mobileDots.addEventListener('click', onMobileSelect);
+  const unsubscribeMobileLanguage = onLanguageChange(syncMobileHome);
+
   /* ---------- Kamera ---------- */
 
   function moveView(target, aim, duration) {
@@ -459,11 +523,13 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   /** Ruhezustand: alle drei Karten im Blick. */
   function toHome(duration = 0.95) {
+    if (exampleFlight.active) return;
     traceExecution({
       source: 'src/scene/stage.js',
       code: `toHome(${Number(duration).toFixed(2)})`,
     });
     opened = null;
+    syncMobileHome();
     cards.setOpened(null);
     background.setDocumentOpen?.(false);
     cards.setDocumentScroll(0, true);
@@ -487,11 +553,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
    * Sockel selbst als Motiv.
    */
   function focusCard(key, duration = 1.8) {
+    if (exampleFlight.active) return;
     traceExecution({
       source: 'src/scene/stage.js',
       code: `focusCard(${JSON.stringify(key)}, ${Number(duration).toFixed(2)})`,
     });
     opened = key;
+    if (view.mobile && mobileKeys.includes(key)) mobileSelection = mobileKeys.indexOf(key);
+    mobileDots.hidden = true;
     cards.setOpened(key, true);
     // Ein laufender Orbit endet; der Rueckweg nimmt die kuerzere Richtung.
     orbit.dragging = false;
@@ -505,7 +574,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     applyBloom();
 
     if (isDocument) syncDocumentAspect();
-    const document3d = isDocument ? cards.documentBounds(bounds) : cards.worldBounds(key, bounds);
+    const document3d = isDocument ? cards.documentBounds(bounds) : key === 'projekte' ? cards.projectBounds(bounds) : cards.worldBounds(key, bounds);
     if (document3d.isEmpty()) return;
 
     const tan = halfFovTan();
@@ -613,6 +682,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onWheel(event) {
+    if (exampleFlight.active) return;
     if (!isDocumentKey(opened) || readerOpen) return;
     // Keyboard controls follow the document after interacting with its canvas.
     canvas.focus({ preventScroll: true });
@@ -635,10 +705,17 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onKeydown(event) {
+    if (exampleFlight.active) return;
+    if (!opened && event.target === canvas && ['Enter', ' '].includes(event.key)) {
+      event.preventDefault(); listener?.('select', hovered || (view.mobile ? mobileKeys[mobileSelection] : 'projekte')); return;
+    }
+    if (view.mobile && !opened && ['ArrowLeft', 'ArrowRight'].includes(event.key) && (event.target === canvas || mobileDots.contains(event.target))) {
+      event.preventDefault(); selectMobile(mobileSelection + (event.key === 'ArrowRight' ? 1 : -1)); return;
+    }
     if (!isDocumentKey(opened) || readerOpen || event.defaultPrevented) return;
     const target = event.target;
     if (target instanceof HTMLElement
-      && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      && (target.closest('.ihk-hologram-film') || target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'VIDEO'].includes(target.tagName))) return;
 
     switch (event.key) {
       case 'ArrowDown':
@@ -669,6 +746,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onPointerMove(event) {
+    if (exampleFlight.active) return;
     const { nx, ny } = updatePointerFromEvent(event);
 
     if (event.pointerType === 'touch' && touchPoints.has(event.pointerId)) {
@@ -701,6 +779,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       return;
     }
 
+    if (drag && drag.id === event.pointerId && view.mobile && !opened && event.pointerType === 'touch') {
+      if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 6) drag.moved = true;
+      event.preventDefault(); return;
+    }
     if (drag && drag.id === event.pointerId) {
       const dx = event.clientX - drag.x;
       const dy = event.clientY - drag.y;
@@ -766,6 +848,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onPointerDown(event) {
+    if (exampleFlight.active) return;
     if (event.button !== 0 && event.pointerType !== 'touch') return;
 
     updatePointerFromEvent(event);
@@ -820,6 +903,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onPointerUp(event) {
+    if (exampleFlight.active) return;
     if (event.pointerType === 'touch') {
       touchPoints.delete(event.pointerId);
       if (pinchGesture) {
@@ -832,6 +916,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }
 
     if (!drag || drag.id !== event.pointerId) return;
+    if (view.mobile && !opened && event.pointerType === 'touch' && drag.moved) {
+      const dx = event.clientX - drag.startX, dy = event.clientY - drag.startY;
+      drag = null;
+      if (event.type !== 'pointercancel' && Math.abs(dx) > 35 && Math.abs(dx) > Math.abs(dy)) selectMobile(mobileSelection + (dx < 0 ? 1 : -1));
+      return;
+    }
     const { moved, wheelUsed, onDocument } = drag;
     drag = null;
 
@@ -874,8 +964,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function pick() {
     if (ndc.x < -1.5 || opened) return null;
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects([...cards.pickables, ...cards.documentPickables.filter((mesh) => mesh.visible)], false);
-    return hits.length ? hits[0].object.userData.key : null;
+    const hits = raycaster.intersectObjects([...cards.pickables, ...cards.group.getObjectsByProperty('name', 'card-label'), ...cards.documentPickables.filter((mesh) => mesh.visible)].filter(mesh => mesh.parent?.visible && mesh.parent?.parent?.visible !== false), false);
+    return hits.length ? (hits[0].object.userData.key || hits[0].object.parent.parent.userData.key) : null;
   }
 
   function setRoute(target) {
@@ -920,28 +1010,30 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     camera.aspect = view.aspect;
     camera.updateProjectionMatrix();
     view.compact = view.aspect < 0.72;
+    const wasMobile = view.mobile;
+    view.mobile = matchMedia('(max-width: 600px)').matches;
+    if (view.mobile && !wasMobile) {
+      orbit.yaw = 0; orbit.pitch = 0; orbit.yawVelocity = 0; orbit.pitchVelocity = 0;
+      orbit.dragging = false; pointer.set(0, 0); drift.set(0, 0);
+    }
     syncDocumentInputHints();
     // Die Lesefassung erfaehrt jede Groessenaenderung, auch wenn der
     // Lebenslauf gerade nicht im Bild steht.
     syncDocumentAspect();
 
-    HOME.cam.z = view.compact ? 34 : 18;
-    if (!opened) {
-      camPos.copy(HOME.cam);
-      look.copy(HOME.look);
-    }
-
     if (view.compact) cards.setLayout({ spacing: 5.1, scale: 0.66, compact: true, stagger: 0.34 });
     else if (view.aspect < 1.15) cards.setLayout({ spacing: 6.2, scale: 0.72 });
     else cards.setLayout({ spacing: 8.6, scale: 0.9 });
 
+    syncMobileHome();
+    if (!opened && !exampleFlight.active && !introActive) { camPos.copy(HOME.cam); look.copy(HOME.look); }
     background.setCompact(view.compact);
     applyBloom();
     renderer.setSize(w, h, false);
     composer?.setSize(w, h);
     background.setPixelRatio(renderer.getPixelRatio());
     cards.setPixelRatio(renderer.getPixelRatio());
-    if (opened && !viewMoving) focusCard(opened, 0.65);
+    if (opened && !viewMoving && !exampleFlight.active) focusCard(opened, 0.65);
   }
 
   function settleQuality() {
@@ -987,7 +1079,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     cards.update(t, dt);
 
     if (
-      isDocumentKey(opened)
+      !exampleFlight.active
+      && isDocumentKey(opened)
       && !readerOpen
       && !viewMoving
     ) {
@@ -1029,7 +1122,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         (bloomTarget - bloom.intensity) * bloomResponse;
     }
 
-    const next = orbit.dragging ? null : pick();
+    mobileDots.hidden = !view.mobile || Boolean(opened) || introActive || exampleFlight.active;
+    const next = orbit.dragging || exampleFlight.active ? null : pick();
     if (next !== hovered) {
       hovered = next;
       cards.setHover(hovered);
@@ -1037,36 +1131,52 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       listener?.('hover', hovered);
     }
 
-    if (opened) drift.multiplyScalar(0.8);
-    else drift.lerp(pointer, 0.018);
-    scrollLift += (scrollLiftTarget - scrollLift) * (1 - Math.pow(0.01, Math.min(dt, 0.1)));
-    camera.position.set(
-      camPos.x + drift.x * 1.35,
-      camPos.y + drift.y * 0.82 + scrollLift,
-      camPos.z,
-    );
-    lookTarget.set(look.x, look.y + scrollLift, look.z);
+    if (!exampleFlight.active) {
+      if (opened) drift.multiplyScalar(0.8);
+      else drift.lerp(pointer, 0.018);
+      scrollLift += (scrollLiftTarget - scrollLift) * (1 - Math.pow(0.01, Math.min(dt, 0.1)));
+      camera.position.set(
+        camPos.x + drift.x * 1.35,
+        camPos.y + drift.y * 0.82 + scrollLift,
+        camPos.z,
+      );
+      lookTarget.set(look.x, look.y + scrollLift, look.z);
 
-    // Orbit: Kamera und Blickpunkt gemeinsam um die Sockelmitte drehen.
-    updateOrbit(Math.min(dt, 0.1));
-    if (orbit.yaw !== 0 || orbit.pitch !== 0) {
-      orbitEuler.set(-orbit.pitch, orbit.yaw, 0);
-      orbitQuaternion.setFromEuler(orbitEuler);
-      // Seitlich und von oben weicht die Kamera etwas zurueck, damit die ganze
-      // Sockelreihe im Bild bleibt.
-      const dolly = 1
-        + 0.55 * Math.abs(Math.sin(orbit.yaw))
-        + 0.30 * Math.max(0, orbit.pitch);
-      camera.position.sub(ORBIT_PIVOT)
-        .applyQuaternion(orbitQuaternion)
-        .multiplyScalar(dolly)
-        .add(ORBIT_PIVOT);
-      lookTarget.sub(ORBIT_PIVOT).applyQuaternion(orbitQuaternion).add(ORBIT_PIVOT);
-    }
-    camera.lookAt(lookTarget);
+      // Orbit: Kamera und Blickpunkt gemeinsam um die Sockelmitte drehen.
+      if (!view.mobile) updateOrbit(Math.min(dt, 0.1));
+      if (orbit.yaw !== 0 || orbit.pitch !== 0) {
+        orbitEuler.set(-orbit.pitch, orbit.yaw, 0);
+        orbitQuaternion.setFromEuler(orbitEuler);
+        // Seitlich und von oben weicht die Kamera etwas zurueck, damit die ganze
+        // Sockelreihe im Bild bleibt.
+        const dolly = 1
+          + 0.55 * Math.abs(Math.sin(orbit.yaw))
+          + 0.30 * Math.max(0, orbit.pitch);
+        camera.position.sub(ORBIT_PIVOT)
+          .applyQuaternion(orbitQuaternion)
+          .multiplyScalar(dolly)
+          .add(ORBIT_PIVOT);
+        lookTarget.sub(ORBIT_PIVOT).applyQuaternion(orbitQuaternion).add(ORBIT_PIVOT);
+      }
+      camera.lookAt(lookTarget);
+    } else exampleFlight.update();
 
+    cards.faceLabels(camera);
     if (composer) composer.render();
     else renderer.render(scene, camera);
+    hologramFilm.update(cards.documentPickables.find(mesh => mesh.userData.key === 'abschluss'),
+      camera, view.width, view.height, opened === 'abschluss' && !readerOpen && !exampleFlight.active);
+    if (examplePreviewUpdate) {
+      const mesh = cards.group.getObjectByName('example-preview');
+      if (mesh) {
+        mesh.localToWorld(examplePreviewPoint.set(0, -2.05, .03)).project(camera);
+        examplePreviewUpdate({ x: (examplePreviewPoint.x + 1) * view.width / 2,
+          y: (1 - examplePreviewPoint.y) * view.height / 2,
+          visible: !exampleFlight.active && (!opened || opened === 'projekte')
+            && cards.group.visible && !document.querySelector(".frame.is-intro") && mesh.parent.visible && mesh.parent.parent?.visible !== false && Math.abs(examplePreviewPoint.x) < .95
+            && Math.abs(examplePreviewPoint.y) < .92 && examplePreviewPoint.z < 1 });
+      }
+    }
   }
 
   return {
@@ -1080,6 +1190,9 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     focusCard,
     toHome,
+    exampleFlight,
+    get isMoving() { return viewMoving; },
+    setExamplePreviewUpdate(callback) { examplePreviewUpdate = callback; },
     setRoute,
 
     /** Blickwinkel im Ruhezustand direkt setzen (Bogenmass). */
@@ -1099,6 +1212,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     /** Die flache Lesefassung uebernimmt Rad und Tasten, solange sie offen ist. */
     setReaderOpen(value) {
       readerOpen = Boolean(value);
+      hologramFilm.setHidden(readerOpen);
       if (zoomHold) endDocumentWheelZoom();
       setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
       syncDocumentInputHints();
@@ -1114,6 +1228,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     async beginReaderTransition(open, key = opened) {
       readerSequence += 1;
       const ticket = readerSequence;
+      hologramFilm.setHidden(open);
       cards.setProjectionHidden(open, key);
 
       if (!open || reduced) return;
@@ -1145,6 +1260,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     intro: {
       /** Vor dem ersten Bild: Kamera in die Tiefe, Runen glimmen voll. */
       begin() {
+        introActive = true;
         camPos.set(HOME.cam.x, -1.3, 8.6);
         background.ambient.value = 1;
         background.setEffectsEnabled?.(false);
@@ -1173,14 +1289,21 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         gsap.to(cards.group.scale, { x: 1, y: 1, z: 1, duration, ease: 'power2.out' });
       },
       /** Skip und normaler Abschluss hinterlassen die Buehne im Ruhezustand. */
-      finish() {
-        gsap.killTweensOf([cards.group.position, cards.group.scale]);
+      finish({ preserveReveal = false } = {}) {
+        introActive = false;
+        syncMobileHome();
+        // The delayed arrival may continue after the unchanged six-second title
+        // sequence. Only skipping snaps it to the final pose.
+        const revealing = preserveReveal && gsap.isTweening(cards.group.position);
+        if (!revealing) gsap.killTweensOf([cards.group.position, cards.group.scale]);
         background.setSymbolOnly(false);
         background.setEffectsEnabled?.(true);
-        cards.setHologramReveal(1, true);
+        cards.setHologramReveal(1, !revealing);
         cards.group.visible = true;
-        cards.group.position.z = 0;
-        cards.group.scale.setScalar(1);
+        if (!revealing) {
+          cards.group.position.z = 0;
+          cards.group.scale.setScalar(1);
+        }
       },
       /** Kurzer Rueckstoss der Kamera, wenn der Schriftzug warpt. */
       recoil() {
@@ -1195,6 +1318,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     stop() { running = false; cancelAnimationFrame(raf); },
     dispose() {
       this.stop();
+      exampleFlight.dispose();
+      unsubscribeMobileLanguage();
+      mobileDots.removeEventListener('click', onMobileSelect);
+      mobileDots.remove();
+      examplePreviewUpdate = null;
       ro.disconnect();
       cancelAnimationFrame(resizeFrame);
       canvas.removeEventListener('pointermove', onPointerMove);
@@ -1211,6 +1339,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       window.clearTimeout(qualityUpgradeTimer);
       mobileZoom.removeEventListener('click', onMobileZoomClick);
       mobileZoom.remove();
+      hologramFilm.dispose();
       keyboardZoomHint.remove();
       canvas.style.touchAction = '';
       dollyGuide.remove();

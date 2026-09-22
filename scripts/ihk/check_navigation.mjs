@@ -33,7 +33,7 @@ try {
       assert.equal(await page.locator('.nav__group.is-open').count(), 1);
       if (name === 'abschluss') {
         assert.equal(await page.locator('.ihk-project').isVisible(), false);
-        assert.equal(await page.locator('.ihk-film-toggle').isVisible(), true);
+        assert.equal(await page.locator('.ihk-film-toggle').count(), 0);
       }
       const route = page.url();
       const box = await page.locator('.nav__group.is-open .nav__sub').boundingBox();
@@ -76,6 +76,10 @@ try {
     assert(await expanded('abschluss'));
     assert.equal(await page.evaluate(() => document.activeElement.dataset.target), 'abschluss/server');
     await page.keyboard.press('End');
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.menuAction), 'download');
+    await page.keyboard.press('ArrowUp');
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.menuAction), 'reader');
+    await page.keyboard.press('ArrowUp');
     assert.equal(await page.evaluate(() => document.activeElement.dataset.target), 'abschluss/migration');
     await page.keyboard.press('Enter');
     await page.waitForURL('**/#abschluss/migration');
@@ -85,7 +89,7 @@ try {
     // Footer actions remain reachable from every project subroute.
     await activate(page.locator('[data-ihk-scroll="ihk-film"]'));
     await page.waitForURL('**/#abschluss');
-    assert.equal(await page.locator('video').evaluate((el) => el === document.activeElement), true);
+    assert.equal(await page.locator('.ihk-project video').evaluate((el) => el === document.activeElement), true);
     await activate(page.locator('[data-ihk-scroll="ihk-downloads"]'));
     assert.equal(await page.evaluate(() => document.activeElement.getAttribute('href')), '/ihk/IHK_Projektarbeit_DE.pdf');
 

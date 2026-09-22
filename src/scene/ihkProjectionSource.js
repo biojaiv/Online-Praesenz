@@ -1,15 +1,16 @@
 import { getLanguage } from '../i18n.js';
 
-const PAGE_COUNT = 5;
+import { IHK_PAGE } from '../data/ihkMedia.js';
+const PAGE_COUNT = IHK_PAGE.count;
 export function ihkProjectionSource(language = getLanguage()) {
   return {
     url: `/ihk/IHK_Projection_${language.toUpperCase()}.webp`,
     pageCount: PAGE_COUNT,
-    pageAspect: 1258 / 1920,
+    pageAspect: IHK_PAGE.width / IHK_PAGE.height,
     webTransform: false,
   };
 }
 export function getIhkAnchor(section) {
   const index = ['overview', 'server', 'uem', 'clients', 'migration'].indexOf(section);
-  return Math.max(0, index) / PAGE_COUNT;
+  return (index > 0 ? index + 1 : 0) / PAGE_COUNT;
 }

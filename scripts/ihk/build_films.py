@@ -13,7 +13,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'public/ihk'
-WIDTH, HEIGHT, FPS, DURATION = 1280, 720, 24, 42
+WIDTH, HEIGHT, FPS, DURATION = 1280, 720, 24, 52.5
+PLAYBACK_SPEED = .8
 FONT_ROOT = Path('/usr/share/fonts/truetype/dejavu')
 INK, DIM = '#d4e2ed', '#889bad'
 AMBER, CYAN, GREEN, RED = '#dca266', '#79afc3', '#a8c9b2', '#ee957d'
@@ -361,7 +362,7 @@ def frame(language, time, poster=False):
         label(d, (192, 657), s['count'], 19, DIM, anchor='lm')
         label(d, (1240, 626), '100 %', 30, GREEN, True, 'rm')
     label(d, (40, 697), s['pilotOnly'] if scene == 8 else s['scope'], 15, DIM, anchor='lm')
-    label(d, (1240, 697), f'{min(42, int(time)):02d} / 42 s', 15, DIM, anchor='rm')
+    label(d, (1240, 697), f'{int(time / PLAYBACK_SPEED):02d} / {DURATION:g} s', 15, DIM, anchor='rm')
     d.line((40, 680, 1240, 680), fill=LINE, width=2)
     d.line((40, 680, 40+1200*time/42, 680), fill=AMBER, width=3)
     if not poster and time < .5:
@@ -380,8 +381,8 @@ def main():
                    '-crf', '21', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', str(OUT/s['file'])]
         process = subprocess.Popen(command, stdin=subprocess.PIPE)
         try:
-            for i in range(FPS*DURATION):
-                process.stdin.write(frame(language, i/FPS).tobytes())
+            for i in range(int(FPS*DURATION)):
+                process.stdin.write(frame(language, i/FPS * PLAYBACK_SPEED).tobytes())
         finally:
             process.stdin.close()
         if process.wait():

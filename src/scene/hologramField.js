@@ -4,9 +4,9 @@ import { LIGHT_PALETTE } from './palette.js';
 
 const CARD_KEYS = Object.freeze(['abschluss', 'projekte', 'lebenslauf']);
 const CARD_ACCENTS = Object.freeze({
-  abschluss: LIGHT_PALETTE.amber,
-  projekte: LIGHT_PALETTE.violet,
-  lebenslauf: LIGHT_PALETTE.signal,
+  abschluss: LIGHT_PALETTE.fiberBlue,
+  projekte: LIGHT_PALETTE.fiberBlue,
+  lebenslauf: LIGHT_PALETTE.fiberBlue,
 });
 const ADJUSTABLE_KINDS = new Set(['ring-jet', 'coming-soon', 'resume-frame', 'card-label']);
 

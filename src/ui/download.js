@@ -1,46 +1,29 @@
 import { getLanguage, onLanguageChange, t } from '../i18n.js';
 
-/**
- * Native CV assets only. No runtime conversion or browser-side DOCX/PDF
- * generation is performed; Vite copies every referenced document unchanged.
- *
- * The English PDF currently is the reviewed reading-version PDF, not a
- * fabricated counterpart of the designed German projection PDF. Its label and
- * filename state that explicitly until a native English projection PDF exists.
+/** Locally exported, portrait-free CV PDFs and the existing native DOCX reader.
+ * No runtime conversion takes place; original source documents stay untouched.
  */
 export const CV_ASSETS = Object.freeze({
   de: Object.freeze({
     projection: Object.freeze({
-      url: new URL(
-        '../../Lebenslauf/Lebenslauf_Vladimir_Leicht.pdf',
-        import.meta.url,
-      ).href,
+      url: '/cv/CV_DE.pdf',
       filename: 'Lebenslauf_Vladimir_Leicht.pdf',
       labelKey: 'download.pdf',
     }),
     reader: Object.freeze({
-      url: new URL(
-        '../../Lebenslauf/Lebenslauf_Vladimir_Leicht_Lesefassung.docx',
-        import.meta.url,
-      ).href,
+      url: '/cv/CV_Reader_DE.docx',
       filename: 'Lebenslauf_Vladimir_Leicht_Lesefassung.docx',
       labelKey: 'download.docx',
     }),
   }),
   en: Object.freeze({
     projection: Object.freeze({
-      url: new URL(
-        '../../Lebenslauf/Lebenslauf_Vladimir_Leicht_Reading_Version_EN.pdf',
-        import.meta.url,
-      ).href,
-      filename: 'Vladimir_Leicht_CV_Reading_Version.pdf',
+      url: '/cv/CV_EN.pdf',
+      filename: 'Vladimir_Leicht_CV.pdf',
       labelKey: 'download.pdf',
     }),
     reader: Object.freeze({
-      url: new URL(
-        '../../Lebenslauf/Lebenslauf_Vladimir_Leicht_Reading_Version_EN.docx',
-        import.meta.url,
-      ).href,
+      url: '/cv/CV_Reader_EN.docx',
       filename: 'Vladimir_Leicht_CV_Reading_Version.docx',
       labelKey: 'download.docx',
     }),
@@ -53,6 +36,8 @@ export function createDownloadButton({ container } = {}) {
   const link = document.createElement('a');
   link.className = 'cv-action cv-download';
   link.rel = 'noopener';
+  link.dataset.menuAction = 'download';
+  const controls = document.querySelector('[data-target="lebenslauf"]').nextElementSibling;
   link.hidden = true;
 
   let readerMode = false;
@@ -76,7 +61,7 @@ export function createDownloadButton({ container } = {}) {
 
   const unsubscribeLanguage = onLanguageChange(applyMode);
   applyMode();
-  container.append(link);
+  controls.append(link);
 
   return {
     setVisible(next) {
@@ -87,7 +72,7 @@ export function createDownloadButton({ container } = {}) {
       readerMode = Boolean(slot);
       link.classList.toggle('is-docked', readerMode);
       applyMode();
-      (readerMode ? slot : container).append(link);
+      controls.append(link);
     },
 
     refreshLanguage: applyMode,

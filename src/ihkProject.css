@@ -20,38 +20,38 @@
 .ihk-icon { width: 24px; height: 24px; flex: 0 0 24px; color: var(--amber); }
 .ihk-symbol-heading { display: flex; align-items: center; gap: 12px; }
 .ihk-areas { margin-block: 24px; }
-.ihk-areas h3 { color: var(--amber); font: 500 18px/1.3 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; }
+.ihk-areas h3 { color: var(--amber); font: 500 18px/1.3 var(--font-display); text-transform: uppercase; letter-spacing: var(--tracking-caps); }
 .ihk-areas ul { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; margin-top: 18px; }
 .ihk-areas a { display: flex; align-items: start; gap: 12px; color: inherit; text-decoration: none; }
 .ihk-areas strong { display: block; color: var(--amber); font: 500 17px/1.25 var(--font-display); text-transform: uppercase; }
-.ihk-areas small { display: block; margin-top: 5px; color: #8eacbc; font-size: 12px; line-height: 1.45; }
+.ihk-areas small { display: block; margin-top: 5px; color: var(--ink-dim); font-size: 12px; line-height: 1.45; }
 .ihk-areas a:hover strong { color: var(--cyan); }
 .ihk-metrics { margin-block: 24px; }
 .ihk-metrics div { grid-template-columns: 130px minmax(0, 1fr); }
-.ihk-metrics dt { color: var(--amber); font: 500 20px/1.2 var(--font-display); letter-spacing: 0.03em; text-transform: none; }
+.ihk-metrics dt { color: var(--amber); font: 500 20px/1.2 var(--font-display); letter-spacing: var(--tracking-caps); text-transform: none; }
 .ihk-metrics dt { display: flex; align-items: center; gap: 10px; }
 .ihk-metrics dd { font-size: 13px; }
 .ihk-tech { margin-top: 32px; }
 .ihk-project .ihk-tech h3,
-.ihk-media h3 { margin-bottom: 16px; color: #dcecf4; font: 500 20px/1.2 var(--font-display); letter-spacing: 0.07em; text-transform: uppercase; }
+.ihk-media h3 { margin-bottom: 16px; color: var(--ink); font: 500 20px/1.2 var(--font-display); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
 .ihk-tech .cv-signature__tools { width: 100%; margin-left: 0; }
 .ihk-media { display: grid; gap: 32px; margin-top: 32px; }
 .ihk-media--lead { margin-top: 0; margin-bottom: 32px; }
 .ihk-media > section { min-width: 0; }
 .ihk-media video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--void); border: 1px solid rgb(var(--fiber-blue-rgb) / 0.2); }
-.ihk-note { margin-top: 10px; color: #7192a8; font-size: 11px; line-height: 1.5; }
-.ihk-downloads p { color: #8eacbc; font-size: 16px; line-height: 1.55; }
+.ihk-note { margin-top: 10px; color: var(--ink-dim); font-size: 11px; line-height: 1.5; }
+.ihk-downloads p { color: var(--ink-dim); font-size: 16px; line-height: 1.55; }
 .ihk-downloads a { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; margin-top: 12px; line-height: 1.4; }
 .ihk-downloads a span { color: var(--cyan); font-size: 18px; }
 .ihk-details { margin-top: 26px; }
 .ihk-panel .ihk-details li { grid-template-columns: 18px 30px minmax(0, 1fr); }
-.ihk-step { grid-column: 2; color: var(--amber); font: 400 14px/1.35 var(--font-display); letter-spacing: 0.13em; }
+.ihk-step { grid-column: 2; color: var(--amber); font: 400 14px/1.35 var(--font-display); letter-spacing: var(--tracking-label); }
 .ihk-return { min-height: 44px; display: inline-flex; align-items: center; }
 .ihk-panel .cv-hologram__footer { flex-wrap: wrap; }
 @media (max-width: 680px), (max-height: 620px) {
   .ihk-downloads p { font-size: 12px; }
   .ihk-panel .ihk-metrics div { grid-template-columns: 116px minmax(0, 1fr); }
-  .ihk-panel .ihk-metrics dt { font-size: 18px; letter-spacing: 0.02em; }
+  .ihk-panel .ihk-metrics dt { font-size: 18px; letter-spacing: var(--tracking-caps); }
   .ihk-panel .ihk-details li { grid-template-columns: 14px 24px minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
@@ -67,9 +67,23 @@
 }
 
 .ihk-reader-toggle:not(.is-docked) { top: var(--s-4); }
-.ihk-film-toggle { top: calc(var(--s-4) + 44px); }
 
 /* Place the project projection's zoom guidance on the left. */
 .frame.is-ihk-open .camera-dolly-guide { left: var(--s-4); right: auto; }
 .frame.is-ihk-open .cv-keyboard-zoom-hint { left: 84px; right: auto; }
 .frame.is-ihk-open .cv-mobile-zoom { left: 13px; right: auto; }
+
+/* This layer follows the actual 3D document plane, clipping at its page window. */
+.ihk-hologram-film { position: absolute; left: 0; top: 0; width: 1258px; transform-origin: 0 0; overflow: hidden; pointer-events: none; z-index: 3; }
+.ihk-hologram-film[hidden] { display: none; }
+.ihk-hologram-film__video { transform-origin: 0 0; position: absolute; display: block; background: #08121c; opacity: 1; pointer-events: auto; }
+.ihk-hologram-film__video:fullscreen { opacity: 1; }
+.ihk-hologram-film__video:focus-within { outline: 3px solid var(--amber); outline-offset: -3px; }
+
+.ihk-hologram-film__video:fullscreen { width: 100vw !important; height: 100vh !important; left: 0 !important; top: 0 !important; transform: none !important; object-fit: contain; }
+
+.ihk-hologram-film__play { position: absolute; display: grid; place-items: center; border: 0; padding: 0; background: transparent; color: #e5a05c; cursor: pointer; pointer-events: auto; }
+.ihk-hologram-film__play[hidden] { display: none; }
+.ihk-hologram-film__play span { display: grid; place-items: center; width: 110px; height: 110px; padding-left: 8px; border: 2px solid currentColor; border-radius: 50%; background: #08121cee; font-size: 46px; }
+.ihk-hologram-film__play:focus-visible { outline: 4px solid var(--amber); outline-offset: -4px; }
+.ihk-summary > .ihk-symbol-heading { color: var(--amber); font: 500 18px/1.3 var(--font-display); margin-bottom: 12px; }

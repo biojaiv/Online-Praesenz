@@ -20,7 +20,7 @@ dieselbe Struktur, nur in anderem Maßstab.
 |---|---|
 | Stille vor Reiz | Höchstens zwei Impulse gleichzeitig, lange Pausen dazwischen |
 | Nichts federt | Alle Übergänge langsam, gleitend, ritualhaft |
-| Ein Farbpaar | Blaugrün als Ruhezustand, Bernstein als Ereignis. Neon (Magenta, Lindgrün) nur als Impuls unter 400 ms — nie als Fläche, nie als Dauerzustand. |
+| Ein Farbpaar | Faserblau als Ruhezustand, Bernstein als Ereignis und Auswahl. Auch die kurzen Glitch-Impulse bleiben in diesem Farbpaar. |
 | Inhalt bleibt Text | Der Lebenslauf ist echtes HTML, markierbar, durchsuchbar, indexierbar |
 | Kein Effekt ohne Grund | Jede Animation transportiert eine Aussage |
 
@@ -32,7 +32,7 @@ zitiert:
 - **Fibonacci als Taktgeber** (*Lateralus*): Abstände, Impulsdauern und
   Timings stehen in keinem ganzzahligen Verhältnis zueinander. Das Muster
   wiederholt sich praktisch nie, ohne dass es zufällig wirkt.
-- **Heilige Geometrie**: Die zwölf Motive aus
+- **Heilige Geometrie**: Ausgewählte Motive aus
   `Heiligegeometrie/DIVINE_SACRED_GEOMETRY_SYMBOLS-01.png` werden als
   leuchtende Vektorsymbole in den Raum gesetzt und stark gedämpft.
 - **Tiefes Schwarz**: Dinge treten aus dem Nichts hervor und verschwinden
@@ -82,11 +82,12 @@ geöffneten Lebenslauf bleibt die Maschine in Bewegung, Front und Läufer
 werden aber stark gedämpft, damit die Seite lesbar bleibt.
 
 **Orbit.** Im Ruhezustand lässt sich die Bühne anfassen: Ziehen mit gedrückter
-Maustaste oder einem Finger dreht die Kamera um die Mitte der Sockelreihe
+Maustaste oder auf Tablets mit einem Finger dreht die Kamera um die Mitte der Sockelreihe
 (horizontal frei, vertikal begrenzt) und läuft nach dem Loslassen aus. Seitlich
 weicht die Kamera automatisch etwas zurück, damit alle drei Sockel im Bild
 bleiben. Beim Anfahren eines Sockels kehrt der Blickwinkel auf kürzestem Weg
-in die Ausgangslage zurück.
+in die Ausgangslage zurück. Auf schmalen Mobilbildschirmen wählt horizontales
+Wischen stattdessen den nächsten Sockel.
 
 ### Impulse
 
@@ -113,7 +114,7 @@ Jede Bahn hat eine Rune zugeordnet, die mit dem Impuls mitglimmt. Sie sind als
 **Strichzüge** definiert, nicht als Schriftart — Runen wurden geritzt, nicht
 geschrieben. Das vermeidet zugleich Ladeprobleme mit Fonts.
 
-Die sechs bedeutungstragenden Zeichen stammen aus dem Älteren Futhark:
+Die fünf verwendeten bedeutungstragenden Zeichen stammen aus dem Älteren Futhark:
 
 | Zeichen | Name | Bedeutung |
 |---|---|---|
@@ -121,7 +122,6 @@ Die sechs bedeutungstragenden Zeichen stammen aus dem Älteren Futhark:
 | ᛃ | Jera | Kompetenz |
 | ᚨ | Ansuz | Intelligenz |
 | ᛊ | Sowilo | Erfolg |
-| ᛉ | Algiz | Schutz |
 | ᚲ | Kenaz | Kreativität |
 
 Dazu kommt Beiwerk ohne Aussage, nur als Textur: **Ogham** (Beith, Luis, Muin)
@@ -138,19 +138,19 @@ zieht er sich auf ein Viertel zurück.
 ### Sakrale Objekte
 
 Die PNG-Datei ist ein visueller Referenzatlas, kein dauerhaft eingeblendetes
-Hintergrundbild. Daraus sind zwölf einzelne Strichmotive abgeleitet:
+Hintergrundbild. Daraus sind elf verwendete Strichmotive abgeleitet:
 
 `Vesica Piscis`, `Torus / Lotus of Life`, `Seed of Life`, `Tree of Life`,
-`Flower of Life`, `Star Tetrahedron`, `Egg of Life`, `Metatrons Cube`,
+`Flower of Life`, `Egg of Life`, `Metatrons Cube`,
 `Fruit of Life`, `Merkabah`, `Sri Yantra` und `Six Petal Rosette`.
 
 Die Figuren liegen in einem gemeinsamen Pool. Alle 5,5 bis 11,5 Sekunden
 materialisiert sich höchstens eine weitere Figur an einer neuen Position und
 Tiefe; maximal zwei sind gleichzeitig sichtbar. Jede rotiert langsam um alle
 drei Achsen, glimmt 7,5 bis 13 Sekunden und verschwindet wieder. Ein
-Impuls-Aufprall darf zusätzlich eine Figur auslösen. Die frühere, ständig
-sichtbare Pyramide (Star Tetrahedron) ist damit kein Sonderfall mehr, sondern
-erscheint nach denselben Regeln wie alle anderen Motive.
+Impuls-Aufprall darf zusätzlich eine Figur auslösen. Star Tetrahedron und
+Algiz gehören nicht mehr zum Auswahlpool. Die Kopfzeile verwendet außerdem
+keine Merkabah-, Sri-Yantra- oder Metatron-Motive mit überlagerten Dreiecken.
 
 ### Tiefe
 
@@ -168,10 +168,11 @@ einem Nachhall über der ganzen Zeile. Danach nie wieder.
 
 ### Intro-Sequenz
 
-Beim ersten Besuch einer Sitzung (ohne Deep Link, ohne
+Beim ersten Besuch (ohne Deep Link, ohne
 `prefers-reduced-motion`) läuft eine Eröffnung von **sechs Sekunden**. Sie ist
-jederzeit per Klick oder Taste abbrechbar; zusätzlich erscheint nach knapp
-einer Sekunde unten rechts ein stiller Textknopf „Intro überspringen".
+jederzeit per Klick oder Taste abbrechbar; zusätzlich erscheint von
+Beginn an unten rechts ein stiller Textknopf „Intro überspringen". Nach dem ersten
+Durchlauf wird das Intro lokal als gesehen gespeichert; weitere Besuche starten direkt.
 
 1. **Der Raum allein** (0–0,7 s). Die Kamera fährt aus der Tiefe auf ihre
    Ruheposition zurück.
@@ -183,8 +184,8 @@ einer Sekunde unten rechts ein stiller Textknopf „Intro überspringen".
 4. **Rolle und Sigil** (3,1–4,9 s): die Bezeichnung blendet ruhig ein, die
    drei Quadrate des Sigils wachsen aus dem Nichts — das äußere dreht nach
    links, das mittlere nach rechts, der Kern pulsiert einmal.
-5. **Warp** (4,95–6,0 s) nach oben links; gleichzeitig steigen die Sockel aus
-   der Tiefe. Der Markenzug ist dasselbe DOM-Element wie in der Kopfzeile;
+5. **Warp** (4,95–6,0 s) nach oben links; erst gegen Ende steigen die Sockel aus
+   der Tiefe. Der mittlere Sockel führt zuerst zur Projektübersicht. Erst die Wahl einer Webseite startet die Projektion. Einen zusätzlichen Öffnen-Knopf gibt es nicht. Der Markenzug ist dasselbe DOM-Element wie in der Kopfzeile;
    am Ende fällt nur sein Transform auf null zurück, er rastet also
    zwangsläufig pixelgenau ein.
 
@@ -198,13 +199,24 @@ ausschließlich in Cyan oder Bernstein. Bedienelemente wechseln beim Hover in
 ihre Zielfarbe — kein Signalbruch, kein Aufhellungsfilter, Bernstein bleibt
 Bernstein.
 
-Jeder Sockel trägt im Startbild eine **Beschriftung** vorn an der Kante
-(Ordnungszahl, Titel, Stichworte; zweisprachig), die beim Öffnen eines
-Bereichs abtritt. Der „Coming soon"-Schriftzug steht neutral in Faserweiß
-statt in der Sockelfarbe und pulsiert nicht mehr. Die Lebenslauf-Projektion
-ist etwas heller gestellt, ihr Partikelrahmen gedämpft; der TV-Synchronlauf
-der Hologramme (der helle Balken) läuft nur noch in der Übersicht und nie
-über einem geöffneten Dokument.
+Die Vorderkanten tragen die zweisprachigen Bereichstitel. Alle drei Sockel
+ruhen in Faserblau; Hover wechselt langsam zwischen Blau und Bernstein,
+der aktive Titel bleibt bis zum Verlassen bernsteinfarben. Bei reduzierter
+Bewegung steht die Hoverfarbe still. Spiegelbilder der unteren Sockel rahmen
+die Hologramme von oben ein. Die zusätzliche Textgravur wurde entfernt;
+bereits in das GLB eingebackene Modellschrift bleibt erhalten.
+Die Rahmen bleiben blau; obere und untere Jet-Streams tragen dynamische Blau-, Türkis- und Bernsteinbänder. Die Sockelkörper drehen sich langsam um ihre eigene Achse; Titel und Dokumente bleiben lesbar ausgerichtet. Die Beispielvorschau ist
+auch beim Hover gedämpft blau; erst die geöffnete HTML-Seite trägt ihre
+Originalfarben. Nach der Kameradrehung blendet die Kopfzeile aus. Ein ruhiger
+blauer Rahmen, unscharfe Umgebung und langsame Randwellen begrenzen die
+scharfe, bedienbare Seite. ESC oder der untere Zurück-Knopf führen zurück.
+
+Die Lebenslauf-Projektion verwendet wieder die frühere zweispaltige
+SVG-Gestaltung, ohne Porträt und Geburtsdatum. Die ausführliche Lesefassung bleibt echtes HTML.
+Lesefassung und Download stehen in den jeweiligen Untermenüs, Zoomhinweise
+in der Fußzeile. Mobil zeigt die Übersicht einen Sockel pro Ansicht, wählbar
+per Wischen, Punktnavigation oder Pfeiltasten. Der TV-Synchronlauf der
+Hologramme bleibt auf die Übersicht beschränkt.
 
 ---
 
@@ -257,7 +269,9 @@ Die drei Ankerpunkte liegen in `stage.slots` bei x = −9,2 / 0 / +9,2:
 | Bereich | Inhalt |
 |---|---|
 | `abschluss` | Abschlussprojekt FISI — Server, UEM, Clients, Migration |
-| `projekte` | Private IT-Projekte |
+| `projekte` | IT-Projekte — räumliche Projektübersicht |
+| `projekte/webseiten` | Webseiten — Auswahl der interaktiven Beispielseite |
+| `projekte/privat` | Private Projekte — angekündigt, noch keine Projekte |
 | `lebenslauf` | Werdegang, Fähigkeiten, Interessen, Kontakt |
 
 ---
@@ -287,12 +301,23 @@ B = Farbton (0 = blaugrün, 1 = bernstein)
 A = Aufprallblitz 0..1
 ```
 
-**Hybrid-Rendering für den Lebenslauf.** Glas, Sockel, Partikel und
-Nachbearbeitung laufen in WebGL, der eigentliche Text jedoch als HTML über
-`CSS3DRenderer` im 3D-Raum. Grund: Ein Recruiter muss Text markieren, kopieren
-und mit Strg+F suchen können. Canvas-Text wäre beim Heranzoomen matschig und
-für Suchmaschinen unsichtbar — bei einer Bewerbungsseite ein
-Ausschlusskriterium.
+**Hybrid-Rendering für den Lebenslauf.** Die räumliche Vorschau läuft als
+Textur in WebGL. Die Lesefassung ist echtes, auswählbares HTML im vorhandenen
+Overlay. `scripts/cv/build_legacy_projection.mjs` exportiert die ursprünglichen
+SVGs ohne Porträt und Geburtsdatum nach `public/cv/CV_Projection_*.webp` und `CV_*.pdf`.
+Die DOCX-Lesefassungen werden ebenfalls ohne Geburtsdatum nach `CV_Reader_*.docx` exportiert. Die Seitenanker stehen in `src/data/cvProjection.json`. Quelldateien werden
+nicht verändert. Die PDF-Fassung besteht wie die deutsche Vorlage aus
+Rasterseiten; auswählbarer Text ist in der HTML-Lesefassung verfügbar.
+
+Zum Aktualisieren: `npm run build:cv` (Playwright Chromium und Python mit
+Pillow und PyMuPDF erforderlich; `CHROMIUM_PATH` und `CV_PYTHON` können
+lokale Installationen auswählen). Kein laufender Webserver erforderlich.
+`npm run test:harmony` prüft Intro, mobile Sockelauswahl, Untermenüs,
+Downloads, DE/EN und die Mindestschriftgröße. `npm run test:refinements`
+prüft zusätzlich Hover-/Aktivfarben, Klänge, Browser-Sprachwahl, Kopfzeile
+und dauerhaft erreichbare Kontaktdaten gegen den Entwicklungsserver
+(`HARMONY_URL`). Standort, Verfügbarkeit, E-Mail und PDF stehen direkt
+im Rahmen; „Wie diese Seite gebaut ist“ erläutert die technischen Nachweise.
 
 ### Bekannte Stolpersteine
 
@@ -380,3 +405,9 @@ npm run preview  # Bündel lokal prüfen
 - [ ] CSS3D-Ebene mit dem Lebenslauf aus `cv.json`
 - [ ] Choreografie: Schreibmaschine, Bildungsweg, Fähigkeitsquadrate
 - [ ] Meshy-Modelle einsetzen
+
+### Projektübersicht und Warp-Wellen (22.09.2026)
+
+`projectsBrowser.js` nutzt die bestehende Hologrammgestaltung für echte HTML-Auswahlfelder. Die erste Kamerafahrt muss tatsächlich beendet sein, bevor die Auswahl erscheint. Die folgende 180°-Fahrt bleibt unter exklusiver Kamerasteuerung. `warpTunnel.js` zeichnet einfarbige und gemischte Lichtkonturen nach der Referenz `Beispielwebseiten/warptunnel.jpg`: Wellen laufen langsam vom äußeren Sichtfeld auf den tatsächlichen rechteckigen Seitenrand zu. Das iframe bleibt scharf und bedienbar. ESC und der Zurück-Schalter im Fußzeilenstil führen zur Projektübersicht zurück.
+
+Die Beispielseite ergänzt native Navigation um Lesefortschritt, sanftes Einblenden, Kapitelmarkierung und dezente Hardware-Parallaxe. Reduzierte Bewegung schaltet die neuen Bewegungen ab. Erster Sprachaufruf: deutscher Browser → DE, alle anderen → EN; eine manuelle Auswahl bleibt gespeichert. `test:waves` prüft diese neuen Effekte, Kategorien, Scrolling und Rückkehr.

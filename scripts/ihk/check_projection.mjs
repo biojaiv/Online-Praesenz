@@ -1,3 +1,4 @@
+import { openMenu } from '../ui/menu.mjs';
 /** Exercise actual 3D controls against the Vite development server's existing stage inspector. */
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -21,7 +22,7 @@ try {
     await page.addInitScript(() => localStorage.setItem('vl-language', 'de'));
     await page.goto(`${base}/#home`);
     await page.waitForFunction(() => window.__stage?.cards.documentPickables.length === 2 && window.__stage.cards.documentPickables.every((mesh) => mesh.visible && mesh.material.uniforms.uMap.value));
-    await page.waitForFunction(() => document.querySelector('#boot').classList.contains('is-done'));
+    await page.waitForFunction(() => document.querySelector('#boot').classList.contains('is-done') && !document.querySelector('.frame.is-intro'));
     await page.waitForTimeout(1200);
     const effects = await page.evaluate(() => {
       let jets = 0, tallVolumes = 0;
@@ -31,7 +32,7 @@ try {
       });
       return { jets, tallVolumes };
     });
-    assert.deepEqual(effects, { jets: 3, tallVolumes: 0 });
+    assert.deepEqual(effects, { jets: 6, tallVolumes: 0 });
     await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-home.png` });
     // Click the real world-space document above the left pedestal.
     const centre = await page.evaluate(() => {
@@ -49,7 +50,7 @@ try {
     await waitForProjectFocus();
     assert.notDeepEqual(await page.evaluate(() => window.__stage.camera.position.toArray()), homeCamera, 'Click zooms into the document');
     const canvas = await page.locator('#scene').boundingBox();
-    const x = canvas.x + canvas.width / 2, y = canvas.y + canvas.height / 2;
+    const x = canvas.x + canvas.width / 2, y = canvas.y + canvas.height * .72;
     await page.mouse.move(x, y);
     await page.mouse.wheel(0, 650);
     await page.waitForFunction(() => window.__stage.cards.documentScroll > 0.01);
@@ -76,6 +77,7 @@ try {
     }
     await page.locator('.nav__link[data-target="lebenslauf"]').click();
     assert.equal(await page.evaluate(() => window.__stage.cards.documentScroll), 0);
+    await openMenu(page, 'lebenslauf');
     await page.locator('.cv-reader-toggle').click();
     await page.locator('.cv-reader:not([hidden])').waitFor();
     await page.keyboard.press('Escape');
@@ -86,9 +88,13 @@ try {
       await page.waitForFunction(() => window.__stage.cards.documentPickables.every((mesh) => mesh.visible && mesh.material.uniforms.uMap.value));
       await waitForProjectFocus();
       await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-${language}-projection.png` });
+      await openMenu(page, 'abschluss');
       await page.locator('.ihk-reader-toggle').click();
       await page.locator('.ihk-project:not([hidden])').waitFor();
-      await page.waitForFunction(() => !window.__stage.cards.documentPickables.find((mesh) => mesh.userData.key === 'abschluss').visible);
+      await page.waitForFunction(() => !window.__stage.cards.documentPickables.find((mesh) => mesh.userData.key === 'abschluss').visible).catch(async error => {
+        console.error(await page.evaluate(() => ({ route: location.hash, panels: [...document.querySelectorAll('.cv-reader, .ihk-project')].map(el => ({ class: el.className, hidden: el.hidden })), projections: window.__stage.cards.documentPickables.map(mesh => ({ key: mesh.userData.key, visible: mesh.visible, opacity: mesh.material.uniforms.uOpacity.value })) })));
+        throw error;
+      });
       await page.keyboard.press('Escape');
       await page.locator('.ihk-project').waitFor({ state: 'hidden' });
       assert(page.url().endsWith('#abschluss'));
@@ -99,13 +105,15 @@ try {
     await page.reload();
     await page.waitForFunction(() => {
       const mesh = window.__stage?.cards.documentPickables.find((item) => item.userData.key === 'abschluss');
-      return mesh?.visible && Math.abs(mesh.material.uniforms.uOffset.value - 0.6) < 0.001;
+      return mesh?.visible && Math.abs(mesh.material.uniforms.uOffset.value - 4 / 6) < 0.001;
     });
     await page.keyboard.press('Escape');
     await page.waitForURL('**/#');
     await page.locator('.nav__link[data-target="abschluss"]').click();
-    await page.locator('.ihk-film-toggle').click();
-    await page.waitForFunction(() => document.activeElement?.tagName === 'VIDEO');
+    assert.equal(await page.locator('.ihk-film-toggle').count(), 0);
+    await openMenu(page, 'abschluss');
+    await page.locator('.ihk-reader-toggle').click();
+    await page.locator('.ihk-project:not([hidden])').waitFor();
     assert.equal(await page.locator('.ihk-body > :first-child > section:first-child').getAttribute('id'), 'ihk-film');
     assert.equal(await page.locator('.ihk-downloads a[download]').count(), 2);
     assert.deepEqual(errors, []);

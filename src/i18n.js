@@ -1,4 +1,5 @@
 import { ihkMessages } from './data/ihk.messages.js';
+import { exampleMessages } from './data/example.messages.js';
 
 const STORAGE_KEY = 'vl-language';
 const SESSION_STORAGE_KEY = 'vl-language-session';
@@ -10,11 +11,12 @@ let currentLanguage = null;
 const MESSAGES = Object.freeze({
   en: Object.freeze({
     ...ihkMessages.en,
+    ...exampleMessages.en,
     'meta.title': 'Vladimir Leicht — Information Technology Specialist - Systems Integration',
     'meta.description': 'Portfolio of Vladimir Leicht, Information Technology Specialist - Systems Integration. Final project, private IT projects and CV.',
     'brand.role': 'Information Technology Specialist - Systems Integration',
     'nav.finalProject': 'Final Project',
-    'nav.privateProjects': 'Private IT Projects',
+    'nav.privateProjects': 'IT Projects',
     'nav.automation': 'Automation',
     'nav.cv': 'CV',
     'nav.education': 'Education',
@@ -25,7 +27,7 @@ const MESSAGES = Object.freeze({
     'intro.skip': 'Skip intro',
     'card.abschluss.title': 'Final Project',
     'card.abschluss.subtitle': 'Server · UEM · Clients · Migration',
-    'card.projekte.title': 'Private IT Projects',
+    'card.projekte.title': 'IT Projects',
     'card.projekte.subtitle': 'Self-built · Automation · Experiments',
     'card.lebenslauf.title': 'CV',
     'card.lebenslauf.subtitle': 'Career · Skills · Contact',
@@ -33,7 +35,7 @@ const MESSAGES = Object.freeze({
     'lang.switch': 'Switch to German',
     'route.home': 'Home',
     'route.finalProject': 'Final Project',
-    'route.privateProjects': 'Private IT Projects',
+    'route.privateProjects': 'IT Projects',
     'route.automation': 'Automation',
     'route.cv': 'CV',
     'route.career': 'Employment History',
@@ -104,11 +106,12 @@ const MESSAGES = Object.freeze({
   }),
   de: Object.freeze({
     ...ihkMessages.de,
+    ...exampleMessages.de,
     'meta.title': 'Vladimir Leicht — Fachinformatiker für Systemintegration',
     'meta.description': 'Portfolio von Vladimir Leicht, Fachinformatiker für Systemintegration. Abschlussprojekt, private IT-Projekte und Lebenslauf.',
     'brand.role': 'Fachinformatiker für Systemintegration',
     'nav.finalProject': 'Abschlussprojekt',
-    'nav.privateProjects': 'Private IT-Projekte',
+    'nav.privateProjects': 'IT-Projekte',
     'nav.automation': 'Automatisierung',
     'nav.cv': 'Lebenslauf',
     'nav.education': 'Bildungsweg',
@@ -127,7 +130,7 @@ const MESSAGES = Object.freeze({
     'lang.switch': 'Switch to English',
     'route.home': 'Home',
     'route.finalProject': 'Abschlussprojekt',
-    'route.privateProjects': 'Private IT-Projekte',
+    'route.privateProjects': 'IT-Projekte',
     'route.automation': 'Automatisierung',
     'route.cv': 'Lebenslauf',
     'route.career': 'Werdegang',
@@ -216,7 +219,8 @@ function storedLanguage() {
   } catch {
     // Storage can be unavailable in hardened/private browser contexts.
   }
-  return DEFAULT_LANGUAGE;
+  const browserLanguage = navigator.languages?.[0] || navigator.language;
+  return normaliseLanguage(browserLanguage);
 }
 
 export function getLanguage() {

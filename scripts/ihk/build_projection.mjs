@@ -1,4 +1,4 @@
-/** Render the reviewed website copy as five transparent hologram pages per language.
+/** Render the reviewed website copy as six transparent hologram pages per language.
  * Intermediate PNGs stay outside the repo. No running website is needed.
  * Uses the site's own fonts; no runtime PDF requests or conversions are needed.
  */
@@ -7,6 +7,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { chromium } from 'playwright';
 import { ihkMessages } from '../../src/data/ihk.messages.js';
+import { IHK_FILM_RECT, IHK_POSTERS } from '../../src/data/ihkMedia.js';
 import { ihkIcon, IHK_SECTION_ICONS } from '../../src/ui/ihkIcons.js';
 const temporary = process.env.IHK_RENDER_OUTPUT || '/tmp/ihk-projection-render';
 await mkdir(temporary, { recursive: true });
@@ -19,21 +20,26 @@ try {
     const t = (key) => escape(ihkMessages[language][`ihk.${key}`]);
     const page = await browser.newPage({ viewport: { width: 1258, height: 1920 }, deviceScaleFactor: 1 });
     const sections = ['overview', 'server', 'uem', 'clients', 'migration'];
-    const pages = sections.map((section, index) => `<section class="sheet">
+    const poster = await readFile(new URL(`../../public${IHK_POSTERS[language]}`, import.meta.url));
+    const hero = `<section class="sheet hero"><header><span>VL // IHK</span><span>${t('kicker')}</span></header>
+      <div class="film-preview"><img src="data:image/webp;base64,${poster.toString('base64')}"><span class="play">▶</span></div>
+      <div class="hero-content"><p class="kicker">${t('scope')}</p><h1>${t('title')}</h1>
+      <p class="subtitle">${t('subtitle')}</p><p>${t('description')}</p>
+      <h2 class="symbol-heading">${ihkIcon('migration')}${t('motivationTitle')}</h2><p>${t('motivation')}</p>
+      <div class="facts">${[['40 h', 'time', 'clock'], ['4', 'clientsMetric', 'clients'], ['100 %', 'success', 'check'], ['Windows 11', 'deployment', 'network']].map(([value, key, icon]) => `<div>${ihkIcon(icon)}<strong>${value}</strong><small>${t(key)}</small></div>`).join('')}</div></div>
+      <footer><span>${t('overview')}</span><span>01 / 06</span></footer></section>`;
+    const pages = hero + sections.map((section, index) => `<section class="sheet">
       <header><span>VL // IHK</span><span>${t('kicker')}</span></header>
       <p class="kicker">${t('scope')}</p>
       <h1>${t(section === 'overview' ? 'title' : `${section}.title`)}</h1>
       ${section === 'overview' ? `
-        <p class="subtitle">${t('subtitle')}</p>
-        <p>${t('description')}</p>
-        <div class="facts">${[['40 h', 'time', 'clock'], ['4', 'clientsMetric', 'clients'], ['100 %', 'success', 'check'], ['Windows 11', 'deployment', 'network']].map(([value, key, icon]) => `<div>${ihkIcon(icon)}<strong>${value}</strong><small>${t(key)}</small></div>`).join('')}</div>
         <h2 class="symbol-heading">${ihkIcon('migration')}${t('areas')}</h2>
         <div class="areas">${sections.slice(1).map((key) => `<div>${ihkIcon(key)}<div><h3>${t(key)}</h3><p>${t(`${key}.summary`)}</p></div></div>`).join('')}</div>
         <p class="result">${t('result')}</p>
         <h2 class="symbol-heading">${ihkIcon('tools')}${t('technologies')}</h2><p class="signature">VMware vSphere · Windows Server 2022 · Active Directory · MSSQL · baramundi · DIP · PXE · TFTP · WinPE · Windows ADK · DISM · bDeploy · TLS · VLAN · DHCP</p>
         ` : `<p class="subtitle">${t(`${section}.lead`)}</p>
         <ol>${['a', 'b', 'c'].map((part, i) => `<li>${ihkIcon(IHK_SECTION_ICONS[section][i])}<div><h2>${t(`${section}.${part}.title`)}</h2><p>${t(`${section}.${part}.text`)}</p></div></li>`).join('')}</ol>`}
-      <footer><span>${t(section)}</span><span>0${index + 1} / 05</span></footer>
+      <footer><span>${t(section)}</span><span>0${index + 2} / 06</span></footer>
     </section>`).join('');
     await page.setContent(`<html lang="${language}"><head>${fontLink}<style>
       *{box-sizing:border-box}html,body{margin:0;background:transparent;color:#cde1eb;font-family:Barlow,sans-serif}
@@ -51,6 +57,10 @@ try {
       ol{list-style:none;padding:0;margin-top:65px;position:relative}ol:before{content:'';position:absolute;left:8px;top:0;bottom:30px;width:2px;background:linear-gradient(transparent,#e5a05c,transparent)}
       li{position:relative;display:grid;grid-template-columns:85px 1fr;gap:20px;padding:38px 0 38px 42px;border-top:1px solid #456a8444}li:before{content:'';position:absolute;left:0;top:47px;width:18px;height:18px;border:3px solid #e5a05c;border-radius:50%;box-shadow:0 0 18px #e5a05c88}
       .number{color:#e5a05c;font:400 34px 'Barlow Condensed',sans-serif}li p{font-size:34px;line-height:1.6;margin-bottom:0}
+      .hero header{position:absolute;left:94px;right:94px;top:100px}
+      .film-preview{position:absolute;left:${IHK_FILM_RECT.x}px;top:${IHK_FILM_RECT.y}px;width:${IHK_FILM_RECT.width}px;height:${IHK_FILM_RECT.height}px;border:1px solid #52769088}
+      .film-preview img{display:block;width:100%;height:100%}.play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#08121cee;border:2px solid #e5a05c;border-radius:50%;width:110px;height:110px;display:grid;place-items:center;color:#e5a05c;font-size:46px;padding-left:8px}
+      .hero-content{position:absolute;left:94px;right:94px;top:850px}.hero-content h1{font-size:55px;text-align:center}.hero-content p{font-size:28px;line-height:1.4;margin-bottom:20px}.hero-content .subtitle{font-size:29px;margin-bottom:24px}.hero-content h2{font-size:34px}.hero-content .facts{margin:26px 0 0}.hero-content .facts strong{font-size:42px}.hero-content .facts .ihk-icon{width:44px;height:44px;margin-bottom:8px}
     </style></head><body>${pages}</body></html>`);
     await page.evaluate(() => document.fonts.ready);
     assert(await page.evaluate(() => document.fonts.check('30px Barlow') && document.fonts.check('65px "Barlow Condensed"')), 'Site fonts must be available');
@@ -65,7 +75,7 @@ try {
     const target = new URL(`../../public/ihk/IHK_Projection_${language.toUpperCase()}.webp`, import.meta.url).pathname;
     const conversion = spawnSync('python', ['-c', 'from PIL import Image; import sys; Image.open(sys.argv[1]).save(sys.argv[2], "WEBP", quality=94, method=6)', png, target], { encoding: 'utf8' });
     assert.equal(conversion.status, 0, conversion.stderr);
-    console.log(`${language}: five transparent projection pages → ${target}`);
+    console.log(`${language}: six transparent projection pages → ${target}`);
     await page.close();
   }
 } finally { await browser.close(); }

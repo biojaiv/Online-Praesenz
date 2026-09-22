@@ -1,6 +1,6 @@
 # IHK-Projektintegration · 21.09.2026
 
-Aktueller Stand: [visueller Netzwerkfilm vor dem Projekttext](ihk-network-film-2026-09-21.md), aufbauend auf [IHK im Lebenslauf-Stil](ihk-cv-presentation-2026-09-21.md). Die folgenden Angaben dokumentieren auch die vorausgegangenen Integrationsstände.
+Aktueller Stand: [Film direkt im Hologramm, langsamere Fassung und Projektbegründung](ihk-hologram-film-2026-09-22.md). Die folgenden Angaben dokumentieren auch die vorausgegangenen Integrationsstände.
 
 ## Ausgangsstand und Quellen
 

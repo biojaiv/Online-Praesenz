@@ -9,9 +9,9 @@ const CARD_COPY = Object.freeze({
   lebenslauf: 'card.cv.title',
 });
 const CARD_ACCENTS = Object.freeze({
-  abschluss: LIGHT_PALETTE.amber,
-  projekte: LIGHT_PALETTE.violet,
-  lebenslauf: LIGHT_PALETTE.signal,
+  abschluss: LIGHT_PALETTE.fiberBlue,
+  projekte: LIGHT_PALETTE.fiberBlue,
+  lebenslauf: LIGHT_PALETTE.fiberBlue,
 });
 
 function hash(index, salt = 0) {
@@ -190,8 +190,9 @@ function makeInscription(accent) {
   mesh.name = 'pedestal-recess-inscription';
   mesh.renderOrder = 8;
 
-  const colour = new THREE.Color(accent);
-  const brightColour = colour.clone().lerp(new THREE.Color(0x35d7ff), 0.38);
+  // Neutral texture lets the material supply the current state colour.
+  const colour = new THREE.Color(0xffffff);
+  const brightColour = colour.clone();
   let currentLabel = '';
 
   function draw(label) {
@@ -304,7 +305,7 @@ export function createPedestalEnergyField({ cards, renderer, reduced = false } =
     const assembly = new THREE.Group();
     assembly.name = `pedestal-energy-${key}`;
     assembly.userData.kind = 'pedestal-energy-field';
-    assembly.add(reservoir.points, inscription.mesh);
+    assembly.add(reservoir.points); // Titles live on the front; no recessed text overlay.
     holder.add(assembly);
 
     states.push({
@@ -395,6 +396,9 @@ export function createPedestalEnergyField({ cards, renderer, reduced = false } =
 
       for (const state of states) {
         state.localPulse *= Math.pow(0.075, dt);
+        const active = state.key === activeRoot;
+        state.reservoir.uniforms.uAccent.value.lerp(new THREE.Color(active ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue), response);
+        state.inscription.material.color.set(active ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue);
         const readerFactor = readerOpen && state.key === 'lebenslauf' ? 0.42 : 1;
         const pulseBoost = Math.max(globalPulse * 0.55, state.localPulse * 0.48);
         const target = Math.min(1.35, (state.target + pulseBoost) * readerFactor);

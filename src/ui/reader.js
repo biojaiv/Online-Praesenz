@@ -188,7 +188,6 @@ function contact(data) {
           <div><dt>${escapeHTML(t('reader.email'))}</dt><dd><a href="mailto:${email}">${email}</a></dd></div>
           <div><dt>${escapeHTML(t('reader.location'))}</dt><dd>${escapeHTML(personal.wohnort)}</dd></div>
           <div><dt>${escapeHTML(t('reader.availability'))}</dt><dd>${escapeHTML(data.verfuegbar)}</dd></div>
-          <div><dt>${escapeHTML(t('reader.birthDate'))}</dt><dd>${escapeHTML(personal.geburtsdatum)}</dd></div>
         </dl>
       </div>
       <a class="cv-primary-action" href="mailto:${email}">${escapeHTML(t('reader.emailAction'))}</a>
@@ -239,7 +238,10 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
   toggle.hidden = true;
   toggle.setAttribute('aria-expanded', 'false');
 
-  container.append(toggle, panel);
+  const controls = document.querySelector('#nav-sub-lebenslauf') || document.querySelector('[data-target="lebenslauf"]').nextElementSibling;
+  toggle.dataset.menuAction = 'reader';
+  controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
+  container.append(panel);
 
   const article = panel.querySelector('.cv-hologram');
   const body = panel.querySelector('.cv-hologram__body');
@@ -328,14 +330,14 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
 
     try {
       if (open) {
-        lastFocus = document.activeElement;
+        lastFocus = document.querySelector('.nav__link[data-target="lebenslauf"]');
         await onTransition?.(true);
         if (!open || route.split('/')[0] !== ROOT) return;
         article.classList.remove('is-fading');
         panel.classList.remove('is-fading');
         article.classList.add('is-emerging');
         panel.hidden = false;
-        actionSlot.prepend(toggle);
+        controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
         scrollToSection('auto');
         requestAnimationFrame(() => scrollToSection('auto'));
         body.focus({ preventScroll: true });
@@ -351,7 +353,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
         article.classList.remove('is-fading');
         panel.classList.remove('is-fading');
         panel.hidden = true;
-        container.prepend(toggle);
+        controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
         onOpenChange?.(false);
         onTransition?.(false);
         if (restoreFocus && route.split('/')[0] === ROOT && lastFocus instanceof HTMLElement) {

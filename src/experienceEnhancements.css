@@ -84,7 +84,7 @@
   transform: translateY(-50%);
   color: rgba(212, 232, 248, 0.66);
   font: 500 12px/1 "Barlow Condensed", "Arial Narrow", sans-serif;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   pointer-events: none;
   opacity: 0;
@@ -106,7 +106,7 @@
   border-bottom-color: rgba(232, 164, 90, 0.72);
   border-radius: 5px;
   background: rgba(3, 8, 14, 0.76);
-  color: #d4e8f8;
+  color: var(--ink);
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.45);
   font: 600 15px/1 system-ui, sans-serif;
 }
@@ -139,7 +139,7 @@
   border: 1px solid rgba(120, 191, 255, 0.48);
   border-radius: 12px;
   background: rgba(6, 17, 29, 0.88);
-  color: #d4e8f8;
+  color: var(--ink);
   font: 500 27px/1 system-ui, sans-serif;
   touch-action: manipulation;
   cursor: pointer;
@@ -157,7 +157,7 @@
   grid-column: 1 / -1;
   color: rgba(212, 232, 248, 0.56);
   font: 500 10px/1 "Barlow Condensed", "Arial Narrow", sans-serif;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--tracking-caps);
   text-align: center;
   text-transform: uppercase;
 }
@@ -188,16 +188,16 @@
 
 @keyframes navigation-signal-distortion {
   0%, 94%, 100% { transform: none; text-shadow: none; }
-  95% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 #53f5ff, -2px 0 #ff4fd8; }
-  96% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 #53f5ff, 2px 0 #ff4fd8; }
-  97% { transform: translateX(-1px); text-shadow: 2px 0 #53f5ff; }
+  95% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 var(--cyan), -2px 0 var(--amber); }
+  96% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 var(--cyan), 2px 0 var(--amber); }
+  97% { transform: translateX(-1px); text-shadow: 2px 0 var(--cyan); }
   98% { transform: none; text-shadow: none; }
 }
 @keyframes navigation-signal-distortion-active {
   0%, 100% { transform: none; text-shadow: none; }
-  18% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 #53f5ff, -2px 0 #ff4fd8; }
-  36% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 #53f5ff, 2px 0 #ff4fd8; }
-  54% { transform: translateX(-1px); text-shadow: 2px 0 #53f5ff; }
+  18% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 var(--cyan), -2px 0 var(--amber); }
+  36% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 var(--cyan), 2px 0 var(--amber); }
+  54% { transform: translateX(-1px); text-shadow: 2px 0 var(--cyan); }
   72% { transform: none; text-shadow: none; }
 }
 

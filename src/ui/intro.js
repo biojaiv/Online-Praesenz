@@ -24,9 +24,10 @@ import { t } from '../i18n.js';
  * liest ihn genau einmal, und nach dem Intro traegt er keinerlei Reste.
  */
 
-/** Intro bei jedem echten Laden der Hauptseite, Deep Links bleiben direkt. */
+/** Intro beim ersten Besuch; gespeicherte Besuche und Deep Links bleiben direkt. */
 export function shouldPlayIntro() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  try { if (localStorage.getItem('vl-intro-seen') === '1') return false; } catch {}
   const hash = location.hash.replace(/^#/, '').trim();
   if (hash && hash !== 'home') return false;
   return true;
@@ -135,7 +136,8 @@ export function playIntro({ stage, onDone } = {}) {
   skipButton.className = 'intro__skip';
   skipButton.textContent = t('intro.skip');
   frame.appendChild(skipButton);
-  const skipReveal = window.setTimeout(() => skipButton.classList.add('is-visible'), 900);
+  skipButton.classList.add('is-visible');
+  const skipReveal = 0;
 
   let tl = null;
   let done = false;
@@ -146,6 +148,7 @@ export function playIntro({ stage, onDone } = {}) {
   function finalize(skipped = false) {
     if (done) return;
     done = true;
+    try { localStorage.setItem('vl-intro-seen', '1'); } catch {}
     window.clearTimeout(safetyTimer);
     window.clearTimeout(skipReveal);
     tl?.kill();
@@ -184,7 +187,7 @@ export function playIntro({ stage, onDone } = {}) {
     brand.style.removeProperty('filter');
     nav.removeAttribute('inert');
     stage.setGlitch(0);
-    stage.intro.finish();
+    stage.intro.finish({ preserveReveal: !skipped });
     stage.background.ambient.value = 0.18;
     if (skipped) stage.toHome(0.9);
     onDone?.();
@@ -363,10 +366,9 @@ export function playIntro({ stage, onDone } = {}) {
       gsap.killTweensOf(role);
       role.style.textShadow = '';
       stage.intro.recoil();
-      // Erst mit dem Warp des Schriftzugs steigen die Sockel aus der Tiefe.
-      stage.intro.revealWorld(1.05);
     }, null, 4.95);
     tl.to(brand, { x: 0, y: 0, scale: 1, duration: 1.05, ease: 'power4.inOut' }, 4.95);
+    tl.call(() => stage.intro.revealWorld(1.05), null, 5.65);
     tl.fromTo(flash,
       { opacity: 0.4, scale: 0.4 },
       { opacity: 0, scale: 1.6, duration: 0.9, ease: 'power2.out' },

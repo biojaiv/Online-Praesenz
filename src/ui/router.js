@@ -55,6 +55,7 @@ export function createRouter({ onEnter }) {
   }
 
   nav.addEventListener('click', (e) => {
+    if (e.target.closest('[data-menu-action]')) { setOpenGroup(null); return; }
     const btn = e.target.closest('[data-target]');
     if (!btn) return;
     const group = btn.closest('.nav__group');
@@ -63,7 +64,7 @@ export function createRouter({ onEnter }) {
         setOpenGroup(null);
         return;
       }
-      go(btn.dataset.target);
+      if (current.split('/')[0] !== btn.dataset.target) go(btn.dataset.target);
       setOpenGroup(group);
       return;
     }
@@ -88,7 +89,7 @@ export function createRouter({ onEnter }) {
     const group = event.target.closest('.nav__group');
     if (!group) return;
     const button = group.querySelector('.nav__link');
-    const items = [...group.querySelectorAll('.nav__sub button')];
+    const items = [...group.querySelectorAll('.nav__sub button, .nav__sub a')].filter(el => !el.hidden);
     if (event.target === button && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault();
       setOpenGroup(group);

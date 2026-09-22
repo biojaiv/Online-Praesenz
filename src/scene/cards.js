@@ -5,6 +5,7 @@ import { LIGHT_PALETTE, lightColor } from './palette.js';
 import { createResumeProjection, getCvAnchor } from './resumeProjection.js'; // DYNAMIC_CV_LANGUAGE_GEOMETRY_V3
 import { ihkProjectionSource, getIhkAnchor } from './ihkProjectionSource.js';
 import { t, onLanguageChange } from '../i18n.js';
+import { createExamplePreview } from './examplePreview.js';
 
 /**
  * Die drei interaktiven Bereichssockel.
@@ -16,6 +17,8 @@ import { t, onLanguageChange } from '../i18n.js';
  * Der Lebenslauf-Sockel traegt zusaetzlich das Dokumentfenster: eine Flaeche
  * direkt ueber der Sockeloberkante, durch die der Lebenslauf laeuft.
  */
+
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const BASE_Y = -6.15;
 // Die gesamte Sockelreihe sitzt im Startbild etwas tiefer. Der Versatz
@@ -32,12 +35,9 @@ const RING_RADIUS = 1.95;
 // ueberstrahlen — auch im Startbild.
 const JET_HEIGHT = 1.3;
 const JET_SPREAD = 0.23;
-// Hoehe des "Coming soon"-Schriftzugs ueber der Sockeloberkante. Er steht
-// bewusst ueber der Partikelfahne, damit die Schrift lesbar bleibt.
-const TEASER_Y = 1.62;
 // Zusaetzliche Klickhoehe ueber der Sockeloberkante: die Projekt- und
 // Lebenslaufbereiche nehmen ihr Dokument mit, private Projekte den Teaser.
-const HIT_HEADROOM = { abschluss: JET_HEIGHT, projekte: TEASER_Y + 0.6, lebenslauf: JET_HEIGHT };
+const HIT_HEADROOM = { abschluss: JET_HEIGHT, projekte: 5.6, lebenslauf: JET_HEIGHT };
 // Grenzen des Dokumentfensters in Welteinheiten. Das Fenster ist genau eine
 // Seite hoch; die Breite folgt daraus und bleibt hoechstens so breit wie der
 // Sockel.
@@ -157,14 +157,13 @@ function makeAccentRing(accent) {
  * am Austritt, danach ausrollend und sprudelnd aufgefaechert.
  */
 function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = JET_HEIGHT } = {}) {
-  const count = 2400;
+  const count = 1200;
   const positions = new Float32Array(count * 3);
   const angles = new Float32Array(count);
   const seeds = new Float32Array(count);
   const speeds = new Float32Array(count);
   const sizes = new Float32Array(count);
   const phases = new Float32Array(count);
-  const hues = new Float32Array(count);
 
   // Jedes Attribut zieht aus einem eigenen Hash. Gekoppelte Folgen wie
   // index * goldener Schnitt wuerden sichtbare Gittermuster im Strahl
@@ -183,7 +182,6 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
     const sizeSeed = hash(index * 5.11 + 13.3);
     sizes[index] = 0.34 + sizeSeed * sizeSeed * 1.35;
     phases[index] = hash(index * 7.93 + 21.7);
-    hues[index] = hash(index * 11.37 + 31.4);
     positions[index * 3] = Math.cos(angle) * radius;
     positions[index * 3 + 1] = 0;
     positions[index * 3 + 2] = Math.sin(angle) * radius;
@@ -196,10 +194,10 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
   geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1));
   geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
   geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
-  geometry.setAttribute('aHue', new THREE.BufferAttribute(hues, 1));
 
   const uniforms = {
     uTime: time,
+    uMotion: { value: reducedMotion() ? 0 : 1 },
     uOriginY: { value: originY },
     uRadius: { value: radius },
     uHeight: { value: height },
@@ -217,27 +215,27 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      attribute float aAngle, aSeed, aSpeed, aSize, aPhase, aHue;
+      attribute float aAngle, aSeed, aSpeed, aSize, aPhase;
       uniform float uTime, uOriginY, uRadius, uHeight, uHeightScale, uSpread;
-      uniform float uReveal, uPixelRatio, uHover;
-      varying float vT, vHue, vSeed, vSpark;
+      uniform float uReveal, uPixelRatio, uHover, uMotion;
+      varying float vT, vSeed, vSpark;
       void main() {
-        float t = fract(aPhase + uTime * aSpeed * 0.9);
+        float clock = uTime * uMotion;
+        float t = fract(aPhase + clock * aSpeed * 1.1);
         vT = t;
-        vHue = aHue;
         vSeed = aSeed;
 
         // Duesenprofil: harter Schub am Austritt, danach bremst das Abgas ab.
         float rise = 1.0 - pow(1.0 - t, 2.1);
 
         // Sprudeln: drei ueberlagerte Wirbel unterschiedlicher Frequenz.
-        float churn = sin(uTime * 3.1 + aSeed * 61.0 + t * 23.0)
-                    + sin(uTime * 1.9 - aSeed * 37.0 + t * 13.0) * 0.55
-                    + sin(uTime * 5.3 + aSeed * 97.0 + t * 41.0) * 0.3;
+        float churn = sin(clock * 3.1 + aSeed * 61.0 + t * 23.0)
+                    + sin(clock * 1.9 - aSeed * 37.0 + t * 13.0) * 0.55
+                    + sin(clock * 5.3 + aSeed * 97.0 + t * 41.0) * 0.3;
 
         // Der Strahl tritt eng am weissen Ring aus und faechert nach oben
         // kegelfoermig auf, wie eine sich entspannende Abgasfahne.
-        float swirl = aAngle + t * (0.5 + (aSeed - 0.5) * 1.1);
+        float swirl = aAngle + t * (1.2 + (aSeed - 0.5) * 1.4) + sin(clock * 1.4 + aSeed * 7.0) * .08;
         float r = uRadius * (1.0 - 0.05 * t)
                 + (aSeed - 0.5) * 0.055
                 + churn * 0.018 * (0.25 + t * 1.6)
@@ -261,10 +259,7 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
     `,
     fragmentShader: /* glsl */`
       uniform float uHover, uCompact, uReveal;
-      varying float vT, vHue, vSeed, vSpark;
-      vec3 hue2rgb(float h) {
-        return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-      }
+      varying float vT, vSeed, vSpark;
       void main() {
         // Senkrecht gestauchte Punktform: aus dem runden Sprite wird ein
         // Bewegungsstrich, wie bei einem sehr schnellen Abgasstrahl.
@@ -274,15 +269,14 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         if (d > 0.5) discard;
         float core = 1.0 - smoothstep(0.0, 0.5, d);
 
-        // Am Austritt weissglueheend, mit der Hoehe saettigt sich die Farbe.
-        // COLOURED_HOLOGRAM_EMITTERS_V6_2_2
-        // Gesättigte Austrittsfarbe statt weißglühendem Partikelkern.
-        vec3 tone = hue2rgb(fract(vHue + vT * 0.18));
-        vec3 emitter = mix(vec3(0.06, 0.72, 0.98), tone, 0.34);
-        vec3 color = mix(emitter, tone, smoothstep(0.0, 0.22, vT));
-        color = mix(color, tone * 1.28, smoothstep(0.3, 0.85, vT));
+        vec3 blue = vec3(.25, .65, 1.0);
+        vec3 amber = vec3(1.0, .49, .16);
+        vec3 teal = vec3(.20, 1.0, .82);
+        float band = .5 + .5 * sin(vSeed * 12.0 + vT * 6.0);
+        vec3 color = mix(blue, amber, smoothstep(.45, .95, band));
+        color = mix(color, teal, .25 * sin(vT * 3.14159));
 
-        float alpha = core * vSpark * (0.23 + uHover * 0.10)
+        float alpha = core * vSpark * (0.48 + uHover * 0.18)
           * uReveal * mix(1.0, 0.64, uCompact);
         if (alpha < 0.005) discard;
         gl_FragColor = vec4(color, alpha);
@@ -318,12 +312,11 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
  * der Strahl, der am Rand entlangwandert.
  */
 function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
-  const count = 820;
+  const count = 410;
   const offsets = new Float32Array(count);
   const speeds = new Float32Array(count);
   const sizes = new Float32Array(count);
   const seeds = new Float32Array(count);
-  const hues = new Float32Array(count);
 
   for (let index = 0; index < count; index += 1) {
     // Gleichmaessige Verteilung auf dem Umfang, damit keine Kante duenn bleibt.
@@ -334,8 +327,6 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
     seeds[index] = seeds[index] - Math.floor(seeds[index]);
     // Eigener Hash fuer den Farbton, damit Farbe und Tempo nicht korrelieren
     // und derselbe Regenbogen entsteht wie in den Duesenstrahlen.
-    hues[index] = (Math.sin(index * 11.37 + 31.4) * 43758.5453123) % 1;
-    hues[index] = hues[index] - Math.floor(hues[index]);
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -344,7 +335,6 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
   geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1));
   geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
   geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
-  geometry.setAttribute('aHue', new THREE.BufferAttribute(hues, 1));
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 24);
 
   const uniforms = {
@@ -360,9 +350,9 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      attribute float aOffset, aSpeed, aSize, aSeed, aHue;
+      attribute float aOffset, aSpeed, aSize, aSeed;
       uniform float uTime, uReduced, uHalfWidth, uHalfHeight;
-      varying float vSeed, vSpark, vHue;
+      varying float vSeed, vSpark;
       void main() {
         float motion = uReduced > 0.5 ? 0.0 : 1.0;
         // Betont traeges Fliessen: der Rahmen wandert, ohne zu hetzen.
@@ -401,26 +391,15 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
           * (24.0 / max(9.0, -mv.z));
         gl_Position = projectionMatrix * mv;
         vSeed = aSeed;
-        vHue = aHue;
       }
     `,
     fragmentShader: /* glsl */`
       uniform float uOpacity, uTime;
-      varying float vSeed, vSpark, vHue;
-      vec3 hue2rgb(float h) {
-        return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-      }
+      varying float vSeed, vSpark;
       void main() {
         vec2 point = gl_PointCoord - 0.5;
         float core = smoothstep(0.5, 0.04, length(point));
-        // Dieselbe Regenbogenpalette wie in den Duesenstrahlen; der Farbton
-        // wandert nur ganz langsam weiter.
-        vec3 tone = hue2rgb(fract(vHue + uTime * 0.01 + vSeed * 0.08));
-        // Gedaempft: der Rahmen fasst das Blatt, er konkurriert nicht mit
-        // dem Text. Der Regenbogen bleibt nur als leiser Farbschimmer.
-        vec3 base = vec3(0.47, 0.75, 1.0);
-        vec3 syncTint = mix(vec3(0.05, 0.74, 0.98), tone, 0.42);
-        vec3 color = mix(mix(base, tone, 0.35), syncTint, vSpark * 0.3);
+        vec3 color = vec3(0.47, 0.75, 1.0);
         float alpha = core * uOpacity * (0.30 + 0.34 * vSpark);
         if (alpha < 0.008) discard;
         gl_FragColor = vec4(color, alpha);
@@ -486,99 +465,6 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
 }
 
 /**
- * Ankuendigungsschild der beiden noch unfertigen Bereiche.
- *
- * Der Schriftzug entsteht einmalig auf einem Canvas — dieselbe schmale
- * Versalienschrift wie in Kopfzeile und Fusszeile, additiv geblendet, damit
- * der Bloom ihn wie die uebrigen Lichtelemente aufnimmt.
- */
-function makeComingSoon(accent, maxAnisotropy = 1) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 256;
-  const context = canvas.getContext('2d');
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = maxAnisotropy;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-
-  function draw() {
-    if (!context) return;
-    const { width, height } = canvas;
-    context.clearRect(0, 0, width, height);
-
-    // Additives Blenden liest Schwarz als Nichts: der Grund bleibt leer.
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    if ('letterSpacing' in context) context.letterSpacing = '0.34em';
-
-    // Der Schriftzug bleibt neutral im Blau/Weiss der Seite; nur ein Hauch
-    // der Sockelfarbe liegt im Schein, damit er nicht aus der Palette faellt.
-    const glow = new THREE.Color(0x78bfff).lerp(new THREE.Color(accent), 0.25);
-    context.shadowColor = glow.getStyle();
-    context.shadowBlur = 26;
-    context.font = '600 92px "Barlow Condensed", "DejaVu Sans Condensed", sans-serif';
-    context.fillStyle = '#c9e8ff';
-    // Der Sperrsatz schiebt den Text nach rechts; die halbe Sperre gleicht aus.
-    context.fillText('COMING SOON', width * 0.5 - 15, height * 0.45);
-
-    // Ein beidseitig auslaufender Strich traegt die Zeile.
-    context.shadowBlur = 0;
-    const rule = context.createLinearGradient(0, 0, width, 0);
-    rule.addColorStop(0, 'rgba(120,191,255,0)');
-    rule.addColorStop(0.5, 'rgba(201,232,255,0.55)');
-    rule.addColorStop(1, 'rgba(120,191,255,0)');
-    context.fillStyle = rule;
-    context.fillRect(width * 0.14, height * 0.66, width * 0.72, 2);
-
-    texture.needsUpdate = true;
-  }
-
-  draw();
-  // Die Schriften kommen aus dem Netz; ohne zweiten Anlauf bliebe der
-  // Schriftzug in der Ersatzschrift stehen.
-  document.fonts?.ready.then(draw).catch(() => {});
-
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-    opacity: 0,
-  });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.1), material);
-  mesh.name = 'coming-soon';
-  mesh.renderOrder = 2;
-
-  const group = new THREE.Group();
-  group.userData.kind = 'coming-soon';
-  group.add(mesh);
-
-  let reveal = 1;
-  let revealTarget = 1;
-  return {
-    group,
-    setOrigin(y) { group.position.y = y + TEASER_Y; },
-    setReveal(value, immediate = false) {
-      revealTarget = value;
-      if (immediate) reveal = value;
-    },
-    update(elapsed, delta, hover) {
-      reveal += (revealTarget - reveal) * (1 - Math.pow(0.01, Math.min(delta, 0.1)));
-      // Ruhig: kein Pulsieren, nur ein sehr langsames Atmen und ein
-      // deutlicher Zugewinn beim Hover.
-      const breath = 0.82 + 0.04 * Math.sin(elapsed * 0.35);
-      material.opacity = (breath + hover * 0.24) * reveal;
-      group.visible = material.opacity > 0.01;
-      mesh.position.y = Math.sin(elapsed * 0.3) * 0.02;
-    },
-  };
-}
-
-/**
  * Beschriftung eines Sockels im Startbild: Ordnungszahl, Titel und eine
  * Zeile Stichworte. Sie steht vorn an der Sockelkante, hell und ruhig, damit
  * man ohne Umweg ueber das Menue erkennt, was hinter jedem Sockel liegt.
@@ -604,38 +490,14 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
 
-    // Ordnungszahl in der Sockelfarbe, klein und gesperrt.
-    if ('letterSpacing' in context) context.letterSpacing = '0.42em';
-    context.font = '500 40px "Barlow Condensed", "DejaVu Sans Condensed", sans-serif';
-    context.fillStyle = accent.clone().lerp(new THREE.Color(0xffffff), 0.35).getStyle();
-    context.shadowColor = accent.getStyle();
-    context.shadowBlur = 14;
-    context.fillText(def.index, width * 0.5, height * 0.2);
-
-    // Titel: hell, gross, weiches Leuchten in Faserweiss. Lange Titel
-    // werden verkleinert, bis sie in die Flaeche passen.
-    const title = t(`card.${def.key}.title`).toUpperCase();
-    if ('letterSpacing' in context) context.letterSpacing = '0.2em';
-    let titleSize = 96;
-    const maxTitleWidth = width * 0.86;
-    do {
-      context.font = `600 ${titleSize}px "Barlow Condensed", "DejaVu Sans Condensed", sans-serif`;
-      if (context.measureText(title).width <= maxTitleWidth) break;
-      titleSize -= 4;
-    } while (titleSize > 48);
-    context.fillStyle = '#eaf6ff';
-    context.shadowColor = 'rgba(201, 232, 255, 0.9)';
-    context.shadowBlur = 22;
-    // Der Sperrsatz haengt hinter dem letzten Zeichen; die halbe Sperre
-    // zentriert den Zug optisch.
-    context.fillText(title, width * 0.5 + titleSize * 0.1, height * 0.52);
-
-    // Stichworte: kleiner, gedaempft, ohne Leuchten.
-    if ('letterSpacing' in context) context.letterSpacing = '0.16em';
-    context.font = '500 34px "Barlow", system-ui, sans-serif';
-    context.fillStyle = 'rgba(190, 212, 232, 0.92)';
+    // Live titles are separate from the model's ornamental engraving.
+    context.letterSpacing = '0.08em';
+    context.font = '500 64px "Barlow Condensed", sans-serif';
+    context.fillStyle = '#ffffff';
     context.shadowBlur = 0;
-    context.fillText(t(`card.${def.key}.subtitle`), width * 0.5, height * 0.83);
+    context.fillText(t(`card.${def.key}.title`).toUpperCase(), width * 0.5, height * 0.32, width * 0.94);
+    context.font = '400 30px "Barlow Condensed", sans-serif';
+    context.fillText(t(`card.${def.key}.subtitle`), width * 0.5, height * 0.60, width * 0.94);
 
     texture.needsUpdate = true;
   }
@@ -654,9 +516,11 @@ function makeCardLabel(def, maxAnisotropy = 1) {
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 1.5), material);
   mesh.name = 'card-label';
+  mesh.userData.key = def.key;
   mesh.renderOrder = 3;
   // Leicht zum Betrachter geneigt, vorn an der Sockelkante.
   mesh.rotation.x = -0.14;
+  mesh.material.depthTest = false;
 
   const group = new THREE.Group();
   group.userData.kind = 'card-label';
@@ -665,16 +529,24 @@ function makeCardLabel(def, maxAnisotropy = 1) {
   let reveal = 1;
   let revealTarget = 1;
   let openTarget = 1;
+  let hoverStart = null;
+  const blue = lightColor('fiberBlue'), amber = lightColor('amber');
   return {
     group,
-    setOrigin(y) { group.position.set(0, y + 0.5, BASE_DIAMETER * 0.5 - 0.1); },
+    setOrigin(y) { group.position.set(0, y + 0.5, BASE_DIAMETER * 0.5 + .65); },
     setReveal(value, immediate = false) {
       revealTarget = value;
       if (immediate) reveal = value;
     },
-    /** Im Fokus eines Bereichs treten alle Beschriftungen ab. */
-    setOpened(anyOpen) { openTarget = anyOpen ? 0 : 1; },
-    update(elapsed, delta, hover) {
+    /** Der aktive Titel bleibt sichtbar; benachbarte Titel treten zurück. */
+    setOpened(anyOpen, active) { openTarget = !anyOpen || active ? 1 : 0; },
+    update(elapsed, delta, hover, active) {
+      if (hover > .05) hoverStart ??= elapsed;
+      else hoverStart = null;
+      const pulse = reducedMotion() ? .7 : (1 - Math.cos(Math.max(0, elapsed - (hoverStart ?? elapsed)) * Math.PI / 2.4)) * .5;
+      const amount = active ? 1 : hover * pulse;
+      material.color.copy(blue).lerp(amber, amount);
+      mesh.userData.orange = amount;
       const target = revealTarget * openTarget;
       reveal += (target - reveal) * (1 - Math.pow(0.01, Math.min(delta, 0.1)));
       material.opacity = (0.88 + hover * 0.12) * reveal;
@@ -775,7 +647,7 @@ function applyDocumentSection(card, immediate = false) {
   }
   const count = Math.max(1, projection.pageCount);
   const anchor = card.key === 'abschluss' ? getIhkAnchor(card.documentSection) : getCvAnchor(card.documentSection);
-  projection.scrollToFraction(Math.min(count - 1, Math.floor(anchor * count)) / count, immediate);
+  projection.scrollToFraction(card.key === 'abschluss' ? Math.min(count - 1, Math.floor(anchor * count)) / count : anchor, immediate);
   card.pendingDocumentSection = false;
 }
 
@@ -784,6 +656,24 @@ function applyDocumentSection(card, immediate = false) {
  * hoechstens so breit wie der Sockel; die Hoehe reicht bis zu einer ganzen
  * Seite und folgt sonst dem Bildschirmfenster, das die Buehne vorgibt.
  */
+function updateCeiling(card, rebuild = false) {
+  if (rebuild && card.ceiling) card.holder.remove(card.ceiling);
+  if (!card.ceiling || rebuild) {
+    card.ceiling = new THREE.Group();
+    card.ceiling.name = 'pedestal-ceiling';
+    card.ceiling.userData.decorative = true;
+    card.ceiling.add(card.base.clone(true));
+    card.ceiling.add(card.accentRing.clone());
+    // One central light illuminates both mirrored bodies; avoid doubling lights.
+    // Shared particle buffers and uniforms keep both jets in phase.
+    card.ceiling.add(card.ringJet.group.clone(true));
+    card.ceiling.scale.y = -1;
+    card.holder.add(card.ceiling);
+  }
+  card.ceiling.position.y = 2 * card.surfaceY + 2 * DOC_LIFT + card.windowHeight;
+  card.rimLight.position.y = card.surfaceY + DOC_LIFT + card.windowHeight * .5;
+}
+
 function updateResumeWindow(card, notify = true) {
   const projection = card.resumeProjection;
   const pageAspect = projection?.pageAspect;
@@ -806,6 +696,7 @@ function updateResumeWindow(card, notify = true) {
 
   card.windowWidth = width;
   card.windowHeight = height;
+  updateCeiling(card);
 
   projection.setWindow(width, height);
 
@@ -862,6 +753,18 @@ function sharpenModel(model, maxAnisotropy) {
         if (key === 'map' || key === 'emissiveMap') texture.colorSpace = THREE.SRGBColorSpace;
         texture.needsUpdate = true;
       }
+      // The model's baked violet/red accents must follow the shared palette too.
+      material.onBeforeCompile = shader => {
+        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
+          #include <map_fragment>
+          float baseLight = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+          diffuseColor.rgb = baseLight * vec3(0.80, 0.91, 1.0);
+        `).replace('#include <emissivemap_fragment>', `
+          #include <emissivemap_fragment>
+          float emissionLight = dot(totalEmissiveRadiance, vec3(0.2126, 0.7152, 0.0722));
+          totalEmissiveRadiance = emissionLight * vec3(0.47, 0.75, 1.0);
+        `);
+      };
       if (material.color?.isColor) material.color.lerp(lightColor('fiber'), 0.1);
       if ('roughness' in material) material.roughness = THREE.MathUtils.clamp(material.roughness, 0.38, 0.62);
       if ('metalness' in material) material.metalness = THREE.MathUtils.clamp(material.metalness, 0.16, 0.55);
@@ -997,10 +900,11 @@ function loadSharedBases(cards, maxAnisotropy, shouldFade, onSettled) {
         card.rimLight.position.y = card.surfaceY + 1.5;
         card.ringJet?.setOrigin(card.surfaceY + 0.04);
         card.resumeFrame?.setOrigin(card.surfaceY);
-        card.comingSoon?.setOrigin(card.surfaceY);
+        card.examplePreview?.setOrigin(card.surfaceY);
         card.label?.setOrigin(card.surfaceY);
         setHitBody(card, modelBox);
         updateResumeWindow(card, false);
+        updateCeiling(card, true);
         card.notifyBoundsChange(card.key);
       }
       onSettled?.('loaded');
@@ -1015,9 +919,9 @@ function loadSharedBases(cards, maxAnisotropy, shouldFade, onSettled) {
 }
 
 export const CARD_DEFS = [
-  { key: 'abschluss',  accent: LIGHT_PALETTE.amber, index: 'I',   title: 'ABSCHLUSSPROJEKT', subtitle: 'Server, UEM, Clients, Migration' },
-  { key: 'projekte',   accent: LIGHT_PALETTE.violet, index: 'II',  title: 'IT-PROJEKTE',      subtitle: 'Eigenbau, Automatisierung, Experiment' },
-  { key: 'lebenslauf', accent: LIGHT_PALETTE.signal, index: 'III', title: 'LEBENSLAUF',       subtitle: 'Werdegang, Fähigkeiten, Kontakt' },
+  { key: 'abschluss',  accent: LIGHT_PALETTE.fiberBlue, index: 'I',   title: 'ABSCHLUSSPROJEKT', subtitle: 'Server, UEM, Clients, Migration' },
+  { key: 'projekte',   accent: LIGHT_PALETTE.fiberBlue, index: 'II',  title: 'IT-PROJEKTE',      subtitle: 'Eigenbau, Automatisierung, Experiment' },
+  { key: 'lebenslauf', accent: LIGHT_PALETTE.fiberBlue, index: 'III', title: 'LEBENSLAUF',       subtitle: 'Werdegang, Fähigkeiten, Kontakt' },
 ];
 
 export function createCards({ renderer, reduced = false } = {}) {
@@ -1029,6 +933,8 @@ export function createCards({ renderer, reduced = false } = {}) {
   const documentPickables = [];
   let boundsListener = null;
   let layoutScale = 1;
+  let mobileSelection = null;
+  let openedKey = null;
   let modelRevealReleased = false;
   let resolveReady;
   const ready = new Promise((resolve) => { resolveReady = resolve; });
@@ -1048,13 +954,11 @@ export function createCards({ renderer, reduced = false } = {}) {
     // Jeder Sockel traegt denselben Partikelstrahl. Er tritt ausschliesslich
     // aus dem weissen Ring der Oberflaeche aus.
     const ringJet = makeRingJet(time, { originY: BASE_TOP + 0.04 });
-    // Only the private projects section still uses the coming-soon teaser.
-    const comingSoon = def.key === 'projekte' ? makeComingSoon(def.accent, maxAnisotropy) : null;
+    // The middle pedestal carries the interactive website preview.
+    const examplePreview = def.key === 'projekte' ? createExamplePreview() : null;
     const label = makeCardLabel(def, maxAnisotropy);
     label.setOrigin(BASE_TOP);
-    const resumeFrame = isResume
-      ? makeResumeFrame(time, { reduced, idleOpacity: 0.60 })
-      : null;
+    const resumeFrame = makeResumeFrame(time, { reduced, idleOpacity: 0.60 });
     const resumeProjection = isResume
       ? createResumeProjection({
           renderer,
@@ -1074,7 +978,8 @@ export function createCards({ renderer, reduced = false } = {}) {
         })
       : null;
     resumeFrame?.setOrigin(BASE_TOP);
-    comingSoon?.setOrigin(BASE_TOP);
+    if (!isResume) resumeFrame.setWindow(DOC_MAX_WIDTH * RESUME_WORLD_SCALE, DOC_MAX_WIDTH * RESUME_WORLD_SCALE / (1258 / 1920));
+    examplePreview?.setOrigin(BASE_TOP);
 
     const accentRing = makeAccentRing(def.accent);
     accentRing.position.y = BASE_TOP + 0.035;
@@ -1096,7 +1001,7 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     holder.add(base, accentRing, rimLight, hit);
     if (ringJet) holder.add(ringJet.group);
-    if (comingSoon) holder.add(comingSoon.group);
+    if (examplePreview) { holder.add(examplePreview.group); pickables.push(examplePreview.mesh); }
     holder.add(label.group);
     if (resumeFrame) holder.add(resumeFrame.group);
     if (resumeProjection) {
@@ -1110,7 +1015,7 @@ export function createCards({ renderer, reduced = false } = {}) {
       holder,
       base,
       ringJet,
-      comingSoon,
+      examplePreview,
       label,
       resumeProjection,
       resumeFrame,
@@ -1129,12 +1034,13 @@ export function createCards({ renderer, reduced = false } = {}) {
       documentBounds: new THREE.Box3(),
       surfaceY: BASE_TOP,
       windowWidth: 0,
-      windowHeight: 3.2,
+      windowHeight: DOC_MAX_WIDTH * RESUME_WORLD_SCALE / (1258 / 1920),
       // Seitenverhaeltnis des Fensters auf dem Schirm, von der Buehne gesetzt.
       windowAspect: 0,
       // Die physische Seitengroesse bleibt beim Oeffnen unveraendert.
       docScale: 1,
       resumeOpen: false,
+      active: false,
       documentSection: 'uebersicht',
       pendingDocumentSection: false,
       notifyBoundsChange(key) { boundsListener?.(key); },
@@ -1150,9 +1056,11 @@ export function createCards({ renderer, reduced = false } = {}) {
       disposed: false,
     };
     setHitBody(card, card.baseBounds);
+    updateCeiling(card);
     cards.push(card);
   }
 
+  let temporaryActive = null;
   let resumeCard = cards.find((card) => card.key === RESUME_KEY) ?? null;
 
   loadSharedBases(
@@ -1281,9 +1189,15 @@ export function createCards({ renderer, reduced = false } = {}) {
     setHologramReveal(value, immediate = false) {
       for (const card of cards) {
         card.ringJet?.setReveal(value, immediate);
-        card.comingSoon?.setReveal(value, immediate);
+        card.examplePreview?.setReveal(value, immediate);
         card.label?.setReveal(value, immediate);
       }
+    },
+
+    setMobileSelection(index) {
+      mobileSelection = index;
+      for (const card of cards) card.holder.visible = index === null
+        || (openedKey ? card.key === openedKey : card.layoutIndex === index);
     },
 
     setLayout({ spacing = 7.8, scale = 1, compact = false, stagger = 0 } = {}) {
@@ -1325,6 +1239,27 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     /** Welt-Bounding-Box des Sockels, fuer das Kamera-Framing. */
+    projectBounds(out = new THREE.Box3()) {
+      const mesh = group.getObjectByName('example-preview');
+      mesh.updateWorldMatrix(true, false);
+      return out.setFromObject(mesh);
+    },
+    faceLabels(camera) {
+      for (const card of cards) {
+        card.holder.updateWorldMatrix(true, false);
+        _center.set(0, card.surfaceY + .5, 0).applyMatrix4(card.holder.matrixWorld);
+        _size.copy(camera.position).sub(_center); _size.y = 0; _size.normalize();
+        const scale = card.holder.scale.x;
+        _center.addScaledVector(_size, (BASE_DIAMETER * .5 + .1) * scale);
+        card.label.group.position.copy(card.holder.worldToLocal(_center));
+        const localCamera = card.holder.worldToLocal(_size.copy(camera.position));
+        const dx = localCamera.x - card.label.group.position.x, dz = localCamera.z - card.label.group.position.z;
+        card.label.group.rotation.y = Math.atan2(dx, dz);
+      }
+    },
+    showProjectPreview(show) {
+      cards.find(c => c.key === 'projekte')?.examplePreview?.setReveal(show ? 1 : 0, true);
+    },
     worldBounds(key, out = new THREE.Box3()) {
       const card = cards.find((item) => item.key === key);
       if (!card) return out.makeEmpty();
@@ -1335,19 +1270,29 @@ export function createCards({ renderer, reduced = false } = {}) {
     onBoundsChange(cb) { boundsListener = cb; },
 
     /** Im Fokus bleibt nur der gewaehlte Sockel im Kamerabild. */
+    setTemporaryActive(key) {
+      temporaryActive = key;
+      for (const card of cards) {
+        card.active = (temporaryActive || openedKey) === card.key;
+        card.label?.setOpened(Boolean(temporaryActive || openedKey), card.active);
+      }
+    },
+
     setOpened(key, _isolate = false) {
+      openedKey = key;
       if (isDocumentKey(key)) resumeCard = cards.find((card) => card.key === key);
       for (const card of cards) {
         // Nachbarsockel verschwinden nicht schlagartig, sondern laufen
         // waehrend der Kamerafahrt aus dem Bild.
-        card.holder.visible = true;
+        card.holder.visible = mobileSelection === null || (key ? card.key === key : card.layoutIndex === mobileSelection);
+        card.active = (temporaryActive || key) === card.key;
         card.resumeOpen =
           key === card.key
           && isDocumentKey(card.key);
 
         card.resumeProjection?.setOpen(card.resumeOpen);
         card.resumeFrame?.setOpen(card.resumeOpen);
-        card.label?.setOpened(Boolean(key));
+        card.label?.setOpened(Boolean(key), card.active);
 
         if (isDocumentKey(card.key) && !card.resumeOpen) {
           card.pendingDocumentSection = false;
@@ -1381,16 +1326,25 @@ export function createCards({ renderer, reduced = false } = {}) {
           }
         }
         card.hover += (card.target - card.hover) * k;
+        if (!reduced) {
+          card.base.rotation.y = elapsed * .055;
+          const topBase = card.ceiling?.children[0];
+          if (topBase) topBase.rotation.y = elapsed * .055;
+        }
+        card.accentRing.material.color.lerp(new THREE.Color(card.active || card.hover > .1
+          ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue).multiplyScalar(1.5), k);
         if (card.ringJet) {
           card.ringJet.uniforms.uHover.value = card.hover;
           card.ringJet.update(delta);
         }
-        card.comingSoon?.update(
+        card.examplePreview?.update(
           elapsed,
           delta,
           card.hover,
         );
-        card.label?.update(elapsed, delta, card.hover);
+        card.label?.update(elapsed, delta, card.hover, card.active);
+        card.holder.userData.active = card.active;
+        card.holder.userData.hover = card.hover;
 
         card.resumeFrame?.update(delta);
         card.resumeProjection?.update(delta);
@@ -1478,6 +1432,7 @@ export function createCards({ renderer, reduced = false } = {}) {
       for (const card of cards) {
         card.disposed = true;
         card.resumeProjection?.dispose();
+        card.examplePreview?.dispose();
       }
       disposeObject(group);
       group.clear();

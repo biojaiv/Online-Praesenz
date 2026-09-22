@@ -111,7 +111,7 @@ for name in ['IHK_Projektfilm_DE.mp4','IHK_Project_Film_EN.mp4']:
     video=probe['streams'][0]
     assert video['codec_name']=='h264' and video['pix_fmt']=='yuv420p'
     assert video['width']==1280 and video['height']==720
-    assert float(probe['format']['duration'])==42
+    assert float(probe['format']['duration'])==52.5
     subprocess.run(['ffmpeg','-v','error','-xerror','-i',str(path),'-f','null','-'],check=True)
     data=path.read_bytes();pos=0;atoms=[]
     while pos<len(data):
@@ -119,7 +119,7 @@ for name in ['IHK_Projektfilm_DE.mp4','IHK_Project_Film_EN.mp4']:
         assert size>=8
         pos+=size
     assert atoms.index(b'moov')<atoms.index(b'mdat'),'MP4 must use faststart'
-    result[name]={'bytes':len(data),'duration':42,'codec':'h264','pixel_format':'yuv420p','audio':False,'faststart':True,'decode':'PASS'}
+    result[name]={'bytes':len(data),'duration':52.5,'codec':'h264','pixel_format':'yuv420p','audio':False,'faststart':True,'decode':'PASS'}
 
 for path in PUBLIC.iterdir():
     assert path.stat().st_size<25*1024*1024,path

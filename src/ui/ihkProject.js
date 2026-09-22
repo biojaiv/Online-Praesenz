@@ -1,12 +1,11 @@
 import { getLanguage, onLanguageChange, t } from '../i18n.js';
 import { ihkIcon, IHK_SECTION_ICONS } from './ihkIcons.js';
+import { IHK_FILMS as FILMS, IHK_POSTERS as POSTERS } from '../data/ihkMedia.js';
 
 const SECTIONS = ['overview', 'server', 'uem', 'clients', 'migration'];
 const TECHNOLOGIES = ['VMware vSphere', 'Windows Server 2022', 'Active Directory',
   'Microsoft SQL Server', 'baramundi Management Suite', 'DIP / baraDIP', 'PXE',
   'TFTP', 'WinPE', 'Windows ADK', 'DISM', 'bDeploy', 'TLS', 'VLAN', 'DHCP'];
-const FILMS = { de: '/ihk/IHK_Projektfilm_DE.mp4', en: '/ihk/IHK_Project_Film_EN.mp4' };
-const POSTERS = { de: '/ihk/IHK_Poster_DE.webp', en: '/ihk/IHK_Poster_EN.webp' };
 const escapeHTML = (value) => String(value).replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 const copy = (key) => escapeHTML(t(`ihk.${key}`));
@@ -31,11 +30,10 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   const download = document.createElement('a');
   download.className = 'cv-action cv-download ihk-projection-download';
   download.hidden = true;
-  const film = document.createElement('button');
-  film.type = 'button';
-  film.className = 'cv-action ihk-film-toggle';
-  film.hidden = true;
-  container.append(toggle, download, film);
+  const controls = document.querySelector('[data-target="abschluss"]').nextElementSibling;
+  toggle.dataset.menuAction = 'reader';
+  download.dataset.menuAction = 'download';
+  controls.append(toggle, download);
 
   function refreshControls() {
     const available = route.split('/')[0] === 'abschluss';
@@ -44,9 +42,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-controls', 'ihk-reader');
     toggle.classList.toggle('is-docked', open);
-    download.hidden = !available || open;
-    film.hidden = !available || open;
-    film.textContent = t('ihk.filmAction');
+    download.hidden = !available;
     download.href = getLanguage() === 'de' ? '/ihk/IHK_Projektarbeit_DE.pdf' : '/ihk/IHK_Project_Report_EN.pdf';
     download.download = download.href.split('/').pop();
     download.textContent = t('download.visible');
@@ -61,7 +57,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     const ticket = ++transition;
     refreshControls();
     if (open) {
-      returnFocus = document.activeElement;
+      returnFocus = document.querySelector('.nav__link[data-target="abschluss"]');
       await onTransition?.(true);
       if (ticket !== transition) return;
       overlay.hidden = false;
@@ -76,7 +72,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       }
       if (ticket !== transition) return;
       releaseVideo();
-      container.append(toggle);
+      controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
       overlay.hidden = true;
       overlay.replaceChildren();
       onTransition?.(false);
@@ -86,8 +82,6 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   }
   const clickToggle = () => setOpen(!open);
   toggle.addEventListener('click', clickToggle);
-  const clickFilm = () => openMedia('ihk-film');
-  film.addEventListener('click', clickFilm);
   function escapeReader(event) {
     if (event.key !== 'Escape' || !open || document.querySelector('.nav__group.is-open')) return;
     event.preventDefault();
@@ -121,6 +115,8 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     return `
       <div class="ihk-summary">
         <p class="ihk-lead cv-lead">${copy('description')}</p>
+        <h3 class="ihk-symbol-heading">${ihkIcon('migration')}${copy('motivationTitle')}</h3>
+        <p class="ihk-lead cv-lead">${copy('motivation')}</p>
         <dl class="ihk-metrics cv-facts">
           ${[['40 h', 'time', 'clock'], ['4', 'clientsMetric', 'clients'], ['100 %', 'success', 'check'], ['Windows 11', 'deployment', 'network']]
             .map(([value, label, icon]) => `<div><dt>${ihkIcon(icon)}<span>${value}</span></dt><dd>${copy(label)}</dd></div>`).join('')}
@@ -192,7 +188,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
           </div>
         </footer>
       </article>`;
-    overlay.querySelector('.cv-hologram__actions').prepend(toggle);
+    controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
     overlay.querySelector('.ihk-body').scrollTop = scroll;
     if (focus) overlay.querySelector('#ihk-title').focus({ preventScroll: true });
     else if (focusedRoute) {
@@ -266,8 +262,6 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       transition += 1;
       window.removeEventListener('keydown', escapeReader, true);
       toggle.removeEventListener('click', clickToggle);
-      film.removeEventListener('click', clickFilm);
-      film.remove();
       toggle.remove();
       download.remove();
       unsubscribe();

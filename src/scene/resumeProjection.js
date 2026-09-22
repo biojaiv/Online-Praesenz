@@ -1,54 +1,20 @@
 import * as THREE from 'three';
 import { getLanguage, onLanguageChange } from '../i18n.js';
 
-// BILINGUAL_PROJECTION_V3
-export const CV_SVG_URL = new URL(
-  '../../Elemente/lebenslauf.svg',
-  import.meta.url,
-).href;
+import cvProjection from '../data/cvProjection.json';
 
-export const CV_EN_PROJECTION_URL = new URL(
-  '../../Elemente/lebenslauf.en.svg',
-  import.meta.url,
-).href;
-
-// German compatibility exports are kept for modules outside this patch. The
-// active projection geometry is resolved per language through the getters.
-export const CV_PAGE_COUNT = 2;
-export const CV_PAGE_ASPECT = 1241 / (3786 / CV_PAGE_COUNT);
-
-export const CV_ANCHORS = Object.freeze({
-  uebersicht: 0,
-  bildungsweg: 0.185,
-  faehigkeiten: 0.355,
-  kontakt: 0.415,
-  arbeitsleben: 0.525,
-});
-
-const CV_ANCHORS_EN = Object.freeze({ // EXACT_EN_CV_MASTER_V5_4
-  uebersicht: 0,
-  bildungsweg: 0.184,
-  faehigkeiten: 0.354,
-  kontakt: 0.417,
-  arbeitsleben: 0.514,
-});
-
-const CV_SOURCES = Object.freeze({
-  de: Object.freeze({
-    url: CV_SVG_URL,
-    pageCount: CV_PAGE_COUNT,
-    pageAspect: CV_PAGE_ASPECT,
-    webTransform: true,
-    anchors: CV_ANCHORS,
-  }),
-  en: Object.freeze({ // EN_HOLOGRAM_PARITY_V4_3
-    url: CV_EN_PROJECTION_URL,
-    pageCount: 2,
-    pageAspect: 1258 / 1920,
-    webTransform: false,
-    anchors: CV_ANCHORS_EN,
-  }),
-});
+// The original two-page document layout, exported locally without its portrait.
+// Original SVGs and all downloadable source documents remain untouched.
+export const CV_SVG_URL = '/cv/CV_Projection_DE.webp';
+export const CV_EN_PROJECTION_URL = '/cv/CV_Projection_EN.webp';
+export const CV_PAGE_COUNT = cvProjection.de.pageCount;
+export const CV_PAGE_ASPECT = cvProjection.de.pageAspect;
+export const CV_ANCHORS = Object.freeze(cvProjection.de.anchors);
+const CV_SOURCES = Object.freeze(Object.fromEntries(['de', 'en'].map(language => [language, {
+  ...cvProjection[language],
+  url: `/cv/CV_Projection_${language.toUpperCase()}.webp`,
+  webTransform: cvProjection[language].webTransform ?? false,
+}])));
 
 function cvSource(language = getLanguage()) {
   const source = CV_SOURCES[language];

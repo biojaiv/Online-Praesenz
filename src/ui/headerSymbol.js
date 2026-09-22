@@ -1,6 +1,10 @@
 import { PRIMARY, RUNES } from '../scene/runes.js';
 import { SACRED_FIGURES } from '../scene/sacredGeometry.js';
 
+// Keep the header free of overlapping triangle silhouettes as well as Algiz.
+const HEADER_FIGURES = SACRED_FIGURES.filter(({ name }) =>
+  !['Star Tetrahedron', 'Merkabah', 'Sri Yantra', 'Metatrons Cube'].includes(name));
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const FIRST_DELAY_MIN = 6.0;
 const FIRST_DELAY_MAX = 10.0;
@@ -76,7 +80,7 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
   let nextKind = 'sacred';
   let toneCursor = Math.floor(Math.random() * TONES.length);
   let runeCursor = Math.floor(Math.random() * PRIMARY.length);
-  let sacredCursor = Math.floor(Math.random() * SACRED_FIGURES.length);
+  let sacredCursor = Math.floor(Math.random() * HEADER_FIGURES.length);
 
   function schedule(fn, seconds) {
     window.clearTimeout(timer);
@@ -121,9 +125,9 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
       };
     }
 
-    const figure = SACRED_FIGURES[sacredCursor % SACRED_FIGURES.length];
+    const figure = HEADER_FIGURES[sacredCursor % HEADER_FIGURES.length];
     sacredCursor = (sacredCursor + 1 + Math.floor(Math.random() * 3))
-      % SACRED_FIGURES.length;
+      % HEADER_FIGURES.length;
     nextKind = 'rune';
     return {
       kind: 'sacred',

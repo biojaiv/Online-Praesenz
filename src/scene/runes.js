@@ -244,7 +244,7 @@ export const RUNES = {
 };
 
 /** Die sechs bedeutungstragenden Runen, in fester Reihenfolge. */
-export const PRIMARY = ['fehu', 'jera', 'ansuz', 'sowilo', 'algiz', 'kenaz'];
+export const PRIMARY = ['fehu', 'jera', 'ansuz', 'sowilo', 'kenaz'];
 
 /** Beiwerk ohne Bedeutung, nur Textur im Hintergrund. */
 export const SECONDARY = [

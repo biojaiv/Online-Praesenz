@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,7 +13,9 @@
     (() => {
       const hash = location.hash.replace(/^#/, '').trim();
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      if (!reduced && (!hash || hash === 'home')) document.documentElement.classList.add('pre-intro');
+      let seen = false;
+      try { seen = localStorage.getItem('vl-intro-seen') === '1'; } catch {}
+      if (!seen && !reduced && (!hash || hash === 'home')) document.documentElement.classList.add('pre-intro');
     })();
   </script>
 </head>
@@ -71,9 +73,8 @@
             <span class="nav__label" data-i18n="nav.privateProjects">Private IT Projects</span>
           </button>
           <div class="nav__sub">
-            <button data-target="projekte/homelab" type="button">Homelab</button>
-            <button data-target="projekte/automation" data-i18n="nav.automation" type="button">Automation</button>
-            <button data-target="projekte/web" type="button">Web</button>
+            <button data-target="projekte/webseiten" data-i18n="projects.websites" type="button">Webseiten</button>
+            <button data-target="projekte/privat" data-i18n="projects.private" type="button">Private Projekte</button>
           </div>
         </div>
 
@@ -112,6 +113,7 @@
 
     <footer class="foot">
       <button class="foot__hint" id="hint" type="button" data-i18n="footer.chooseArea" data-distort-label="Choose section">Choose section</button>
+      <div class="foot__tools" id="foot-tools"></div>
       <span class="foot__crumb" id="crumb">Home</span>
     </footer>
   </div>
