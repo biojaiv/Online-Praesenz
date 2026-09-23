@@ -3,11 +3,17 @@ export function createControlDistortion() {
   const selector = '.nav button, .nav a, .foot button, .foot a, .foot summary, .project-choice, .projects-browser button, [data-example-back]';
   const timers = new Map();
   function pulse(event) {
+    if (document.documentElement.classList.contains('is-site-inspecting')) return;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const control = event.target.closest(selector);
     if (!control || control.contains(event.relatedTarget) || timers.has(control)) return;
     control.classList.add('control-ripple');
     function finish() {
+      if (document.documentElement.classList.contains('is-site-inspecting')) {
+        const record = timers.get(control);
+        if (record) record.timer = setTimeout(finish, 150);
+        return;
+      }
       clearTimeout(timers.get(control)?.timer);
       control.removeEventListener('animationend', ended);
       control.classList.remove('control-ripple'); timers.delete(control);

@@ -92,6 +92,15 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
     effectTimer = 0;
   }
 
+  function finishEffect(callback) {
+    if (stopped) return;
+    if (document.documentElement.classList.contains('is-site-inspecting')) {
+      effectTimer = window.setTimeout(() => finishEffect(callback), 150);
+      return;
+    }
+    callback();
+  }
+
   function fitHost() {
     if (!(brand instanceof HTMLElement) || !(nav instanceof HTMLElement)) return true;
     if (getComputedStyle(host).display === 'none') return false;
@@ -140,12 +149,20 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
 
   function finishHide() {
     if (stopped) return;
+    if (document.documentElement.classList.contains('is-site-inspecting')) {
+      schedule(finishHide, 1.6);
+      return;
+    }
     host.classList.remove('is-visible', 'is-leaving', 'is-arriving');
     schedule(show, randomBetween(QUIET_MIN, QUIET_MAX));
   }
 
   function hide() {
     if (stopped) return;
+    if (document.documentElement.classList.contains('is-site-inspecting')) {
+      schedule(hide, 1.6);
+      return;
+    }
     clearEffectTimer();
     if (reduced) {
       finishHide();
@@ -160,6 +177,7 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
     if (stopped) return;
     if (
       document.hidden
+      || document.documentElement.classList.contains('is-site-inspecting')
       || header.closest('.frame')?.classList.contains('is-intro')
       || !fitHost()
     ) {
@@ -182,17 +200,17 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
     toneCursor = (toneCursor + 1) % TONES.length;
 
     host.classList.remove('is-visible', 'is-arriving', 'is-leaving');
-    requestAnimationFrame(() => {
+    requestAnimationFrame(() => finishEffect(() => {
       if (stopped || !fitHost()) return;
       host.classList.add('is-visible');
       if (!reduced) {
         host.classList.add('is-arriving');
         clearEffectTimer();
-        effectTimer = window.setTimeout(() => {
+        effectTimer = window.setTimeout(() => finishEffect(() => {
           host.classList.remove('is-arriving');
-        }, ARRIVAL_FLICKER_MS);
+        }), ARRIVAL_FLICKER_MS);
       }
-    });
+    }));
 
     const visible = kind === 'sacred'
       ? randomBetween(SACRED_VISIBLE_MIN, SACRED_VISIBLE_MAX)
@@ -229,4 +247,3 @@ export function startHeaderSymbols({ header = document.querySelector('.head') } 
     host.remove();
   };
 }
-

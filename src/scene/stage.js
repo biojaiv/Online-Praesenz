@@ -306,11 +306,16 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function pulseDollyGuide(direction) {
     window.clearTimeout(dollyGuideTimer);
     setDollyGuide(isDocumentKey(opened) && !readerOpen, true, direction);
-    dollyGuideTimer = window.setTimeout(() => {
+    const finishPulse = () => {
+      if (document.documentElement.classList.contains('is-site-inspecting')) {
+        dollyGuideTimer = window.setTimeout(finishPulse, 150);
+        return;
+      }
       if (!zoomHold) {
         setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
       }
-    }, 320);
+    };
+    dollyGuideTimer = window.setTimeout(finishPulse, 320);
   }
 
   function cancelViewMove() {
@@ -1003,6 +1008,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   let resizeFrame = 0;
+  let inspectionFrozen = false;
+  let inspectionResized = false;
   function resize() {
     resizeFrame = 0;
     const rect = canvas.getBoundingClientRect();
@@ -1039,7 +1046,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     composer?.setSize(w, h);
     background.setPixelRatio(renderer.getPixelRatio());
     cards.setPixelRatio(renderer.getPixelRatio());
-    if (opened && !viewMoving && !exampleFlight.active) focusCard(opened, 0.65);
+    if (inspectionFrozen) {
+      inspectionResized = true;
+      if (composer) composer.render(0);
+      else renderer.render(scene, camera);
+    } else if (opened && !viewMoving && !exampleFlight.active) focusCard(opened, 0.65);
   }
 
   function settleQuality() {
@@ -1077,6 +1088,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function frame(now = performance.now()) {
     raf = requestAnimationFrame(frame);
     // Hold the last space frame behind a settled HTML project; the return flight resumes it.
+    if (inspectionFrozen) { timer.update(now); return; }
     if (projectionIdle) return;
     if (now - lastFrameAt < FRAME_BUDGET) return;
     lastFrameAt = now;
@@ -1208,6 +1220,19 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     toHome,
     exampleFlight,
     setProjectionIdle(value) { projectionIdle = Boolean(value); },
+    setInspectionFrozen(value) {
+      inspectionFrozen = Boolean(value);
+      timer.setTimescale(inspectionFrozen ? 0 : 1);
+      if (inspectionFrozen) {
+        // A resize may have cleared the drawing buffer just before the hover.
+        // Redraw the current state once, without advancing any animation.
+        if (composer) composer.render(0);
+        else renderer.render(scene, camera);
+      } else {
+        timer.reset();
+        if (inspectionResized) { inspectionResized = false; resize(); }
+      }
+    },
     get isMoving() { return viewMoving; },
     setExamplePreviewUpdate(callback) { examplePreviewUpdate = callback; },
     setRoute,

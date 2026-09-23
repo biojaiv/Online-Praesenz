@@ -271,6 +271,7 @@ try {
     stageEl.appendChild(fallback);
   }
 }
+profileAccess.setStage(stage);
 
 // Intro nur beim ersten Besuch, ohne Deep Link, mit WebGL und mit Bewegung.
 // Die Kamera muss vor dem allerersten Bild in der Tiefe stehen.

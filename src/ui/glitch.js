@@ -300,7 +300,7 @@ export function startBrandGlitch({ stage } = {}) {
 
   function burst() {
     if (stopped) return;
-    if (document.hidden) {
+    if (document.hidden || document.documentElement.classList.contains('is-site-inspecting')) {
       schedule();
       return;
     }

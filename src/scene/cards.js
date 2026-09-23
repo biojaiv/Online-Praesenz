@@ -42,9 +42,8 @@ const HIT_HEADROOM = { abschluss: JET_HEIGHT, projekte: 5.6, lebenslauf: JET_HEI
 // Seite hoch; die Breite folgt daraus und bleibt hoechstens so breit wie der
 // Sockel.
 const DOC_MAX_WIDTH = 7.35;
-// Das Blatt greift leicht in die obere Zone der Partikelfahne. Zusammen mit
-// der bereits eingerueckten unteren Rahmenkante wirkt es dadurch, als wuerde
-// das Hologramm unmittelbar aus dem Duesenstrahl materialisieren.
+// Der Strahl endet an dieser Dokumentkante; seine maximale Hoehe folgt
+// dem verbleibenden Abstand zur Duese, auch im kompakten Layout.
 const DOC_LIFT = JET_HEIGHT - 0.13;
 // Das Blatt schwebt nahezu zentrisch ueber dem Sockel — direkt ueber dem
 // Partikelstrahl, nicht weit davor. Ein kleiner Z-Versatz haelt den
@@ -202,6 +201,9 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
     uRadius: { value: radius },
     uHeight: { value: height },
     uHeightScale: { value: 1 },
+    uEndY: { value: originY + DOC_LIFT - 0.04 },
+    uDocumentYaw: { value: 0 },
+    uViewport: { value: new THREE.Vector2(1, 1) },
     uSpread: { value: JET_SPREAD },
     uHover: { value: 0 },
     uCompact: { value: 0 },
@@ -216,14 +218,17 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
       attribute float aAngle, aSeed, aSpeed, aSize, aPhase;
-      uniform float uTime, uOriginY, uRadius, uHeight, uHeightScale, uSpread;
+      uniform float uTime, uOriginY, uRadius, uHeight, uHeightScale, uSpread, uEndY, uDocumentYaw;
       uniform float uReveal, uPixelRatio, uHover, uMotion;
-      varying float vT, vSeed, vSpark;
+      uniform vec2 uViewport;
+      varying float vT, vSeed, vSpark, vHue;
+      varying vec3 vDocumentEdge;
       void main() {
         float clock = uTime * uMotion;
         float t = fract(aPhase + clock * aSpeed * 1.1);
         vT = t;
         vSeed = aSeed;
+        vHue = fract(aSeed + clock * 0.035);
 
         // Duesenprofil: harter Schub am Austritt, danach bremst das Abgas ab.
         float rise = 1.0 - pow(1.0 - t, 2.1);
@@ -244,7 +249,24 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         vec3 p;
         p.x = cos(swirl) * r;
         p.z = sin(swirl) * r;
-        p.y = uOriginY + rise * uHeight * uHeightScale + churn * 0.025;
+        float availableHeight = max(0.0, uEndY - uOriginY - 0.015);
+        p.y = uOriginY + clamp(rise * min(uHeight * uHeightScale, availableHeight)
+          + churn * 0.025, 0.0, availableHeight);
+
+        // Clip the whole sprite at the projected document edge. A height
+        // limit alone lets foreground particles overlap it in perspective.
+        vec3 edgeDirection = vec3(cos(uDocumentYaw), 0.0, -sin(uDocumentYaw));
+        vec3 edgeCentre = vec3(0.0, uEndY, ${DOC_FRONT.toFixed(2)});
+        vec4 a = projectionMatrix * modelViewMatrix * vec4(edgeCentre - edgeDirection, 1.0);
+        vec4 b = projectionMatrix * modelViewMatrix * vec4(edgeCentre + edgeDirection, 1.0);
+        vec4 source = projectionMatrix * modelViewMatrix * vec4(0.0, uOriginY, 0.0, 1.0);
+        vec2 edgeA = (a.xy / a.w * 0.5 + 0.5) * uViewport;
+        vec2 edgeB = (b.xy / b.w * 0.5 + 0.5) * uViewport;
+        vec2 sourcePixel = (source.xy / source.w * 0.5 + 0.5) * uViewport;
+        vec2 direction = edgeB - edgeA;
+        vec2 normal = vec2(-direction.y, direction.x) / max(length(direction), 0.001);
+        normal *= dot(sourcePixel - edgeA, normal) < 0.0 ? -1.0 : 1.0;
+        vDocumentEdge = vec3(normal, -dot(normal, edgeA));
 
         // Stetiges Verwehen statt harter Kante: die Fahne loest sich oben auf.
         vSpark = smoothstep(0.0, 0.04, t) * pow(1.0 - t, 1.7);
@@ -258,9 +280,12 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
       }
     `,
     fragmentShader: /* glsl */`
-      uniform float uHover, uCompact, uReveal;
-      varying float vT, vSeed, vSpark;
+      uniform float uHover, uCompact, uReveal, uPixelRatio;
+      varying float vT, vSeed, vSpark, vHue;
+      varying vec3 vDocumentEdge;
       void main() {
+        float edgeDistance = dot(vDocumentEdge.xy, gl_FragCoord.xy) + vDocumentEdge.z;
+        if (edgeDistance <= 0.5) discard;
         // Senkrecht gestauchte Punktform: aus dem runden Sprite wird ein
         // Bewegungsstrich, wie bei einem sehr schnellen Abgasstrahl.
         vec2 point = gl_PointCoord - 0.5;
@@ -269,15 +294,19 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         if (d > 0.5) discard;
         float core = 1.0 - smoothstep(0.0, 0.5, d);
 
-        vec3 blue = vec3(.25, .65, 1.0);
-        vec3 amber = vec3(1.0, .49, .16);
-        vec3 teal = vec3(.20, 1.0, .82);
-        float band = .5 + .5 * sin(vSeed * 12.0 + vT * 6.0);
-        vec3 color = mix(blue, amber, smoothstep(.45, .95, band));
-        color = mix(color, teal, .25 * sin(vT * 3.14159));
+        vec3 blue = vec3(.12, .48, 1.0);
+        vec3 amber = vec3(1.0, .40, .06);
+        vec3 teal = vec3(.04, 1.0, .65);
+        vec3 violet = vec3(.72, .22, 1.0);
+        float band = vHue * 4.0;
+        float blend = smoothstep(.65, 1.0, fract(band));
+        vec3 color = band < 1.0 ? mix(blue, teal, blend)
+          : band < 2.0 ? mix(teal, amber, blend)
+          : band < 3.0 ? mix(amber, violet, blend) : mix(violet, blue, blend);
 
-        float alpha = core * vSpark * (0.48 + uHover * 0.18)
-          * uReveal * mix(1.0, 0.64, uCompact);
+        float alpha = core * vSpark * (0.60 + uHover * 0.18)
+          * uReveal * mix(1.0, 0.64, uCompact)
+          * smoothstep(0.5, max(1.5, 2.5 * uPixelRatio), edgeDistance);
         if (alpha < 0.005) discard;
         gl_FragColor = vec4(color, alpha);
       }
@@ -292,7 +321,10 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
   return {
     group,
     uniforms,
-    setOrigin(y) { uniforms.uOriginY.value = y; },
+    setOrigin(y) {
+      uniforms.uOriginY.value = y;
+      uniforms.uEndY.value = y + DOC_LIFT - 0.04;
+    },
     setReveal(value, immediate = false) {
       revealTarget = value;
       if (immediate) uniforms.uReveal.value = value;
@@ -739,7 +771,7 @@ function applyResumeScale(card) {
   card.resumeFrame?.setWindow(width, height);
 }
 
-function sharpenModel(model, maxAnisotropy) {
+function sharpenModel(model, maxAnisotropy, ringPulse) {
   model.traverse((object) => {
     if (!object.isMesh) return;
     object.castShadow = false;
@@ -758,14 +790,23 @@ function sharpenModel(model, maxAnisotropy) {
       }
       // The model's baked violet/red accents must follow the shared palette too.
       material.onBeforeCompile = shader => {
+        // Include every luminous ring in the baked texture, including the
+        // inner circles and lower tiers. Dark metal stays outside the mask.
+        shader.uniforms.uRingPulse = ringPulse;
+        shader.fragmentShader = `uniform float uRingPulse;
+          ${shader.fragmentShader}`;
         shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
           #include <map_fragment>
           float baseLight = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
           diffuseColor.rgb = baseLight * vec3(0.80, 0.91, 1.0);
+          float ringMask = smoothstep(0.12, 0.45, baseLight);
+          float ringBrightness = mix(1.0, uRingPulse, ringMask);
+          diffuseColor.rgb *= ringBrightness;
         `).replace('#include <emissivemap_fragment>', `
           #include <emissivemap_fragment>
           float emissionLight = dot(totalEmissiveRadiance, vec3(0.2126, 0.7152, 0.0722));
-          totalEmissiveRadiance = emissionLight * vec3(0.47, 0.75, 1.0);
+          totalEmissiveRadiance = emissionLight * vec3(0.47, 0.75, 1.0) * uRingPulse
+            + vec3(0.80, 0.91, 1.0) * ringMask * 0.35 * uRingPulse;
         `);
       };
       if (material.color?.isColor) material.color.lerp(lightColor('fiber'), 0.1);
@@ -848,7 +889,7 @@ function loadLeanGLB(url, onLoad, onError) {
   );
 }
 
-function loadSharedBases(cards, maxAnisotropy, shouldFade, onSettled) {
+function loadSharedBases(cards, maxAnisotropy, shouldFade, onSettled, ringPulse) {
   loadLeanGLB(
     MODEL_URL,
     (gltf) => {
@@ -868,7 +909,7 @@ function loadSharedBases(cards, maxAnisotropy, shouldFade, onSettled) {
         return;
       }
 
-      sharpenModel(source, maxAnisotropy);
+      sharpenModel(source, maxAnisotropy, ringPulse);
       source.scale.multiplyScalar(BASE_DIAMETER / horizontalDiameter);
       source.updateMatrixWorld(true);
 
@@ -930,6 +971,9 @@ export const CARD_DEFS = [
 export function createCards({ renderer, reduced = false } = {}) {
   const group = new THREE.Group();
   const time = { value: 0 };
+  // One shared uniform also drives the mirrored upper pedestals, without
+  // additional geometry, textures or animation loops.
+  const ringPulse = { value: 1 };
   const maxAnisotropy = renderer?.capabilities.getMaxAnisotropy?.() || 1;
   const cards = [];
   const pickables = [];
@@ -1071,6 +1115,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     maxAnisotropy,
     () => modelRevealReleased,
     (status) => resolveReady(status),
+    ringPulse,
   );
 
   return {
@@ -1086,6 +1131,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     setPixelRatio(pr) {
       for (const card of cards) {
         card.ringJet?.setPixelRatio(pr);
+        if (card.ringJet) renderer.getDrawingBufferSize(card.ringJet.uniforms.uViewport.value);
       }
     },
 
@@ -1185,7 +1231,7 @@ export function createCards({ renderer, reduced = false } = {}) {
       const keys = explored instanceof Set ? explored : new Set(explored || []);
       // Besuchte Bereiche treten optisch zurueck: ihr Ring leuchtet matter.
       for (const card of cards) {
-        card.accentRing.material.opacity = keys.has(card.key) ? 0.34 : 0.58;
+        card.accentRing.userData.idleOpacity = keys.has(card.key) ? 0.34 : 0.58;
       }
     },
 
@@ -1319,6 +1365,7 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     update(elapsed, delta) {
       time.value = elapsed;
+      ringPulse.value = reduced ? 1.6 : 1.6 + 0.85 * Math.sin(elapsed * Math.PI * 2 / 6.3);
       const k = 1 - Math.pow(0.0012, Math.min(delta, 0.1));
       for (const card of cards) {
         if (card.pendingFallback) {
@@ -1341,6 +1388,11 @@ export function createCards({ renderer, reduced = false } = {}) {
         }
         card.accentRing.material.color.lerp(new THREE.Color(card.active || card.hover > .1
           ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue).multiplyScalar(1.5), k);
+        // The upper clone shares this material and therefore the same pulse.
+        card.accentRing.material.opacity = Math.min(1,
+          (card.accentRing.userData.idleOpacity ?? 0.58) * ringPulse.value);
+        const fallbackRing = card.base.children.find(child => child.isLine);
+        if (fallbackRing) fallbackRing.material.opacity = Math.min(1, 0.42 * ringPulse.value);
         if (card.ringJet) {
           card.ringJet.uniforms.uHover.value = card.hover;
           card.ringJet.update(delta);
@@ -1401,6 +1453,7 @@ export function createCards({ renderer, reduced = false } = {}) {
           if (card.resumeFrame) {
             card.resumeFrame.group.rotation.y = documentYaw;
           }
+          card.ringJet.uniforms.uDocumentYaw.value = documentYaw;
         } else {
           card.holder.rotation.y =
             openedKey === card.key ? 0 : Math.sin(elapsed * 0.09 + phase) * 0.022;

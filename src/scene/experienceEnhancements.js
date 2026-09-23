@@ -236,6 +236,7 @@ function createGuideDirector({ isResumeActive }) {
   function later(callback, delay) {
     const id = window.setTimeout(() => {
       timers.delete(id);
+      if (document.documentElement.classList.contains('is-site-inspecting')) { later(callback, 150); return; }
       callback();
     }, delay);
     timers.add(id);
@@ -372,6 +373,7 @@ export function createExperienceEnhancements({
     const timer = window.setTimeout(() => {
       promptTimers.delete(timer);
       if (disposed) return;
+      if (document.documentElement.classList.contains('is-site-inspecting')) { promptLater(callback, 150); return; }
       callback();
     }, delay);
     promptTimers.add(timer);
@@ -401,7 +403,7 @@ export function createExperienceEnhancements({
   function frame(now) {
     if (disposed) return;
     raf = requestAnimationFrame(frame);
-    if (document.hidden) {
+    if (document.hidden || document.documentElement.classList.contains('is-site-inspecting')) {
       lastFrame = now;
       return;
     }

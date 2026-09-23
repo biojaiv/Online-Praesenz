@@ -94,15 +94,15 @@
 .head__summary { grid-column: 2; color: var(--ink-dim); font: 11px/1.45 var(--font-body); letter-spacing: .02em; max-width: 490px; }
 .is-intro .head__summary { visibility: hidden; }
 .foot__contact { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 5px 22px; font-size: 11px; letter-spacing: var(--tracking-caps); text-transform: none; }
-.foot__contact a, .site-method summary { color: var(--ink); text-decoration: none; min-height: 30px; display: inline-flex; align-items: center; cursor: pointer; }
-.foot__contact a:hover, .site-method summary:hover { color: var(--amber); }
+.foot__contact a, .site-method button { color: var(--ink); text-decoration: none; min-height: 30px; display: inline-flex; align-items: center; cursor: pointer; }
+.site-method button { padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; }
+.foot__contact a:hover, .site-method button:hover, .site-method button[aria-pressed="true"] { color: var(--amber); }
 .foot__contact :focus-visible { outline: 1px solid var(--amber); outline-offset: 4px; }
-.site-method > p { position: absolute; bottom: calc(100% + 8px); right: 0; width: min(420px, 90vw); padding: 20px; background: var(--deep); border: 1px solid var(--line-hot); font: 15px/1.6 var(--font-body); color: var(--ink); letter-spacing: normal; z-index: 10; }
 @media (max-width: 600px) {
   .head__summary { font-size: 10px; max-width: 300px; }
   .foot__contact { grid-row: 4; gap: 0 15px; justify-content: flex-start; font-size: 10px; }
   .foot__contact > span { width: 100%; }
-  .foot__contact a, .site-method summary { min-height: 44px; }
+  .foot__contact a, .site-method button { min-height: 44px; }
 }
 
 .projects-browser { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; pointer-events: none; }

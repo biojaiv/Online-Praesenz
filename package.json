@@ -18,7 +18,8 @@
     "test:refinements": "node scripts/ui/check_refinements.mjs",
     "test:waves": "node scripts/ui/check_waves.mjs",
     "test:cv:transparency": "node scripts/cv/check_transparency.mjs",
-    "test:project-frame": "node scripts/ui/check_project_frame.mjs"
+    "test:project-frame": "node scripts/ui/check_project_frame.mjs",
+    "test:inspection": "node scripts/ui/check_site_inspection.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",
