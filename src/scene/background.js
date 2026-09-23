@@ -37,6 +37,8 @@ export function createBackground({ renderer = null } = {}) {
     group,
     ambient,
     ready: machine.ready,
+    getInspectionCandidates: camera => machine.getInspectionCandidates(camera),
+    setInspectionPoint: (point, radius) => machine.setInspectionPoint(point, radius),
 
     setEffectsEnabled(value) {
       effectsEnabled = Boolean(value);

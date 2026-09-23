@@ -207,6 +207,7 @@ function makeSharedUniforms() {
   return {
     uTime: { value: 0 },
     uVisible: { value: 0 },
+    uInspection: { value: new THREE.Vector4(0, 0, 0, 0) },
     uStageCentre: { value: PIVOT.clone() },
     uDocumentOpen: { value: 0 },
     uCore: { value: MACHINE_CENTRE.clone() },
@@ -261,6 +262,7 @@ function makeMachineMaterial(uniforms) {
     fragmentShader: /* glsl */`
       #define RUNNERS ${RUNNER_SLOTS}
       uniform float uTime, uVisible, uDocumentOpen, uCoreGlow;
+      uniform vec4 uInspection;
       uniform vec3 uCore;
       uniform float uWaveRadius, uWaveStrength, uWaveCone;
       uniform vec3 uWaveDir, uWaveColourA, uWaveColourB;
@@ -285,7 +287,9 @@ function makeMachineMaterial(uniforms) {
 
       void main() {
         float backgroundFade = backgroundVisibility(vWorldPos);
-        if (uVisible <= 0.0 || backgroundFade <= 0.0) discard;
+        float inspection = uInspection.w > 0.0
+          ? 1.0 - smoothstep(0.0, uInspection.w, distance(vWorldPos, uInspection.xyz)) : 0.0;
+        if (max(uVisible, inspection) <= 0.0 || backgroundFade <= 0.0) discard;
         vec3 n = normalize(vWorldNormal);
         vec3 v = normalize(cameraPosition - vWorldPos);
         if (dot(n, v) < 0.0) n = -n;
@@ -330,13 +334,16 @@ function makeMachineMaterial(uniforms) {
 
         // Geoeffnetes Dokument: die Welt tritt etwas zurueck.
         colour *= mix(1.0, 0.72, uDocumentOpen);
+        // A small, static inspection light reveals only the selected piece of
+        // existing geometry. It does not advance or replace the background.
+        colour += vec3(0.47, 0.75, 1.0) * inspection * (0.35 + rim * 0.3);
 
         // Nebel daempft nur vorhandenes Licht. Er darf dunkle Geometrie
         // nicht wieder als deckende, nebelgefaerbte Silhouette zeichnen.
         float viewDistance = length(cameraPosition - vWorldPos);
         colour *= exp(-pow(viewDistance * uFogDensity, 2.0));
         float illumination = max(colour.r, max(colour.g, colour.b));
-        float alpha = smoothstep(0.002, 0.035, illumination) * uVisible * backgroundFade;
+        float alpha = smoothstep(0.002, 0.035, illumination) * max(uVisible, inspection) * backgroundFade;
         if (alpha <= 0.001) discard;
         gl_FragColor = vec4(colour, alpha);
       }
@@ -1022,6 +1029,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
   let visibility = 0;
   let visibilityTarget = 1;
   let lastElapsed = 0;
+  let inspectionVisibility = null;
 
   // Wellen-Zustand
   let waveActive = false;
@@ -1143,6 +1151,45 @@ export function createOrreryMachine({ renderer = null } = {}) {
   const api = {
     group,
     ready: Promise.resolve(true),
+
+    /** Actual geometry points for inspection; sampled only when the view opens. */
+    getInspectionCandidates(camera) {
+      const candidates = [];
+      const world = new THREE.Vector3();
+      const projected = new THREE.Vector3();
+      group.updateWorldMatrix(true, true);
+      group.traverse(object => {
+        if (!object.isMesh || object.isInstancedMesh || object.material !== material) return;
+        for (let parent = object; parent && parent !== group; parent = parent.parent) {
+          if (!parent.visible) return;
+        }
+        const positions = object.geometry.getAttribute('position');
+        const stride = Math.max(1, Math.ceil(positions.count / 320));
+        const stageDepth = -PIVOT.clone().applyMatrix4(camera.matrixWorldInverse).z;
+        for (let i = 0; i < positions.count; i += stride) {
+          world.fromBufferAttribute(positions, i).applyMatrix4(object.matrixWorld);
+          const depth = -projected.copy(world).applyMatrix4(camera.matrixWorldInverse).z;
+          if (depth < stageDepth + 19) continue;
+          projected.copy(world).project(camera);
+          if (Math.abs(projected.x) < .96 && Math.abs(projected.y) < .92 && projected.z > -1 && projected.z < 1) {
+            candidates.push({ world: world.clone(), ndc: projected.clone(), depth });
+          }
+        }
+      });
+      return candidates;
+    },
+
+    setInspectionPoint(point, radius = 0) {
+      if (point) {
+        if (inspectionVisibility === null) inspectionVisibility = group.visible;
+        uniforms.uInspection.value.set(point.x, point.y, point.z, radius);
+        group.visible = true;
+      } else {
+        uniforms.uInspection.value.w = 0;
+        if (inspectionVisibility !== null) group.visible = inspectionVisibility;
+        inspectionVisibility = null;
+      }
+    },
 
     setEffectsEnabled(value) {
       effectsEnabled = Boolean(value);

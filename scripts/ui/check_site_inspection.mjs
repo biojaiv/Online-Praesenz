@@ -21,11 +21,20 @@ try {
   await page.goto(`${base}/#home`);
   await page.waitForFunction(() => document.querySelector('#boot.is-done'));
   const initialInert = await page.locator('#frame [inert]').count();
+  // Let the boot curtain finish fading before freezing a view for screenshots.
+  await page.waitForTimeout(1100);
   const trigger = page.locator('.site-method button');
   const overlay = page.locator('.site-inspection');
   await trigger.hover();
   await overlay.waitFor({ state: 'visible' });
   assert.match(await overlay.locator('h2').textContent(), /Wie diese Seite/);
+  assert.equal(await overlay.getAttribute('data-background-anchor'), 'scene');
+  const backgroundAnchor = await overlay.locator('[data-topic="space"] circle:not(.site-inspection__orbit)').evaluate(el => ({ x: Number(el.getAttribute('cx')), y: Number(el.getAttribute('cy')) }));
+  const noteBounds = await overlay.locator('.site-inspection__note:visible').evaluateAll(notes => notes.map(el => { const r = el.getBoundingClientRect(); return {left:r.left,right:r.right,top:r.top,bottom:r.bottom}; }));
+  assert(noteBounds.every(r => backgroundAnchor.x < r.left || backgroundAnchor.x > r.right || backgroundAnchor.y < r.top || backgroundAnchor.y > r.bottom), 'Background leader must point into the scene, not into a note');
+  assert.match(await overlay.locator('#site-inspection-camera').textContent(), /Sockel/);
+  assert.equal(await overlay.locator('.site-inspection__diagram').evaluate(el => getComputedStyle(el).color), 'rgb(232, 164, 90)');
+  assert.match(await overlay.locator('#site-inspection-space').textContent(), /Lichtfronten/);
   await page.waitForTimeout(250);
   const first = hash(await page.locator('#frame').screenshot());
   await page.waitForTimeout(6500);
@@ -44,7 +53,7 @@ try {
   const headerBox = await page.locator('.head').boundingBox();
   assert(Math.abs(closeBox.x + closeBox.width / 2 - headerBox.x - headerBox.width / 2) < 2, 'Close belongs at the geometry centre');
   assert.equal(await overlay.locator('.site-inspection__close').evaluate(el => getComputedStyle(el).animationDuration), '3.4s');
-  const crossesNavigation = await overlay.locator('.site-inspection__diagram').evaluate(svg => {
+  const crossesNavigation = await overlay.locator('.site-inspection__diagram').first().evaluate(svg => {
     const links = [...document.querySelectorAll('.nav__link')].filter(el => el.getClientRects().length).map(el => el.getBoundingClientRect());
     return [...svg.querySelectorAll('g > path')].some(path => {
       const length = path.getTotalLength();
@@ -78,18 +87,22 @@ try {
     await page.waitForTimeout(300);
     await trigger.click();
     await overlay.waitFor({ state: 'visible' });
-    const compact = width <= 900 || height <= 690;
+    const compact = await overlay.getAttribute('data-compact') === 'true';
     if (compact) {
       for (const button of await overlay.locator('.site-inspection__tabs button').all()) {
         await button.click();
         await page.waitForTimeout(30);
         assert.equal(await overlay.locator('.site-inspection__note:visible').count(), 1);
+        const active = await overlay.locator('.site-inspection__note:visible').boundingBox();
+        const footerTop = (await page.locator('.foot').boundingBox()).y;
+        assert(active.y >= 0 && active.y + active.height <= footerTop, `Active note must fit above the footer at ${width}×${height}`);
       }
     }
     const rectangles = await overlay.locator('.site-inspection__note:visible').evaluateAll(elements => elements.map(el => {
       const r = el.getBoundingClientRect(); return { left:r.left, right:r.right, top:r.top, bottom:r.bottom };
     }));
-    for (const r of rectangles) assert(r.left >= 0 && r.right <= width + 1 && r.top >= 0 && r.bottom <= height, JSON.stringify({ width, height, r }));
+    const footer = await page.locator('.foot').boundingBox();
+    for (const r of rectangles) assert(r.left >= 0 && r.right <= width + 1 && r.top >= 0 && r.bottom <= footer.y, JSON.stringify({ width, height, r, footer }));
     const toolbar = await overlay.locator('.site-inspection__toolbar').boundingBox();
     assert(toolbar.y >= 0 && toolbar.y + toolbar.height <= height, 'Heading and close control must remain visible');
     const closeRect = await overlay.locator('.site-inspection__close').boundingBox();
@@ -128,6 +141,12 @@ try {
     const mobileInert = await mobile.locator('#frame [inert]').count();
     await mobile.locator('.site-method button').tap();
     await mobile.locator('.site-inspection.is-pinned').waitFor({ state:'visible' });
+    if (fallback || await mobile.locator('.site-inspection').getAttribute('data-background-anchor') !== 'scene') {
+      const sample = mobile.locator('.site-inspection__background-detail img');
+      await sample.evaluate(img => img.decode());
+      assert(await sample.isVisible(), 'Detail must work when the real background is unavailable');
+    }
+    assert.match(await mobile.locator('#site-inspection-space').textContent(), /light fronts/);
     assert.equal(await mobile.locator('.site-inspection__close').evaluate(el => getComputedStyle(el).animationName), 'none');
     assert.equal(await mobile.locator('.site-inspection h2').textContent(), 'How this site is built');
     await mobile.locator('.site-inspection__tabs button').nth(3).tap();

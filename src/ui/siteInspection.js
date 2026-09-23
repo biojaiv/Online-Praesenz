@@ -4,7 +4,7 @@ import { t, onLanguageChange } from '../i18n.js';
 import './siteInspection.css';
 
 const ANNOTATIONS = [
-  { key: 'space', target: 'space' },
+  { key: 'space', target: 'background' },
   { key: 'camera', target: 'abschluss' },
   { key: 'access', target: '.foot__hint' },
   { key: 'language', target: '#language-switch' },
@@ -15,7 +15,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Fine outline symbols echo the reader headings and the navigation's orbital dials.
 const SYMBOLS = {
   space: '<circle cx="12" cy="12" r="7"/><ellipse cx="12" cy="12" rx="11" ry="4" transform="rotate(-35 12 12)"/>',
-  camera: '<path d="M3 8h11v9H3zM14 11l7-4v11l-7-4M5 4h6M8 2v4"/>',
+  camera: '<ellipse cx="12" cy="6" rx="9" ry="3"/><path d="M3 6v12c0 4 18 4 18 0V6M3 12c0 4 18 4 18 0"/>',
   access: '<circle cx="12" cy="4" r="2"/><path d="M4 9l8 2 8-2M12 11v5m-5 6 5-6 5 6"/>',
   language: '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>',
   html: '<path d="M8 6l-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/>',
@@ -56,6 +56,12 @@ export function createSiteInspection(trigger) {
     card.id = `site-inspection-${key}`;
     card.dataset.side = index < 3 ? 'left' : 'right';
     card.innerHTML = `<span class="site-inspection__symbol" aria-hidden="true"><svg viewBox="0 0 24 24">${SYMBOLS[key]}</svg></span><div class="site-inspection__copy"><span class="site-inspection__number" aria-hidden="true">${number}</span><h3></h3><p></p></div>`;
+    if (key === 'space') {
+      const detail = document.createElement('figure');
+      detail.className = 'site-inspection__background-detail';
+      detail.innerHTML = '<img src="/inspection/orrery-detail.webp" width="640" height="220" loading="lazy" alt=""><figcaption></figcaption>';
+      card.querySelector('h3').after(detail);
+    }
     notes.append(card);
     const tab = document.createElement('button');
     tab.type = 'button';
@@ -71,7 +77,9 @@ export function createSiteInspection(trigger) {
     const orbit = document.createElementNS(SVG_NS, 'circle');
     orbit.setAttribute('r', '7');
     orbit.classList.add('site-inspection__orbit');
-    group.append(path, orbit, dot); diagram.append(group);
+    group.append(path, orbit, dot);
+    group.dataset.topic = key;
+    diagram.append(group);
     return { key, card, tab, group, path, dot, orbit };
   });
 
@@ -79,6 +87,7 @@ export function createSiteInspection(trigger) {
   let timelineWasPaused = false;
   let pausedAnimations = [], playingMedia = [], inertElements = [];
   const point = new THREE.Vector3();
+  let backgroundAnchor = null;
   const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
   function renderText() {
     title.textContent = t('profile.method');
@@ -91,6 +100,9 @@ export function createSiteInspection(trigger) {
       card.querySelector('p').textContent = t(`profile.method.${key}.text`);
       tab.setAttribute('aria-label', t(`profile.method.${key}.title`));
     }
+    const detail = overlay.querySelector('.site-inspection__background-detail');
+    detail.querySelector('img').alt = t('profile.method.backgroundAlt');
+    detail.querySelector('figcaption').textContent = t('profile.method.backgroundCaption');
     if (visible) { cancelAnimationFrame(updateFrame); layout(); }
   }
   function elementAnchor(element) {
@@ -100,6 +112,7 @@ export function createSiteInspection(trigger) {
   }
   function anchor(target) {
     const sceneRect = document.getElementById('stage').getBoundingClientRect();
+    if (target === 'background') return backgroundAnchor;
     if (target === 'html') {
       const content = [...document.querySelectorAll('.cv-reader:not([hidden]), #ihk-reader:not([hidden]), .projects-panel')]
         .find(element => element.getClientRects().length);
@@ -127,10 +140,72 @@ export function createSiteInspection(trigger) {
     }
     return { x: sceneRect.left + sceneRect.width * .5, y: sceneRect.top + sceneRect.height * .18 };
   }
+  function markBackground(scene) {
+    backgroundAnchor = null;
+    if (!stage?.background.getInspectionCandidates) return;
+    const blocked = [...cards.map(({ card }) => card), overlay.querySelector('.site-inspection__toolbar'), close,
+      ...document.querySelectorAll('.cv-hologram')]
+      .filter(element => element.getClientRects().length).map(element => element.getBoundingClientRect());
+    stage.cards.group.updateWorldMatrix(true, true);
+    // Particle jets are displaced in their vertex shader, so mesh raycasts
+    // cannot detect them. Exclude their projected envelopes explicitly.
+    stage.cards.group.traverse(object => {
+      const u = object.material?.uniforms;
+      if (!object.isPoints || !u?.uEndY) return;
+      for (let parent = object; parent; parent = parent.parent) if (!parent.visible) return;
+      const radius = u.uRadius.value + u.uSpread.value + .2;
+      const r = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+      const p = new THREE.Vector3();
+      for (const x of [-radius, radius]) for (const y of [u.uOriginY.value, u.uEndY.value]) for (const z of [-radius, radius]) {
+        p.set(x, y, z).applyMatrix4(object.matrixWorld).project(stage.camera);
+        if (p.z < -1 || p.z > 1) continue;
+        const sx = scene.left + (p.x + 1) * scene.width / 2, sy = scene.top + (1 - p.y) * scene.height / 2;
+        r.left = Math.min(r.left, sx); r.right = Math.max(r.right, sx);
+        r.top = Math.min(r.top, sy); r.bottom = Math.max(r.bottom, sy);
+      }
+      if (Number.isFinite(r.left)) blocked.push(r);
+    });
+    const footerTop = document.querySelector('.foot').getBoundingClientRect().top;
+    const candidates = stage.background.getInspectionCandidates(stage.camera).map(candidate => ({ ...candidate,
+      x: scene.left + (candidate.ndc.x + 1) * scene.width / 2,
+      y: scene.top + (1 - candidate.ndc.y) * scene.height / 2,
+    })).filter(p => p.y > scene.top + 72 && p.y < footerTop - 20 &&
+      !blocked.some(r => p.x > r.left - 16 && p.x < r.right + 16 && p.y > r.top - 16 && p.y < r.bottom + 16));
+    candidates.sort((a, b) => (a.ndc.x + .22) ** 2 + (a.ndc.y - .1) ** 2 - (b.ndc.x + .22) ** 2 - (b.ndc.y - .1) ** 2);
+    const foreground = [];
+    stage.cards.group.traverse(object => {
+      if (!object.isMesh) return;
+      for (let parent = object; parent; parent = parent.parent) if (!parent.visible) return;
+      foreground.push(object);
+    });
+    const ray = new THREE.Raycaster();
+    const tested = new Set();
+    let chosen = null;
+    for (const candidate of candidates) {
+      const cell = `${Math.round(candidate.x / 18)}:${Math.round(candidate.y / 18)}`;
+      if (tested.has(cell)) continue;
+      tested.add(cell);
+      if (tested.size > 160) break;
+      ray.setFromCamera(candidate.ndc, stage.camera);
+      const hit = ray.intersectObjects(foreground, false)[0];
+      if (!hit || hit.distance > stage.camera.position.distanceTo(candidate.world)) { chosen = candidate; break; }
+    }
+    if (chosen) {
+      const radius = chosen.depth * Math.tan(THREE.MathUtils.degToRad(stage.camera.fov / 2)) * 110 / scene.height;
+      stage.background.setInspectionPoint(chosen.world, radius);
+      backgroundAnchor = { x: chosen.x, y: chosen.y };
+    } else {
+      stage.background.setInspectionPoint(null);
+      const detail = overlay.querySelector('.site-inspection__background-detail');
+      if (detail.hidden) { detail.hidden = false; queueLayout(); }
+    }
+    overlay.dataset.backgroundAnchor = chosen ? 'scene' : 'unavailable';
+    stage.setInspectionFrozen(true);
+  }
   function layout() {
     updateFrame = 0;
     if (!visible) return;
-    const compact = matchMedia(compactQuery).matches;
+    let compact = matchMedia(compactQuery).matches;
     const bounds = frame.getBoundingClientRect();
     const scene = document.getElementById('stage').getBoundingClientRect();
     const bottom = document.querySelector('.foot').getBoundingClientRect().top - 12;
@@ -149,24 +224,38 @@ export function createSiteInspection(trigger) {
     close.style.left = `${inHeader ? headerCentre : bounds.right - 16}px`;
     close.style.top = `${inHeader ? header.top + header.height / 2 : clamp(scene.top + 8, 12, innerHeight * .25)}px`;
     diagram.setAttribute('viewBox', `0 0 ${innerWidth} ${innerHeight}`);
-    cards.forEach(({ card, tab }, index) => {
+    function sizeNotes() { cards.forEach(({ card, tab }, index) => {
       card.hidden = compact && index !== selected;
       tab.setAttribute('aria-pressed', String(index === selected));
       card.style.left = compact || index < 3 ? `${bounds.left + 16}px` : 'auto';
       card.style.right = !compact && index >= 3 ? `${innerWidth - bounds.right + 16}px` : 'auto';
       card.style.width = `${compact ? bounds.width - 32 : Math.min(300, bounds.width * .24)}px`;
-    });
+    }); }
+    sizeNotes();
+    const notesTop = scene.top + 72;
+    if (!compact && [cards.slice(0, 3), cards.slice(3)].some(column =>
+      column.reduce((sum, { card }) => sum + card.offsetHeight, 16) > bottom - notesTop)) {
+      compact = true;
+      overlay.dataset.compact = 'true';
+      sizeNotes();
+    }
     if (compact) {
       const card = cards[selected].card;
       const top = Math.max(scene.top + 116, bottom - card.offsetHeight);
       card.style.top = `${top}px`;
       tabs.style.top = `${top - 46}px`;
     } else {
-      const top = scene.top + 88;
-      const maxHeight = Math.max(...cards.map(({ card }) => card.offsetHeight));
-      const gap = Math.max(8, (bottom - top - maxHeight * 3) / 2);
-      cards.forEach(({ card }, index) => { card.style.top = `${top + index % 3 * (maxHeight + gap)}px`; });
+      const top = notesTop;
+      // Each column uses its actual content height; the background sample must
+      // not inflate all six slots or push the footer explanations off screen.
+      for (const column of [cards.slice(0, 3), cards.slice(3)]) {
+        const height = column.reduce((sum, { card }) => sum + card.offsetHeight, 0);
+        const gap = Math.max(8, (bottom - top - height) / 2);
+        let y = top;
+        column.forEach(({ card }) => { card.style.top = `${y}px`; y += card.offsetHeight + gap; });
+      }
     }
+    markBackground(scene);
     cards.forEach(({ card, group, path, dot, orbit }, index) => {
       const source = card.hidden ? null : anchor(ANNOTATIONS[index].target);
       group.style.display = source ? '' : 'none';
@@ -203,6 +292,8 @@ export function createSiteInspection(trigger) {
   function show() {
     if (visible || frame.classList.contains('is-intro') || !document.querySelector('#boot.is-done')) return;
     visible = true;
+    selected = 0;
+    overlay.querySelector('.site-inspection__background-detail').hidden = Boolean(stage);
     stage?.setInspectionFrozen(true);
     timelineWasPaused = gsap.globalTimeline.paused();
     gsap.globalTimeline.pause();
@@ -233,6 +324,8 @@ export function createSiteInspection(trigger) {
     inertElements.forEach(element => { element.inert = false; }); inertElements = [];
     pausedAnimations.forEach(animation => { if (animation.playState === 'paused') animation.play(); }); pausedAnimations = [];
     if (!timelineWasPaused) gsap.globalTimeline.resume();
+    stage?.background.setInspectionPoint(null);
+    backgroundAnchor = null;
     stage?.setInspectionFrozen(false);
     playingMedia.forEach(media => { if (media.isConnected) media.play().catch(() => {}); }); playingMedia = [];
     if (focus) trigger.focus({ preventScroll: true });
