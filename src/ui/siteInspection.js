@@ -6,7 +6,7 @@ import './siteInspection.css';
 const ANNOTATIONS = [
   { key: 'space', target: 'background' },
   { key: 'camera', target: 'abschluss' },
-  { key: 'access', target: '.foot__hint' },
+  { key: 'access', target: 'zoom-cue' },
   { key: 'language', target: '#language-switch' },
   { key: 'html', target: 'html' },
   { key: 'delivery', target: '.foot__contact a[download]' },
@@ -41,12 +41,14 @@ export function createSiteInspection(trigger) {
         <path d="M 1 1 L 9 5 L 1 9" />
       </marker>
     </defs></svg>
+    <div class="site-inspection__zoom-cue" aria-hidden="true"><kbd>↑</kbd><span>ZOOM</span><kbd>↓</kbd></div>
     <nav class="site-inspection__tabs"></nav><div class="site-inspection__notes"></div>`;
   document.body.append(overlay);
   const title = overlay.querySelector('h2');
   const status = overlay.querySelector('#site-inspection-status');
   const close = overlay.querySelector('.site-inspection__close');
   const diagram = overlay.querySelector('svg');
+  const zoomCue = overlay.querySelector('.site-inspection__zoom-cue');
   const notes = overlay.querySelector('.site-inspection__notes');
   const tabs = overlay.querySelector('.site-inspection__tabs');
   const cards = ANNOTATIONS.map(({ key }, index) => {
@@ -88,6 +90,7 @@ export function createSiteInspection(trigger) {
   let pausedAnimations = [], playingMedia = [], inertElements = [];
   const point = new THREE.Vector3();
   let backgroundAnchor = null;
+  let zoomTarget = null;
   const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
   function renderText() {
     title.textContent = t('profile.method');
@@ -113,6 +116,7 @@ export function createSiteInspection(trigger) {
   function anchor(target) {
     const sceneRect = document.getElementById('stage').getBoundingClientRect();
     if (target === 'background') return backgroundAnchor;
+    if (target === 'zoom-cue') return elementAnchor(zoomTarget);
     if (target === 'html') {
       const content = [...document.querySelectorAll('.cv-reader:not([hidden]), #ihk-reader:not([hidden]), .projects-panel')]
         .find(element => element.getClientRects().length);
@@ -208,7 +212,21 @@ export function createSiteInspection(trigger) {
     let compact = matchMedia(compactQuery).matches;
     const bounds = frame.getBoundingClientRect();
     const scene = document.getElementById('stage').getBoundingClientRect();
-    const bottom = document.querySelector('.foot').getBoundingClientRect().top - 12;
+    const foot = document.querySelector('.foot').getBoundingClientRect();
+    const bottom = foot.top - 12;
+    overlay.style.setProperty('--inspection-footer-inset', `${innerHeight - foot.top}px`);
+    // Reuse the real control in an open document. Home and reader views get a
+    // static example without changing the frozen page's footer layout.
+    zoomTarget = [...document.querySelectorAll('.foot__tools .cv-keyboard-zoom-hint kbd, .foot__tools .cv-mobile-zoom__button')]
+      .find(element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden');
+    zoomCue.hidden = Boolean(zoomTarget);
+    const mobileFooter = innerWidth <= 600;
+    const cuePosition = document.querySelector(mobileFooter ? '.foot__crumb' : '.foot__tools').getBoundingClientRect();
+    zoomCue.style.left = `${mobileFooter ? foot.right - 58 : cuePosition.left + cuePosition.width / 2}px`;
+    zoomCue.style.top = `${cuePosition.top + cuePosition.height / 2}px`;
+    zoomCue.querySelectorAll('kbd')[0].textContent = mobileFooter ? '+' : '↑';
+    zoomCue.querySelectorAll('kbd')[1].textContent = mobileFooter ? '−' : '↓';
+    zoomTarget ||= zoomCue.querySelector('kbd');
     overlay.dataset.compact = String(compact);
     overlay.style.setProperty('--inspection-left', `${bounds.left + 16}px`);
     overlay.style.setProperty('--inspection-width', `${bounds.width - 32}px`);
@@ -256,12 +274,12 @@ export function createSiteInspection(trigger) {
       }
     }
     markBackground(scene);
-    cards.forEach(({ card, group, path, dot, orbit }, index) => {
+    cards.forEach(({ key, card, group, path, dot, orbit }, index) => {
       const source = card.hidden ? null : anchor(ANNOTATIONS[index].target);
       group.style.display = source ? '' : 'none';
       if (!source) return;
       const rect = card.getBoundingClientRect();
-      const footerTarget = ['access', 'delivery'].includes(ANNOTATIONS[index].key);
+      const footerTarget = ['access', 'delivery'].includes(key);
       let end, bend;
       if (compact) {
         end = { x: clamp(source.x, rect.left + 28, rect.right - 28),
@@ -279,11 +297,16 @@ export function createSiteInspection(trigger) {
       const language = ANNOTATIONS[index].key === 'language';
       const belowHeader = Math.max(header.bottom + 8, source.y + 8);
       const gutter = compact ? bounds.right - 8 : bend.x;
-      path.setAttribute('d', language
+      const footerPath = key === 'access'
+        ? `M${source.x},${source.y - 8} V${foot.top - 8} H${end.x} V${end.y}`
+        : key === 'delivery'
+          ? `M${source.x},${source.y + 8} V${Math.min(foot.bottom - 4, innerHeight - 6)} H${compact ? foot.right - 8 : bend.x} V${end.y} H${end.x}`
+          : null;
+      path.setAttribute('d', footerPath || (language
         ? `M${source.x},${source.y} V${belowHeader} H${gutter} V${end.y} H${end.x}`
         : compact
         ? `M${source.x},${source.y} L${bend.x},${bend.y} L${end.x},${end.y}`
-        : `M${source.x},${source.y} L${bend.x},${bend.y} L${bend.x},${end.y} L${end.x},${end.y}`);
+        : `M${source.x},${source.y} L${bend.x},${bend.y} L${bend.x},${end.y} L${end.x},${end.y}`));
       dot.setAttribute('cx', source.x); dot.setAttribute('cy', source.y);
       orbit.setAttribute('cx', source.x); orbit.setAttribute('cy', source.y);
     });

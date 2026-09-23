@@ -12,6 +12,35 @@ const browser = await chromium.launch({
 });
 const results = [];
 const hash = data => createHash('sha256').update(data).digest('hex');
+async function checkFooterLeaders(page) {
+  const checks = await page.evaluate(() => {
+    const visible = element => element?.getClientRects().length && getComputedStyle(element).display !== 'none';
+    const zoom = [...document.querySelectorAll('.foot__tools .cv-keyboard-zoom-hint kbd, .foot__tools .cv-mobile-zoom__button, .site-inspection__zoom-cue kbd')].find(visible);
+    const failures = [];
+    if (!zoom) failures.push('Zoom symbols must be visible during inspection');
+    for (const [topic, target] of [['access', zoom], ['delivery', document.querySelector('.foot__contact a[download]')]]) {
+      const group = document.querySelector(`.site-inspection__diagram [data-topic="${topic}"]`);
+      if (!visible(group) || !target) continue;
+      const dot = group.querySelector('circle:not(.site-inspection__orbit)');
+      const rect = target.getBoundingClientRect();
+      if (Math.abs(Number(dot.getAttribute('cx')) - rect.left - rect.width / 2) > 1 ||
+          Math.abs(Number(dot.getAttribute('cy')) - rect.top - rect.height / 2) > 1) failures.push(`${topic}: marker must centre on its visible target`);
+      const path = group.querySelector('path');
+      const texts = [...document.querySelectorAll('.foot__contact a, .site-method button')].filter(el => el !== target).flatMap(el => {
+        const range = document.createRange(); range.selectNodeContents(el);
+        return [...range.getClientRects()];
+      });
+      for (let d = 0; d <= path.getTotalLength(); d += 1) {
+        const p = path.getPointAtLength(d);
+        if (texts.some(r => p.x > r.left - 2 && p.x < r.right + 2 && p.y > r.top - 2 && p.y < r.bottom + 2)) {
+          failures.push(`${topic}: leader crosses unrelated footer text`); break;
+        }
+      }
+    }
+    return failures;
+  });
+  assert.deepEqual(checks, [], 'Footer leaders must terminate on visible targets without crossing other labels');
+}
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: .5, locale: 'de-DE' });
   const errors = [];
@@ -27,6 +56,7 @@ try {
   const overlay = page.locator('.site-inspection');
   await trigger.hover();
   await overlay.waitFor({ state: 'visible' });
+  await checkFooterLeaders(page);
   assert.match(await overlay.locator('h2').textContent(), /Wie diese Seite/);
   assert.equal(await overlay.getAttribute('data-background-anchor'), 'scene');
   const backgroundAnchor = await overlay.locator('[data-topic="space"] circle:not(.site-inspection__orbit)').evaluate(el => ({ x: Number(el.getAttribute('cx')), y: Number(el.getAttribute('cy')) }));
@@ -96,8 +126,10 @@ try {
         const active = await overlay.locator('.site-inspection__note:visible').boundingBox();
         const footerTop = (await page.locator('.foot').boundingBox()).y;
         assert(active.y >= 0 && active.y + active.height <= footerTop, `Active note must fit above the footer at ${width}×${height}`);
+        await checkFooterLeaders(page);
       }
     }
+    await checkFooterLeaders(page);
     const rectangles = await overlay.locator('.site-inspection__note:visible').evaluateAll(elements => elements.map(el => {
       const r = el.getBoundingClientRect(); return { left:r.left, right:r.right, top:r.top, bottom:r.bottom };
     }));
@@ -122,6 +154,8 @@ try {
   await filmPage.locator('.ihk-hologram-film__play').click();
   await filmPage.waitForFunction(() => document.querySelector('.ihk-hologram-film video').currentTime > .3);
   await filmPage.locator('.site-method button').hover();
+  await checkFooterLeaders(filmPage);
+  assert.equal(await filmPage.locator('.site-inspection__zoom-cue').isVisible(), false, 'An existing zoom control must not be duplicated');
   assert(await video.evaluate(element => element.paused));
   const videoTime = await video.evaluate(element => element.currentTime);
   await filmPage.waitForTimeout(700);
