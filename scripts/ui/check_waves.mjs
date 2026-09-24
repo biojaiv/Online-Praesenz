@@ -51,7 +51,7 @@ try {
         outsideAlpha: texture.getImageData(20, 20, 1, 1).data[3], imageAlpha: texture.getImageData(100, 400, 1, 1).data[3],
       };
     });
-    assert.deepEqual(preview, { panel: 'rgba(0, 0, 0, 0)', choice: 'rgba(0, 0, 0, 0)', previewVisible: true, outsideAlpha: 0, imageAlpha: 255 }, 'Only preview images are opaque');
+    assert.deepEqual(preview, { panel: 'rgba(0, 0, 0, 0)', choice: 'rgba(0, 0, 0, 0)', previewVisible: true, outsideAlpha: 255, imageAlpha: 255 }, 'The original 3D hologram is opaque; its accessible hit area adds no second surface');
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-gallery.png` });
     await page.locator('.project-choice[data-project-id="systems"]').click();
     await page.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
