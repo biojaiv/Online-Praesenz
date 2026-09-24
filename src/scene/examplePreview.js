@@ -6,8 +6,7 @@ export function createExamplePreview() {
   const canvas = document.createElement('canvas');
   canvas.width = 1258; canvas.height = 1920;
   const ctx = canvas.getContext('2d');
-  // Tint the thumbnail separately; the document itself has an opaque surface
-  // so the moving Orrery cannot show through its text or image.
+  // Only the thumbnail is opaque; the surrounding hologram stays transparent.
   const thumbnail = document.createElement('canvas');
   thumbnail.width = 1094; thumbnail.height = 730;
   const thumbnailContext = thumbnail.getContext('2d');
@@ -22,7 +21,7 @@ export function createExamplePreview() {
   function draw() {
     if (disposed) return;
     ctx.clearRect(0, 0, 1258, 1920);
-    ctx.fillStyle = '#08121e'; ctx.fillRect(0, 0, 1258, 1920);
+    ctx.fillStyle = '#08121e'; ctx.fillRect(82, 360, 1094, 730);
     ctx.strokeStyle = '#78bfff55'; ctx.lineWidth = 2; ctx.strokeRect(2, 2, 1254, 1916);
     ctx.textAlign = 'left'; ctx.fillStyle = '#e8a45a'; ctx.font = '500 26px "Barlow Condensed", sans-serif';
     ctx.fillText('VL // ' + t('example.label').toUpperCase(), 82, 130);
