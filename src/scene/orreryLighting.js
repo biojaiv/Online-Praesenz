@@ -27,6 +27,38 @@ export function createOrreryLighting(source, { reduced = false, camera = null, r
   group.add(world.root);
   const meshes = [];
   world.root.traverse(object => { if (object.isMesh) meshes.push(object); });
+  const drawBounds = meshes.map(mesh => {
+    if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    return { mesh, sphere: new THREE.Sphere(), distant: materials.some(material => material.userData.orreryDistant) };
+  });
+  const lightPosition = new THREE.Vector3();
+  function syncDrawLayers() {
+    const energies = uniforms.uOrreryEnergy.value;
+    const lit = energies.some(value => value > 0);
+    const inspecting = uniforms.uOrreryInspection.value.w > 0;
+    for (const item of drawBounds) {
+      let draw = item.distant && uniforms.uOrreryRear.value > 0;
+      if (!draw && (lit || inspecting)) {
+        item.sphere.copy(item.mesh.geometry.boundingSphere).applyMatrix4(item.mesh.matrixWorld);
+        for (let i = 0; !draw && i < energies.length; i++) {
+          if (energies[i] <= 0) continue;
+          const light = uniforms.uOrreryLights.value[i];
+          lightPosition.set(light.x, light.y, light.z);
+          draw = item.sphere.center.distanceToSquared(lightPosition) <= (item.sphere.radius + light.w) ** 2;
+        }
+        if (!draw && inspecting) {
+          const light = uniforms.uOrreryInspection.value;
+          lightPosition.set(light.x + 3, light.y + 7, light.z + 10);
+          draw = item.sphere.center.distanceToSquared(lightPosition) <= (item.sphere.radius + light.w + 14) ** 2;
+        }
+      }
+      // Keep visibility intact for path selection and inspection. Layer zero
+      // excludes only meshes whose shader would discard every fragment anyway.
+      if (draw) item.mesh.layers.enable(0); else item.mesh.layers.disable(0);
+    }
+  }
+  syncDrawLayers();
   group.updateWorldMatrix(true, true);
   const network = createOrreryPaths(world.root);
   network.update();
@@ -182,7 +214,7 @@ export function createOrreryLighting(source, { reduced = false, camera = null, r
         uniforms.uOrreryRear.value = smooth((-viewDirection.z - .1) / .7);
       }
       for (const satellite of world.satellites) satellite.visible = !compact || uniforms.uOrreryRear.value > .05;
-      if (!enabled || reduced) return;
+      if (!enabled || reduced) { syncDrawLayers(); return; }
       uniforms.uOrreryTime.value = elapsed;
       for (const rotor of world.rotors) {
         const step = rotor.speed * dt * (documentOpen || suspended ? .7 : 1);
@@ -191,8 +223,9 @@ export function createOrreryLighting(source, { reduced = false, camera = null, r
         else rotor.object.rotateY(step);
       }
       group.updateWorldMatrix(true, true);
-      network.update();
+      if (episode) network.update();
       updateLights(elapsed);
+      syncDrawLayers();
     },
     setEffectsEnabled(value) {
       enabled = Boolean(value);
@@ -212,6 +245,8 @@ export function createOrreryLighting(source, { reduced = false, camera = null, r
     setInspectionPoint(point, radius = 0) {
       if (point) uniforms.uOrreryInspection.value.set(point.x, point.y, point.z, radius);
       else uniforms.uOrreryInspection.value.w = 0;
+      group.updateWorldMatrix(true, true);
+      syncDrawLayers();
     },
     getInspectionCandidates(viewCamera) {
       const candidates = [], point = new THREE.Vector3(), ndc = new THREE.Vector3();

@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader.js';
 import { createOrreryLighting } from './orreryLighting.js';
 import { createDistantStars } from './distantStars.js';
+import { deviceQuality } from './renderBudget.js';
 
 const MODEL_URL = new URL('../../Elemente/Orrery/Hintergrund_web.glb', import.meta.url).href;
 
@@ -41,7 +42,8 @@ export function createBackground({ camera = null, random = Math.random } = {}) {
     if (!machine) geometry.forEach(item => item.dispose());
     sourceScene = null;
   }
-  const draco = new DRACOLoader().setDecoderPath(DRACO_GLTF_CONFIG);
+  const draco = new DRACOLoader().setDecoderPath(DRACO_GLTF_CONFIG)
+    .setWorkerLimit(deviceQuality() === 2 ? 2 : 1);
   const ready = new GLTFLoader().setDRACOLoader(draco).loadAsync(MODEL_URL).then(gltf => {
     sourceScene = gltf.scene;
     if (disposed) { releaseSource(); return false; }

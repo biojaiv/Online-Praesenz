@@ -14,6 +14,7 @@ import { ihkProjectionSource } from './ihkProjectionSource.js';
 import { createIhkHologramFilm } from '../ui/ihkHologramFilm.js';
 import { LIGHT_PALETTE } from './palette.js';
 import { createExampleFlight } from './exampleFlight.js';
+import { createRenderBudget } from './renderBudget.js';
 
 const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
 
@@ -74,16 +75,17 @@ function wrapAngle(value) {
 
 export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const renderBudget = createRenderBudget();
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: false,
-    powerPreference: 'high-performance',
+    powerPreference: renderBudget.profile.name === 'full' ? 'high-performance' : 'low-power',
     stencil: false,
   });
   // STARTUP_DPR_RAMP_V5_1_1: first usable frame at DPR 1.
-  const targetPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
-  let currentPixelRatio = Math.min(targetPixelRatio, 1);
+  let currentPixelRatio = Math.min(renderBudget.ratio(innerWidth, innerHeight), 1);
+  let qualitySettled = false;
   renderer.setPixelRatio(currentPixelRatio);
   // FOREGROUND_BACKGROUND_SEPARATION_V5_5_2
   renderer.setClearColor(0x020407, 1);
@@ -144,6 +146,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       luminanceSmoothing: 0.28,
       kernelSize: KernelSize.LARGE,
       mipmapBlur: true,
+      levels: renderBudget.profile.bloomLevels,
     });
 
     composer.addPass(new EffectPass(
@@ -151,7 +154,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       bloom,
       new VignetteEffect({ offset: 0.28, darkness: 0.72 }),
       noise,
-      new SMAAEffect(),
+      ...(renderBudget.profile.name === 'full' ? [new SMAAEffect()] : []),
     ));
   } catch (err) {
     console.warn('Nachbearbeitung nicht verfügbar, verwende direktes Rendering:', err);
@@ -1011,6 +1014,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let resizeFrame = 0;
   let inspectionFrozen = false;
   let inspectionResized = false;
+  let projectionIdle = false;
   function resize() {
     resizeFrame = 0;
     const rect = canvas.getBoundingClientRect();
@@ -1043,23 +1047,26 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (!opened && !exampleFlight.active && !introActive) { camPos.copy(HOME.cam); look.copy(HOME.look); }
     background.setCompact(view.compact);
     applyBloom();
+    currentPixelRatio = Math.min(renderBudget.ratio(w, h), qualitySettled ? Infinity : 1);
+    if (Math.abs(renderer.getPixelRatio() - currentPixelRatio) > .001) renderer.setPixelRatio(currentPixelRatio);
     renderer.setSize(w, h, false);
     composer?.setSize(w, h);
     background.setPixelRatio(renderer.getPixelRatio());
     cards.setPixelRatio(renderer.getPixelRatio());
-    if (inspectionFrozen) {
-      inspectionResized = true;
-      if (composer) composer.render(0);
-      else renderer.render(scene, camera);
+    if (inspectionFrozen || projectionIdle) {
+      inspectionResized ||= inspectionFrozen;
+      if (!document.hidden) {
+        if (composer) composer.render(0);
+        else renderer.render(scene, camera);
+      }
     } else if (opened && !viewMoving && !exampleFlight.active) focusCard(opened, 0.65);
   }
 
   function settleQuality() {
-    if (qualityUpgradeTimer || currentPixelRatio >= targetPixelRatio - 0.001) return;
+    if (qualityUpgradeTimer || qualitySettled) return;
     qualityUpgradeTimer = window.setTimeout(() => {
       qualityUpgradeTimer = 0;
-      currentPixelRatio = targetPixelRatio;
-      renderer.setPixelRatio(currentPixelRatio);
+      qualitySettled = true;
       resize();
     }, 1100);
   }
@@ -1084,14 +1091,21 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let raf = 0;
   let running = false;
   let lastFrameAt = 0;
-  let projectionIdle = false;
 
   function frame(now = performance.now()) {
+    raf = 0;
+    if (!running || projectionIdle || inspectionFrozen || document.hidden) return;
     raf = requestAnimationFrame(frame);
     // Hold the last space frame behind a settled HTML project; the return flight resumes it.
-    if (inspectionFrozen) { timer.update(now); return; }
-    if (projectionIdle) return;
     if (now - lastFrameAt < FRAME_BUDGET) return;
+    if (qualitySettled && lastFrameAt && renderBudget.sample(now - lastFrameAt)) {
+      if (bloom) bloom.mipmapBlurPass.levels = renderBudget.profile.bloomLevels;
+      currentPixelRatio = renderBudget.ratio(view.width, view.height);
+      renderer.setPixelRatio(currentPixelRatio);
+      renderer.setSize(Math.floor(view.width), Math.floor(view.height), false);
+      composer?.setSize(Math.floor(view.width), Math.floor(view.height));
+      cards.setPixelRatio(currentPixelRatio); background.setPixelRatio(currentPixelRatio);
+    }
     lastFrameAt = now;
     timer.update(now);
     const t = timer.getElapsed();
@@ -1226,10 +1240,20 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     focusCard,
     toHome,
     exampleFlight,
-    setProjectionIdle(value) { projectionIdle = Boolean(value); },
+    get renderQuality() { return renderBudget.profile.name; },
+    get isRenderingPaused() { return projectionIdle || inspectionFrozen || !running || document.hidden; },
+    setProjectionIdle(value) {
+      projectionIdle = Boolean(value);
+      cancelAnimationFrame(raf); raf = 0;
+      timer.setTimescale(projectionIdle || inspectionFrozen ? 0 : 1); timer.reset();
+      lastFrameAt = 0; renderBudget.reset();
+      if (running && !projectionIdle && !inspectionFrozen && !document.hidden) frame();
+      canvas.dispatchEvent(new Event('renderpausechange'));
+    },
     setInspectionFrozen(value) {
       inspectionFrozen = Boolean(value);
-      timer.setTimescale(inspectionFrozen ? 0 : 1);
+      cancelAnimationFrame(raf); raf = 0;
+      timer.setTimescale(inspectionFrozen || projectionIdle ? 0 : 1);
       if (inspectionFrozen) {
         // A resize may have cleared the drawing buffer just before the hover.
         // Redraw the current state once, without advancing any animation.
@@ -1238,7 +1262,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       } else {
         timer.reset();
         if (inspectionResized) { inspectionResized = false; resize(); }
+        lastFrameAt = 0; renderBudget.reset();
+        if (running && !projectionIdle && !document.hidden) frame();
       }
+      canvas.dispatchEvent(new Event('renderpausechange'));
     },
     get isMoving() { return viewMoving; },
     setExamplePreviewUpdate(callback) { examplePreviewUpdate = callback; },
@@ -1363,8 +1390,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       },
     },
 
-    start() { if (!running) { running = true; timer.reset(); frame(); } },
-    stop() { running = false; cancelAnimationFrame(raf); },
+    start() { if (!running) { running = true; timer.reset(); lastFrameAt = 0; renderBudget.reset(); frame(); canvas.dispatchEvent(new Event('renderpausechange')); } },
+    stop() { running = false; cancelAnimationFrame(raf); raf = 0; canvas.dispatchEvent(new Event('renderpausechange')); },
     dispose() {
       this.stop();
       exampleFlight.dispose();

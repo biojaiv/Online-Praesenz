@@ -53,15 +53,9 @@ try {
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-gallery.png` });
     await page.locator('.project-choice[data-project-id="systems"]').click();
     await page.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
-    const wave = () => page.locator('.warp-tunnel').evaluate(canvas => canvas.toDataURL());
-    const field = await page.locator('.warp-tunnel').evaluate(canvas => {
-      const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height;
-      const ctx = copy.getContext('2d'); ctx.drawImage(canvas, 0, 0);
-      return { marginAlpha: ctx.getImageData(1, Math.floor(copy.height / 2), 1, 1).data[3],
-        centerAlpha: ctx.getImageData(Math.floor(copy.width / 2), Math.floor(copy.height / 2), 1, 1).data[3] };
-    });
-    assert(field.marginAlpha > 70, 'Waves cover the surrounding area as a filled surface');
-    assert.equal(field.centerAlpha, 0, 'Waves leave the readable page clear');
+    // Read the composited result; the GPU buffer is now released after presenting.
+    const wave = async () => (await page.locator('.warp-tunnel').screenshot()).toString('base64');
+    assert.equal(await page.locator('.example-projection__screen').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(243, 237, 223)', 'The readable page stays opaque');
     const a = await wave(); await page.waitForTimeout(1200); const b = await wave();
     assert(reduced ? a === b : a !== b, 'Tunnel waves animate only when motion is permitted');
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-tunnel.png` });

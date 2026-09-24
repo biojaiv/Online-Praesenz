@@ -113,7 +113,9 @@
 .projects-panel .cv-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .projects-panel .cv-nav [aria-pressed="true"] { color: var(--amber); }
 .project-choice { display: block; border: 1px solid var(--line-hot); padding: 12px; color: var(--ink); background: transparent; text-decoration: none; transition: border-color .3s, box-shadow .3s; }
-.project-preview { position: relative; display: block; width: 100%; overflow: hidden; background: #f3eddf; }
+.project-preview { position: relative; display: block; width: 100%; overflow: hidden; background: #f3eddf; filter: grayscale(.65) brightness(.65) sepia(.15); transition: filter .25s; }
+.project-choice:hover .project-preview, .project-choice:focus-visible .project-preview { filter: none; }
+@media (prefers-reduced-motion: reduce) { .project-preview { transition: none; } }
 .project-preview img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: left top; opacity: 1; }
 .project-preview iframe { position: absolute; left: 0; top: 0; border: 0; max-width: none; transform-origin: top left; pointer-events: none; opacity: 0; background: #f3eddf; }
 .project-preview iframe.is-ready { opacity: 1; }

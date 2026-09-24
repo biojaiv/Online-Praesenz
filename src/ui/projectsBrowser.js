@@ -46,10 +46,14 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
         <h3>${t(project.title)} <span aria-hidden="true">↗</span></h3><p>${t(project.note)}</p>
       </a>${project.separate ? `<a class="project-direct" href="${project.entry(getLanguage())}">${t('projects.direct')}</a>` : ''}</div>`).join('')}<p class="projects-caption">HTML · CSS · JavaScript</p>`}
       </div></article>`;
-    // Render the actual entry page at its future viewport, scaled down without
-    // recolouring. Inert frames keep the enclosing link as the single control.
-    if (route.startsWith('projekte') && !privateProjects) {
+    mountPreviews();
+    resizePreviews();
+  }
+  function mountPreviews() {
+    // Keep live documents only while their gallery is actually visible.
+    if (!panel.hidden && !suspended && route.startsWith('projekte') && !route.endsWith('/privat')) {
       panel.querySelectorAll('.project-preview').forEach(preview => {
+        if (preview.querySelector('iframe')) return;
         const project = PROJECTS.find(item => item.id === preview.dataset.projectPreview);
         const iframe = document.createElement('iframe');
         iframe.src = getProjectUrl(project, getLanguage(), true);
@@ -65,7 +69,6 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
         preview.append(iframe); previewObserver.observe(preview);
       });
     }
-    resizePreviews();
   }
   function click(event) { const choice = event.target.closest('[data-project-route]'); if (choice) onNavigate(choice.dataset.projectRoute); }
   panel.addEventListener('click', click);
@@ -79,7 +82,7 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
       function reveal() {
         if (suspended) { panel.hidden = true; return; }
         if (stage?.isMoving && !wasOpen) { timer = requestAnimationFrame(reveal); return; }
-        panel.hidden = false; stage?.cards.showProjectPreview(false);
+        panel.hidden = false; mountPreviews(); resizePreviews(); stage?.cards.showProjectPreview(false);
       }
       // Finish the activating pointer/click sequence before placing a link
       // beneath it, including immediate camera moves with reduced motion.
@@ -88,8 +91,12 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
     },
     setSuspended(value) {
       suspended = Boolean(value);
-      if (suspended) { cancelAnimationFrame(timer); panel.hidden = true; }
-      else if (route.startsWith('projekte')) panel.hidden = false;
+      if (suspended) {
+        cancelAnimationFrame(timer); panel.hidden = true; previewObserver.disconnect();
+        panel.querySelectorAll('.project-preview iframe').forEach(iframe => iframe.remove());
+      } else if (route.startsWith('projekte')) {
+        panel.hidden = false; mountPreviews(); resizePreviews();
+      }
     },
     dispose() { cancelAnimationFrame(timer); previewObserver.disconnect(); window.removeEventListener('resize', resizePreviews); stage?.setExamplePreviewUpdate(null); unsubscribe(); panel.removeEventListener('click', click); panel.remove(); }
   };
