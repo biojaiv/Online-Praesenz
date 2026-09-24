@@ -524,15 +524,29 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     context.clearRect(0, 0, width, height);
     context.textAlign = 'center';
     context.textBaseline = 'middle';
+    context.fillStyle = 'rgba(7, 16, 29, 0.96)';
+    context.fillRect(48, 38, width - 96, height - 76);
+    context.strokeStyle = 'rgba(201, 232, 255, 0.28)';
+    context.lineWidth = 2;
+    context.strokeRect(49, 39, width - 98, height - 78);
 
     // Live titles are separate from the model's ornamental engraving.
-    context.letterSpacing = '0.08em';
-    context.font = '500 64px "Barlow Condensed", sans-serif';
-    context.fillStyle = '#ffffff';
+    context.letterSpacing = '0.06em';
     context.shadowBlur = 0;
-    context.fillText(t(`card.${def.key}.title`).toUpperCase(), width * 0.5, height * 0.32, width * 0.94);
-    context.font = '400 30px "Barlow Condensed", sans-serif';
-    context.fillText(t(`card.${def.key}.subtitle`), width * 0.5, height * 0.60, width * 0.94);
+    context.lineJoin = 'round';
+    context.strokeStyle = '#07101d';
+    context.fillStyle = '#f3faff';
+    context.font = '700 76px "Barlow Condensed", sans-serif';
+    context.lineWidth = 8;
+    const title = t(`card.${def.key}.title`).toUpperCase();
+    context.strokeText(title, width * 0.5, height * 0.36, width * 0.94);
+    context.fillText(title, width * 0.5, height * 0.36, width * 0.94);
+    context.font = '500 50px "Barlow Condensed", sans-serif';
+    context.fillStyle = '#e0efff';
+    context.lineWidth = 5;
+    const subtitle = t(`card.${def.key}.subtitle`);
+    context.strokeText(subtitle, width * 0.5, height * 0.68, width * 0.94);
+    context.fillText(subtitle, width * 0.5, height * 0.68, width * 0.94);
 
     texture.needsUpdate = true;
   }
@@ -549,7 +563,7 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     opacity: 0,
     toneMapped: false,
   });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 1.5), material);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(5.25, 1.65), material);
   mesh.name = 'card-label';
   mesh.userData.key = def.key;
   mesh.renderOrder = 3;
@@ -565,7 +579,7 @@ function makeCardLabel(def, maxAnisotropy = 1) {
   let revealTarget = 1;
   let openTarget = 1;
   let hoverStart = null;
-  const blue = lightColor('fiberBlue'), amber = lightColor('amber');
+  const blue = lightColor('fiber'), amber = lightColor('amber');
   return {
     group,
     setOrigin(y) { group.position.set(0, y + 0.5, BASE_DIAMETER * 0.5 + .65); },
@@ -584,7 +598,7 @@ function makeCardLabel(def, maxAnisotropy = 1) {
       mesh.userData.orange = amount;
       const target = revealTarget * openTarget;
       reveal += (target - reveal) * (1 - Math.pow(0.01, Math.min(delta, 0.1)));
-      material.opacity = (0.88 + hover * 0.12) * reveal;
+      material.opacity = (0.96 + hover * 0.04) * reveal;
       group.visible = material.opacity > 0.01;
     },
     dispose() {
