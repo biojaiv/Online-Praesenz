@@ -13,6 +13,8 @@
     "test:navigation": "node scripts/ihk/check_navigation.mjs",
     "test:example": "node scripts/example/check_browser.mjs",
     "test:example:production": "node scripts/example/check_production.mjs",
+    "build:example-previews": "node scripts/example/build_previews.mjs",
+    "test:example:preview": "node scripts/example/check_preview_match.mjs",
     "build:cv": "node scripts/cv/build_legacy_projection.mjs",
     "test:harmony": "node scripts/ui/check_harmony.mjs",
     "test:refinements": "node scripts/ui/check_refinements.mjs",
