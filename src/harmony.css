@@ -145,5 +145,11 @@
 .project-choice h3 span { position: absolute; right: 0; top: 0; }
 
 .project-entry + .project-entry { margin-top: 24px; }
+.projects-panel--spatial { pointer-events: none; text-shadow: none; }
+.projects-panel--spatial .project-choice { position: absolute; left: 6.518%; top: 18.75%; width: 86.964%; height: 38.021%; padding: 0; border: 0; pointer-events: auto; touch-action: none; }
+.projects-panel--spatial .project-preview { height: 100%; background: transparent; filter: none; }
+.projects-panel--spatial .project-choice:hover { box-shadow: none; }
+.projects-panel--spatial .project-choice:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
+.project-accessible { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .project-direct { display: flex; align-items: center; justify-content: flex-end; min-height: 44px; padding: 7px 4px; color: var(--ink-dim); font: 13px var(--font-body); text-decoration: none; }
 .project-direct:hover, .project-direct:focus-visible { color: var(--amber); }
