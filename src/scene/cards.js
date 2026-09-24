@@ -541,7 +541,7 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     const title = t(`card.${def.key}.title`).toUpperCase();
     context.strokeText(title, width * 0.5, height * 0.36, width * 0.94);
     context.fillText(title, width * 0.5, height * 0.36, width * 0.94);
-    context.font = '500 50px "Barlow Condensed", sans-serif';
+    context.font = '500 58px "Barlow Condensed", sans-serif';
     context.fillStyle = '#e0efff';
     context.lineWidth = 5;
     const subtitle = t(`card.${def.key}.subtitle`);

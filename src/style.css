@@ -660,7 +660,7 @@ body {
   fill: var(--amber);
   opacity: 1;
 }
-.camera-dolly-guide.is-active .camera-dolly-guide__wheel {
+.camera-dolly-guide.is-active:not(.is-keyboard) .camera-dolly-guide__wheel {
   filter: drop-shadow(0 0 5px rgb(var(--fiber-blue-rgb) / 0.72));
 }
 @keyframes camera-guide-breathe {
@@ -2102,7 +2102,7 @@ body {
   opacity: 1;
   filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.82));
 }
-.camera-dolly-guide.is-active .camera-dolly-guide__left-button {
+.camera-dolly-guide.is-active:not(.is-keyboard) .camera-dolly-guide__left-button {
   fill: rgb(var(--amber-rgb) / 0.22);
   filter: drop-shadow(0 0 5px rgb(var(--amber-rgb) / 0.58));
 }
