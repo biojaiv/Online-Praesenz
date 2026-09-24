@@ -183,6 +183,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let mobileSelection = 0;
   let introActive = false;
   let hovered = null;
+  let menuHover = null;
   let opened = null;
   let listener = null;
   let drag = null;
@@ -1147,10 +1148,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     const next = orbit.dragging || exampleFlight.active ? null : pick();
     if (next !== hovered) {
       hovered = next;
-      cards.setHover(hovered);
       syncCursor();
       listener?.('hover', hovered);
     }
+    cards.setHover(menuHover || hovered);
 
     if (!exampleFlight.active) {
       if (opened) drift.multiplyScalar(0.8);
@@ -1215,6 +1216,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     /** cb(event, key) mit event = 'hover' | 'select' */
     on(cb) { listener = cb; },
+    setMenuHover(key) {
+      if (menuHover === key) return;
+      menuHover = key;
+      cards.setHover(menuHover || hovered);
+      cards.pulseMenuHover(key);
+    },
 
     focusCard,
     toHome,

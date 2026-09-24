@@ -329,13 +329,16 @@ const ihkProject = createIhkProject({
 ihkProjectRef = ihkProject;
 if (stage) ihkProject.setRect(stage.documentRect());
 
+let projectsBrowser;
 const exampleProjection = createExampleProjection({
   stage, container: stageEl, onNavigate: target => router.go(target),
+  setBrowserSuspended: value => projectsBrowser?.setSuspended(value),
 });
 
-const projectsBrowser = createProjectsBrowser({ container: stageEl, stage, onNavigate: target => router.go(target) });
+projectsBrowser = createProjectsBrowser({ container: stageEl, stage, onNavigate: target => router.go(target) });
 
 const router = createRouter({
+  onMenuHover(key) { stage?.setMenuHover(key); },
   onEnter(target) {
     if (exampleProjection.isOpen) {
       exampleProjection.close(target);

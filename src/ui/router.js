@@ -8,7 +8,7 @@ import { playSound } from './audio.js';
  * damit Links teilbar und der Zurueck-Button nutzbar bleibt, aber es
  * wird nie neu geladen.
  */
-export function createRouter({ onEnter }) {
+export function createRouter({ onEnter, onMenuHover }) {
   const nav = document.getElementById('nav');
   const navLinks = [...nav.querySelectorAll('.nav__link')];
   const groups = [...nav.querySelectorAll('.nav__group')];
@@ -30,6 +30,30 @@ export function createRouter({ onEnter }) {
     submenu.id = `nav-sub-${button.dataset.target}`;
     button.setAttribute('aria-controls', submenu.id);
   }
+
+  let pointerGroup = null, focusGroup = null, highlighted = null;
+  function syncMenuHighlight() {
+    const key = (pointerGroup || focusGroup)?.querySelector('.nav__link')?.dataset.target || null;
+    if (key === highlighted) return;
+    highlighted = key;
+    onMenuHover?.(key);
+  }
+  nav.addEventListener('pointerover', event => {
+    const group = event.target.closest('.nav__group');
+    if (group && group !== pointerGroup) { pointerGroup = group; syncMenuHighlight(); }
+  });
+  nav.addEventListener('pointerout', event => {
+    if (pointerGroup && !pointerGroup.contains(event.relatedTarget)) {
+      pointerGroup = null; syncMenuHighlight();
+    }
+  });
+  nav.addEventListener('focusin', event => {
+    focusGroup = event.target.closest('.nav__group'); syncMenuHighlight();
+  });
+  nav.addEventListener('focusout', event => {
+    focusGroup = event.relatedTarget?.closest?.('.nav__group') || null;
+    syncMenuHighlight();
+  });
 
   function normalise(raw) {
     return (raw || '').replace(/^#/, '').trim() || 'home';

@@ -6,14 +6,14 @@ export function createExamplePreview() {
   const canvas = document.createElement('canvas');
   canvas.width = 1258; canvas.height = 1920;
   const ctx = canvas.getContext('2d');
-  // Tint the thumbnail separately so its colour wash cannot fill transparent
-  // space around the document. Only the preview image needs a readable surface.
+  // Tint the thumbnail separately; the document itself has an opaque surface
+  // so the moving Orrery cannot show through its text or image.
   const thumbnail = document.createElement('canvas');
   thumbnail.width = 1094; thumbnail.height = 730;
   const thumbnailContext = thumbnail.getContext('2d');
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, opacity: .85, toneMapped: false, side: THREE.DoubleSide });
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, opacity: 1, toneMapped: false, side: THREE.DoubleSide });
   const width = 7.35 * .88, height = width / (1258 / 1920);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
   mesh.name = 'example-preview'; mesh.userData.key = 'projekte';
@@ -22,6 +22,7 @@ export function createExamplePreview() {
   function draw() {
     if (disposed) return;
     ctx.clearRect(0, 0, 1258, 1920);
+    ctx.fillStyle = '#08121e'; ctx.fillRect(0, 0, 1258, 1920);
     ctx.strokeStyle = '#78bfff55'; ctx.lineWidth = 2; ctx.strokeRect(2, 2, 1254, 1916);
     ctx.textAlign = 'left'; ctx.fillStyle = '#e8a45a'; ctx.font = '500 26px "Barlow Condensed", sans-serif';
     ctx.fillText('VL // ' + t('example.label').toUpperCase(), 82, 130);
@@ -34,8 +35,7 @@ export function createExamplePreview() {
       thumbnailContext.save(); thumbnailContext.globalCompositeOperation = 'color';
       thumbnailContext.fillStyle = '#78bfff'; thumbnailContext.fillRect(0, 0, 1094, 730); thumbnailContext.restore();
       thumbnailContext.fillStyle = '#07101d80'; thumbnailContext.fillRect(0, 0, 1094, 730);
-      ctx.save(); ctx.globalAlpha = .78;
-      ctx.drawImage(thumbnail, 82, 360); ctx.restore();
+      ctx.drawImage(thumbnail, 82, 360);
     }
     ctx.fillStyle = '#a4b4c3'; ctx.font = '400 35px Barlow, sans-serif';
     ctx.fillText(t('example.previewNote'), 82, 1190, 1094);
@@ -54,9 +54,9 @@ export function createExamplePreview() {
     group, mesh,
     setOrigin(y) { group.position.set(0, y + 1.17 + height / 2, .4); },
     setReveal(value, immediate = false) { target = value; if (immediate) reveal = value; },
-    update(_time, delta, hover) {
+    update(_time, delta) {
       reveal += (target - reveal) * (1 - Math.pow(.01, Math.min(delta, .1)));
-      material.opacity = (.68 + hover * .14) * reveal;
+      material.opacity = reveal;
       group.visible = material.opacity > .01;
     },
     dispose() { disposed = true; picture.onload = null; unsubscribe(); },

@@ -7,7 +7,7 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
   panel.className = 'projects-browser'; panel.hidden = true;
   panel.setAttribute('aria-labelledby', 'projects-title');
   container.append(panel);
-  let route = 'home', timer = 0;
+  let route = 'home', timer = 0, suspended = false;
   let previousRect = '';
   stage?.setExamplePreviewUpdate(({ left, top, width, height }) => {
     const values = [left + width / 2, top + height / 2, width, height].map(value => `${value.toFixed(2)}px`);
@@ -40,6 +40,7 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
       if (!route.startsWith('projekte')) { panel.hidden = true; stage?.cards.showProjectPreview(true); return; }
       // Wait for the real camera tween, including slow rendering devices.
       function reveal() {
+        if (suspended) { panel.hidden = true; return; }
         if (stage?.isMoving && !wasOpen) { timer = requestAnimationFrame(reveal); return; }
         panel.hidden = false; stage?.cards.showProjectPreview(false);
       }
@@ -47,6 +48,11 @@ export function createProjectsBrowser({ container, stage, onNavigate }) {
       // beneath it, including immediate camera moves with reduced motion.
       if (wasOpen) reveal();
       else timer = requestAnimationFrame(reveal);
+    },
+    setSuspended(value) {
+      suspended = Boolean(value);
+      if (suspended) { cancelAnimationFrame(timer); panel.hidden = true; }
+      else if (route.startsWith('projekte')) panel.hidden = false;
     },
     dispose() { cancelAnimationFrame(timer); stage?.setExamplePreviewUpdate(null); unsubscribe(); panel.removeEventListener('click', click); panel.remove(); }
   };
