@@ -11,13 +11,13 @@ try {
     const page = await context.newPage(); const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base);
-    await page.waitForFunction(() => window.__stage?.cards.group.getObjectByName('Sockel_V2_projekte') && document.querySelector('#boot.is-done'));
+    await page.waitForFunction(() => window.__stage?.cards.group.getObjectByName('pedestal-base-projekte') && document.querySelector('#boot.is-done'));
     await page.waitForTimeout(1800);
     const state = () => page.evaluate(() => {
       const root = window.__stage.cards.group, nodes = [];
       root.traverse(n => { if (n.userData.kind === 'ring-jet') nodes.push(n); });
       const card = root.getObjectByName('card-projekte');
-      return { jets: nodes.length, lower: card.getObjectByName('Sockel_V2_projekte').rotation.y, upper: card.getObjectByName('pedestal-ceiling').children[0].rotation.y, motion: nodes[0].children[0].material.uniforms.uMotion.value };
+      return { jets: nodes.length, lower: card.getObjectByName('pedestal-base-projekte').rotation.y, upper: card.getObjectByName('pedestal-ceiling').children[0].rotation.y, motion: nodes[0].children[0].material.uniforms.uMotion.value };
     });
     const first = await state(); await page.waitForTimeout(1500); const last = await state();
     assert.equal(last.jets, 6); assert(Math.abs(last.lower - last.upper) < .001);

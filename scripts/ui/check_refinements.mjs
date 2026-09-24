@@ -20,7 +20,7 @@ try {
   const page = await context.newPage();
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(base);
-  await page.waitForFunction(() => window.__stage?.cards.group.getObjectByName('Sockel_V2_projekte') && document.querySelector('#boot.is-done'));
+  await page.waitForFunction(() => window.__stage?.cards.group.getObjectByName('pedestal-base-projekte') && document.querySelector('#boot.is-done'));
   await page.waitForTimeout(1800);
   assert.equal(await page.locator('html').getAttribute('lang'), 'de', 'Browser language is respected');
   assert.equal(await page.locator('.frame.is-intro').count(), 0, 'Seen intro does not repeat');
