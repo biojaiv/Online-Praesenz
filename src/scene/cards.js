@@ -6,6 +6,7 @@ import { createResumeProjection, getCvAnchor } from './resumeProjection.js'; // 
 import { ihkProjectionSource, getIhkAnchor } from './ihkProjectionSource.js';
 import { t, getLanguage, onLanguageChange } from '../i18n.js';
 import { createExamplePreview } from './examplePreview.js';
+import { deviceQuality } from './renderBudget.js';
 
 /**
  * Die drei interaktiven Bereichssockel.
@@ -801,7 +802,7 @@ function prepareModelMaterials(source, ringPulse) {
 }
 
 function loadLeanGLB(url, onLoad, onError) {
-  const draco = new DRACOLoader();
+  const draco = new DRACOLoader().setWorkerLimit(deviceQuality() === 2 ? 2 : 1);
   draco.setDecoderPath(DRACO_GLTF_CONFIG);
   new GLTFLoader().setDRACOLoader(draco).load(
     url,

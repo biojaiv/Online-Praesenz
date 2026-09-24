@@ -1,4 +1,5 @@
 import { WebGLRenderer, Scene, OrthographicCamera, PlaneGeometry, Mesh, ShaderMaterial, Vector2, Vector4 } from 'three';
+import { createRenderBudget } from '../scene/renderBudget.js';
 
 // A shared height field gives adjacent wave crests the same flowing motion.
 // Multi-scale waves: NVIDIA GPU Gems, chapter 1. Domain warping: Book of Shaders, chapter 13.
@@ -59,12 +60,13 @@ const fragmentShader = `
   }
 `;
 
-function createField(canvas) {
+function createField(canvas, budget) {
   let renderer;
   try {
-    renderer = new WebGLRenderer({ canvas, alpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true, powerPreference: 'low-power' });
+    renderer = new WebGLRenderer({ canvas, alpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
   } catch { return null; }
   renderer.setClearColor(0x000000, 0);
+  renderer.autoClear = false;
   const uniforms = { uSize: { value: new Vector2() }, uBox: { value: new Vector4() }, uTime: { value: 0 }, uWavelength: { value: 5 } };
   const material = new ShaderMaterial({
     uniforms, depthTest: false, depthWrite: false, transparent: true,
@@ -76,7 +78,7 @@ function createField(canvas) {
   let previousSize = '';
   return {
     draw(width, height, box, time) {
-      const ratio = Math.min(devicePixelRatio, width < 600 ? 1 : 1.25);
+      const ratio = Math.min(budget.ratio(width, height), width < 600 ? 1 : 1.25);
       const size = `${width}/${height}/${ratio}`;
       if (size !== previousSize) {
         renderer.setPixelRatio(ratio); renderer.setSize(width, height, false); previousSize = size;
@@ -86,7 +88,17 @@ function createField(canvas) {
       uniforms.uBox.value.set(box.left, box.top, box.width, box.height);
       uniforms.uWavelength.value = Math.max(4.5, margin / (width < 600 ? 16 : 28));
       uniforms.uTime.value = time;
-      renderer.render(scene, camera);
+      renderer.setScissorTest(false); renderer.clear();
+      renderer.setScissorTest(true);
+      // Rasterize just the four visible margins, leaving the large HTML centre
+      // out of the fragment pipeline entirely.
+      const rects = [[0, height - box.top, width, box.top], [0, 0, width, height - box.bottom],
+        [0, height - box.bottom, box.left, box.height], [box.right, height - box.bottom, width - box.right, box.height]];
+      for (const [x, y, w, h] of rects) {
+        if (w <= 0 || h <= 0) continue;
+        renderer.setScissor(x, y, w, h); renderer.render(scene, camera);
+      }
+      renderer.setScissorTest(false);
     },
     clear() { renderer.clear(); },
     dispose() { geometry.dispose(); material.dispose(); renderer.dispose(); renderer.forceContextLoss(); },
@@ -138,15 +150,17 @@ export function createWarpTunnel(host, screen) {
   // Create lazily: most visitors never open a projection, so need no extra GL context.
   let field = null, animation = 0, running = false, last = null, time = 0;
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  const budget = createRenderBudget();
   function initialize() {
-    field = createField(canvas);
+    field = createField(canvas, budget);
     if (!field) { canvas = document.createElement('canvas'); field = createFallback(canvas); }
     canvas.className = 'warp-tunnel'; canvas.setAttribute('aria-hidden', 'true');
     host.prepend(canvas);
   }
   function draw(now = performance.now()) {
     if (!running || document.hidden) return;
-    if (!motion.matches && last !== null && now - last < 1000 / 30) { animation = requestAnimationFrame(draw); return; }
+    if (!motion.matches && last !== null && now - last < 1000 / (budget.profile.name === 'low' ? 24 : 30) - 2) { animation = requestAnimationFrame(draw); return; }
+    if (!motion.matches && last !== null) budget.sample(now - last);
     if (!motion.matches && last !== null) time += Math.min((now - last) / 1000, .1);
     last = now;
     field.draw(innerWidth, innerHeight, screen.getBoundingClientRect(), time);
@@ -158,7 +172,10 @@ export function createWarpTunnel(host, screen) {
   document.addEventListener('visibilitychange', refresh);
   return {
     start() { if (running) return; if (!field) initialize(); running = true; refresh(); },
-    stop() { running = false; cancelAnimationFrame(animation); field?.clear(); },
+    stop() {
+      running = false; cancelAnimationFrame(animation);
+      field?.dispose(); field = null; canvas.remove(); canvas = document.createElement('canvas');
+    },
     dispose() {
       this.stop(); window.removeEventListener('resize', refresh); motion.removeEventListener('change', refresh);
       document.removeEventListener('visibilitychange', refresh); field?.dispose(); canvas.remove();

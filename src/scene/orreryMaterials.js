@@ -10,6 +10,7 @@ export function createOrreryMaterial(source, uniforms, distant = false) {
   material.depthWrite = false;
   material.fog = false;
   material.userData.orreryUniforms = uniforms;
+  material.userData.orreryDistant = distant;
   material.customProgramCacheKey = () => 'orrery-local-pbr-v2';
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, uniforms, { uOrreryDistant: { value: distant ? 1 : 0 } });

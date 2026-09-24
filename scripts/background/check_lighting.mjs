@@ -44,6 +44,7 @@ export async function checkLighting(browser, base, output) {
     let peakPixels = 0, darkRun = 0, longestDarkRun = 0, waves = 0, lastActive = false;
     let darkImage, litImage, peakBrightness = 0;
     const failures = [];
+    const cullingComparisons = [];
     for (let step = 0; step <= 700; step++) {
       background.update(step / 10, .1);
       background.group.updateWorldMatrix(true, true);
@@ -73,6 +74,14 @@ export async function checkLighting(browser, base, output) {
       lastActive = active;
       renderer.render(scene, camera);
       gl.readPixels(0, 0, 480, 300, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      if (step === 20 || step === 90) {
+        const masks = [], reference = new Uint8Array(pixels.length);
+        root.traverse(mesh => { if (mesh.isMesh) { masks.push([mesh, mesh.layers.mask]); mesh.layers.enable(0); } });
+        renderer.render(scene, camera);
+        gl.readPixels(0, 0, 480, 300, gl.RGBA, gl.UNSIGNED_BYTE, reference);
+        cullingComparisons.push(pixels.every((value, index) => value === reference[index]));
+        masks.forEach(([mesh, mask]) => { mesh.layers.mask = mask; });
+      }
       let visiblePixels = 0, brightness = 0;
       for (let i = 0; i < pixels.length; i += 4) {
         if (pixels[i] || pixels[i + 1] || pixels[i + 2]) visiblePixels++;
@@ -117,10 +126,11 @@ export async function checkLighting(browser, base, output) {
     for (let i = 0; i < pixels.length; i += 4) if (pixels[i] || pixels[i + 1] || pixels[i + 2]) starPixels++;
     background.dispose();
     renderer.dispose(); renderer.forceContextLoss();
-    return { failures, peakPixels, longestDarkRun, waves, darkImage, litImage, maxTrackDistance, maxLightRadius, kinds: [...kinds], starPixels, rearPixels, frontPixels, rearImage, coverage, episodes, travel: [maxX-minX, maxY-minY] };
+    return { failures, cullingComparisons, peakPixels, longestDarkRun, waves, darkImage, litImage, maxTrackDistance, maxLightRadius, kinds: [...kinds], starPixels, rearPixels, frontPixels, rearImage, coverage, episodes, travel: [maxX-minX, maxY-minY] };
   });
   assert.deepEqual(shaderErrors, [], 'PBR shaders must compile without errors');
   assert.deepEqual(result.failures, [], 'Without local light the complete Orrery must render zero visible pixels');
+  assert(result.cullingComparisons.every(Boolean), 'Skipping unlit geometry must preserve every rendered pixel');
   assert(result.maxTrackDistance < 1.8, `Lights stay attached to the moving geometry: ${result.maxTrackDistance}`);
   assert(result.coverage.every(value => value >= .15 && value <= .21), `About 15–20% of the sampled visible structure is covered: ${Math.min(...result.coverage)}..${Math.max(...result.coverage)}`);
   assert(result.episodes.every(episode => episode.targetCoverage >= .15 && episode.targetCoverage <= .2));

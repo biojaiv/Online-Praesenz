@@ -19,6 +19,7 @@
     "test:harmony": "node scripts/ui/check_harmony.mjs",
     "test:refinements": "node scripts/ui/check_refinements.mjs",
     "test:waves": "node scripts/ui/check_waves.mjs",
+    "test:render-budget": "node scripts/ui/check_render_budget.mjs",
     "test:cv:transparency": "node scripts/cv/check_transparency.mjs",
     "test:project-frame": "node scripts/ui/check_project_frame.mjs",
     "test:inspection": "node scripts/ui/check_site_inspection.mjs",

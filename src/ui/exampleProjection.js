@@ -104,7 +104,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     state = 'open'; dialog.dataset.state = state;
     frame?.classList.add('is-example-projected');
     tunnel.start();
-    if (project.id === 'knallblau') stage.setProjectionIdle(true);
+    stage.setProjectionIdle(true);
     post('visible');
     if (iframe.dataset.ready) { iframe.inert = false; iframe.tabIndex = 0; }
   }

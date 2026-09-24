@@ -401,12 +401,13 @@ export function createExperienceEnhancements({
   let lastFrame = performance.now();
   let elapsed = 0;
   function frame(now) {
+    raf = 0;
     if (disposed) return;
-    raf = requestAnimationFrame(frame);
-    if (document.hidden || document.documentElement.classList.contains('is-site-inspecting')) {
+    if (stage.isRenderingPaused || document.hidden || document.documentElement.classList.contains('is-site-inspecting')) {
       lastFrame = now;
       return;
     }
+    raf = requestAnimationFrame(frame);
     if (now - lastFrame < 28) return;
 
     const delta = Math.min(0.1, Math.max(0, (now - lastFrame) / 1000));
@@ -419,6 +420,12 @@ export function createExperienceEnhancements({
     }
     energy.update(elapsed, delta);
   }
+  function syncRendering() {
+    cancelAnimationFrame(raf); raf = 0; lastFrame = performance.now();
+    if (!disposed && !stage.isRenderingPaused && !document.hidden) raf = requestAnimationFrame(frame);
+  }
+  canvas.addEventListener('renderpausechange', syncRendering);
+  document.addEventListener('visibilitychange', syncRendering);
 
   const initialRoot = String(route || 'home').split('/')[0] || 'home';
   energy.setRoute(initialRoot);
@@ -468,6 +475,8 @@ export function createExperienceEnhancements({
       if (disposed) return;
       disposed = true;
       cancelAnimationFrame(raf);
+      canvas.removeEventListener('renderpausechange', syncRendering);
+      document.removeEventListener('visibilitychange', syncRendering);
       cancelAnimationFrame(qualityFrame);
       clearPrompt();
       guideDirector.dispose();

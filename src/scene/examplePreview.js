@@ -12,6 +12,20 @@ export function createExamplePreview() {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, opacity: 1, toneMapped: false, side: THREE.DoubleSide });
+  const colorReveal = { value: 0 };
+  material.customProgramCacheKey = () => 'project-preview-hover';
+  material.onBeforeCompile = shader => {
+    shader.uniforms.uPreviewColor = colorReveal;
+    shader.fragmentShader = 'uniform float uPreviewColor;\n' + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
+      #include <map_fragment>
+      if (vMapUv.x > .06518 && vMapUv.x < .93482 && vMapUv.y > .43229 && vMapUv.y < .8125) {
+        float luminance = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722));
+        vec3 muted = vec3(.46, .68, .86) * luminance * .58;
+        diffuseColor.rgb = mix(muted, diffuseColor.rgb, uPreviewColor);
+      }
+    `);
+  };
   const width = 7.35 * .88, height = width / (1258 / 1920);
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
   mesh.name = 'example-preview'; mesh.userData.key = 'projekte';
@@ -54,11 +68,12 @@ export function createExamplePreview() {
     group, mesh,
     setOrigin(y) { group.position.set(0, y + 1.17 + height / 2, .4); },
     setReveal(value, immediate = false) { target = value; if (immediate) reveal = value; },
-    update(_time, delta) {
+    update(_time, delta, hover = 0) {
+      colorReveal.value = THREE.MathUtils.smoothstep(hover, .05, .8);
       reveal += (target - reveal) * (1 - Math.pow(.01, Math.min(delta, .1)));
       material.opacity = reveal;
       group.visible = material.opacity > .01;
     },
-    dispose() { disposed = true; picture.onload = null; window.removeEventListener('resize', loadPreview); unsubscribe(); },
+    dispose() { disposed = true; picture.onload = null; window.removeEventListener('resize', loadPreview); unsubscribe(); texture.dispose(); material.dispose(); mesh.geometry.dispose(); },
   };
 }
