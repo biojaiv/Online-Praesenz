@@ -26,7 +26,7 @@
   transform-origin: center;
 }
 
-.camera-dolly-guide.is-active .camera-dolly-guide__left-button,
+.camera-dolly-guide.is-active:not(.is-keyboard) .camera-dolly-guide__left-button,
 .camera-dolly-guide.is-demo-near .camera-dolly-guide__left-button,
 .camera-dolly-guide.is-demo-far .camera-dolly-guide__left-button {
   fill: rgba(255, 144, 48, 0.22);
@@ -34,6 +34,40 @@
   filter: drop-shadow(0 0 5px rgba(255, 139, 39, 0.9));
   opacity: 1;
 }
+
+.camera-dolly-guide.is-keyboard.is-active .camera-dolly-guide__left-button,
+.camera-dolly-guide.is-keyboard.is-active .camera-dolly-guide__wheel {
+  fill: rgba(255, 255, 255, 0.025);
+  stroke: var(--fiber-white);
+  filter: none;
+  opacity: 0.35;
+  animation: none;
+  transition: none;
+}
+
+.camera-dolly-guide.is-keyboard.is-active .camera-dolly-guide__arrow,
+.camera-dolly-guide.is-keyboard.is-active .camera-dolly-guide__sign {
+  color: var(--cyan);
+  stroke: currentColor;
+  opacity: 0.3;
+  filter: none;
+}
+
+.camera-dolly-guide.is-keyboard.is-active .camera-dolly-guide__arrow { fill: none; }
+.camera-dolly-guide.is-keyboard.is-active .camera-dolly-guide__sign { fill: currentColor; }
+
+.camera-dolly-guide.is-keyboard.is-near .camera-dolly-guide__arrow--near,
+.camera-dolly-guide.is-keyboard.is-near .camera-dolly-guide__sign--plus,
+.camera-dolly-guide.is-keyboard.is-far .camera-dolly-guide__arrow--far,
+.camera-dolly-guide.is-keyboard.is-far .camera-dolly-guide__sign--minus {
+  color: #ff9838;
+  stroke: #ff9838;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 139, 39, 0.95));
+}
+
+.camera-dolly-guide.is-keyboard.is-near .camera-dolly-guide__sign--plus,
+.camera-dolly-guide.is-keyboard.is-far .camera-dolly-guide__sign--minus { fill: #ff9838; }
 
 .camera-dolly-guide.is-near .camera-dolly-guide__arrow--near,
 .camera-dolly-guide.is-demo-near .camera-dolly-guide__arrow--near,
@@ -111,6 +145,13 @@
   font: 600 15px/1 system-ui, sans-serif;
 }
 
+.cv-keyboard-zoom-hint.is-near kbd:first-child,
+.cv-keyboard-zoom-hint.is-far kbd:last-child {
+  color: #ffb56d;
+  border-color: #ff9838;
+  box-shadow: 0 0 10px rgba(255, 139, 39, 0.55);
+}
+
 .cv-mobile-zoom {
   position: absolute;
   right: 13px;
@@ -166,39 +207,6 @@
 .head__name.glitch-ghost {
   background: none;
   -webkit-text-fill-color: currentColor;
-}
-
-/* Lokale Kanalverschiebung der Navigation, zeitlich gegeneinander versetzt. */
-.nav__label {
-  animation: navigation-signal-distortion 17s steps(1, end) infinite;
-  animation-delay: -11s;
-}
-.nav__group:nth-child(2) .nav__label {
-  animation-duration: 19s;
-  animation-delay: -9s;
-}
-.nav__group:nth-child(3) .nav__label {
-  animation-duration: 23s;
-  animation-delay: -9s;
-}
-.nav__link:hover .nav__label,
-.nav__link:focus-visible .nav__label {
-  animation: navigation-signal-distortion-active 560ms steps(1, end) 1;
-}
-
-@keyframes navigation-signal-distortion {
-  0%, 94%, 100% { transform: none; text-shadow: none; }
-  95% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 var(--cyan), -2px 0 var(--amber); }
-  96% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 var(--cyan), 2px 0 var(--amber); }
-  97% { transform: translateX(-1px); text-shadow: 2px 0 var(--cyan); }
-  98% { transform: none; text-shadow: none; }
-}
-@keyframes navigation-signal-distortion-active {
-  0%, 100% { transform: none; text-shadow: none; }
-  18% { transform: translateX(-2px) skewX(-5deg); text-shadow: 3px 0 var(--cyan), -2px 0 var(--amber); }
-  36% { transform: translateX(2px) skewX(3deg); text-shadow: -2px 0 var(--cyan), 2px 0 var(--amber); }
-  54% { transform: translateX(-1px); text-shadow: 2px 0 var(--cyan); }
-  72% { transform: none; text-shadow: none; }
 }
 
 /* Home und Bereichsauswahl verwenden dieselbe lokale Signalstoerung. */
@@ -335,14 +343,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav__label,
-  .nav__link:hover .nav__label,
-  .nav__link:focus-visible .nav__label {
-    animation: none;
-    transform: none;
-    text-shadow: none;
-  }
-
   .foot__hint-lead::after,
   .foot__crumb-item.is-distortion-target::before,
   .frame.is-section-prompt .nav__link[data-target] {
