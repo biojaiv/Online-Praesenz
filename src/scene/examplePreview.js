@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { t, onLanguageChange } from '../i18n.js';
+import { t, getLanguage, onLanguageChange } from '../i18n.js';
+import { getProject } from '../data/projects.js';
+import { getProjectionViewport } from '../ui/projectionViewport.js';
 
 /** One project in the existing hologram; the actual HTML page loads on activation. */
 export function createExamplePreview() {
@@ -7,9 +9,6 @@ export function createExamplePreview() {
   canvas.width = 1258; canvas.height = 1920;
   const ctx = canvas.getContext('2d');
   // Only the thumbnail is opaque; the surrounding hologram stays transparent.
-  const thumbnail = document.createElement('canvas');
-  thumbnail.width = 1094; thumbnail.height = 730;
-  const thumbnailContext = thumbnail.getContext('2d');
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, opacity: 1, toneMapped: false, side: THREE.DoubleSide });
@@ -28,13 +27,9 @@ export function createExamplePreview() {
     ctx.fillStyle = '#d4e8f8'; ctx.font = '500 66px "Barlow Condensed", sans-serif';
     ctx.textAlign = 'center'; ctx.fillText(t('example.previewTitle'), 629, 270, 1094); ctx.textAlign = 'left';
     if (picture.complete && picture.naturalWidth) {
-      thumbnailContext.clearRect(0, 0, 1094, 730);
-      thumbnailContext.save(); thumbnailContext.filter = 'grayscale(1)';
-      thumbnailContext.drawImage(picture, 0, 0, 1094, 730); thumbnailContext.restore();
-      thumbnailContext.save(); thumbnailContext.globalCompositeOperation = 'color';
-      thumbnailContext.fillStyle = '#78bfff'; thumbnailContext.fillRect(0, 0, 1094, 730); thumbnailContext.restore();
-      thumbnailContext.fillStyle = '#07101d80'; thumbnailContext.fillRect(0, 0, 1094, 730);
-      ctx.drawImage(thumbnail, 82, 360);
+      const scale = Math.min(1094 / picture.naturalWidth, 730 / picture.naturalHeight);
+      const w = picture.naturalWidth * scale, h = picture.naturalHeight * scale;
+      ctx.drawImage(picture, 82 + (1094 - w) / 2, 360 + (730 - h) / 2, w, h);
     }
     ctx.fillStyle = '#a4b4c3'; ctx.font = '400 35px Barlow, sans-serif';
     ctx.fillText(t('example.previewNote'), 82, 1190, 1094);
@@ -45,9 +40,15 @@ export function createExamplePreview() {
     for (const [i, text] of t('example.previewFacts').split('|').entries()) ctx.fillText(text, 82, 1530 + i * 75, 1094);
     texture.needsUpdate = true;
   }
-  picture.onload = draw; picture.src = '/example/preview.webp'; draw();
+  function loadPreview() {
+    const source = getProject('systems').preview(getLanguage(), getProjectionViewport().width <= 580);
+    if (picture.getAttribute('src') !== source) picture.src = source;
+    draw();
+  }
+  picture.onload = draw; loadPreview();
   document.fonts.ready.then(draw);
-  const unsubscribe = onLanguageChange(draw);
+  const unsubscribe = onLanguageChange(loadPreview);
+  window.addEventListener('resize', loadPreview);
   let reveal = 1, target = 1;
   return {
     group, mesh,
@@ -58,6 +59,6 @@ export function createExamplePreview() {
       material.opacity = reveal;
       group.visible = material.opacity > .01;
     },
-    dispose() { disposed = true; picture.onload = null; unsubscribe(); },
+    dispose() { disposed = true; picture.onload = null; window.removeEventListener('resize', loadPreview); unsubscribe(); },
   };
 }

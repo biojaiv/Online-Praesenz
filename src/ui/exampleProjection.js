@@ -2,7 +2,8 @@ import './exampleProjection.css';
 import { createWarpTunnel } from './warpTunnel.js';
 import { playSound } from './audio.js';
 import { getLanguage, setLanguage, onLanguageChange, t } from '../i18n.js';
-import { getProject } from '../data/projects.js';
+import { getProject, getProjectUrl } from '../data/projects.js';
+import { getProjectionViewport } from './projectionViewport.js';
 
 export function createExampleProjection({ stage, container, onNavigate, setBrowserSuspended = () => {} }) {
   const trigger = document.getElementById('scene');
@@ -13,6 +14,13 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   document.body.append(dialog);
   const back = dialog.querySelector('[data-example-back]');
   const screen = dialog.querySelector('.example-projection__screen');
+  const light = dialog.querySelector('.example-projection__light');
+  function resize() {
+    const view = getProjectionViewport();
+    Object.assign(light.style, { left: `${view.left}px`, top: `${view.top}px`, right: 'auto', bottom: 'auto',
+      width: `${view.width + 2}px`, height: `${view.height + 2}px` });
+  }
+  resize(); window.addEventListener('resize', resize);
   const status = dialog.querySelector('[role=status]');
   const tunnel = createWarpTunnel(dialog, screen);
   let state = 'closed', originFocus = null, iframe = null, events = null, timer = 0, ticket = 0;
@@ -50,7 +58,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   async function open(source = trigger) {
     if (state !== 'closed' || document.querySelector('.frame.is-intro') || !document.querySelector('#boot.is-done')) return;
     project = getProject(source?.dataset?.projectId);
-    if (!stage) { location.href = project.entry(getLanguage()); return; }
+    if (!stage) { location.href = getProjectUrl(project, getLanguage()); return; }
     separate?.remove(); separate = null;
     if (project.separate) {
       separate = document.createElement('a'); separate.dataset.exampleSeparate = '';
@@ -87,7 +95,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     // The iframe loads in parallel with the flight, but remains inert until arrival.
     iframe = document.createElement('iframe');
     iframe.title = t(project.title);
-    iframe.src = `${project.entry(getLanguage())}?${project.parameter}=1&lang=${getLanguage()}`;
+    iframe.src = getProjectUrl(project, getLanguage(), true);
     iframe.inert = true; iframe.tabIndex = -1;
     screen.replaceChildren(iframe);
     timer = window.setTimeout(() => { status.textContent = t('example.error'); }, 12000);
@@ -126,6 +134,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       ++ticket; events?.abort(); clearTimeout(timer);
       document.removeEventListener('click', activate);
       document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('resize', resize);
       stage?.setProjectionIdle(false);
       window.removeEventListener('keydown', onEscape, true);
       dialog.removeEventListener('cancel', onCancel);

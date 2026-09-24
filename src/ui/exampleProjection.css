@@ -11,8 +11,6 @@
 .example-projection[data-state="open"] .example-projection__light { opacity: 1; transform: none; pointer-events: auto; }
 .example-projection__screen { position: absolute; inset: 0; background: #f3eddf; box-shadow: 0 0 3px 2px #f3eddf99, 0 0 32px 8px #f1cc9433, 0 0 90px 20px #d9b47f17; }
 .example-projection__screen iframe { display: block; width: 100%; height: 100%; border: 0; background: #f3eddf; }
-/* Light/grain sit above the DOM but never intercept input or obscure letters. */
-.example-projection__screen::after { content: ''; pointer-events: none; position: absolute; inset: 0; box-shadow: inset 0 0 24px #9d703218; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23977b52' filter='url(%23n)' opacity='.055' d='M0 0h160v160H0z'/%3E%3C/svg%3E"); }
 .example-projection[data-state="open"] .example-projection__screen { animation: example-warmup .6s ease-out both; }
 @keyframes example-warmup { from { filter: brightness(1.08); } to { filter: brightness(1); } }
 .example-projection__status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 15px 20px; text-align: center; background: #101820; z-index: 2; font: 15px var(--font-body); }

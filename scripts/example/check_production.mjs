@@ -51,7 +51,7 @@ try {
   await fallbackPage.locator('.stage.is-fallback').waitFor();
   await fallbackPage.locator('.nav__link[data-target="projekte"]').click();
   await fallbackPage.locator('.project-choice[data-project-id="systems"]').click();
-  await fallbackPage.waitForURL('**/beispiel/');
+  await fallbackPage.waitForURL(url => url.pathname === '/beispiel/' && ['de', 'en'].includes(url.searchParams.get('lang')));
   await fallbackPage.locator('h1').waitFor();
   results.push({ webglFallback: true });
   await fallback.close();

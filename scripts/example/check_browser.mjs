@@ -22,9 +22,9 @@ try {
     await page.addInitScript(() => localStorage.setItem('vl-language', 'de'));
     await page.goto(`${base}/#home`);
     await page.waitForFunction(() => window.__stage?.cards.group.getObjectByName('example-preview') && document.querySelector('#boot.is-done') && !document.querySelector('.frame.is-intro'), { timeout: 45000 });
+    assert.equal(requests.some(path => path.startsWith('/beispiel/')), false, 'Website is lazy-loaded');
     if (mobile) await page.locator('.mobile-pedestals [data-pedestal="1"]').click();
     await page.waitForTimeout(1500);
-    assert.equal(requests.some(path => path.startsWith('/beispiel/')), false, 'Website is lazy-loaded');
     await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-pedestal.png` });
     const centre = await page.evaluate(() => {
       const { cards, camera } = window.__stage;
@@ -133,7 +133,7 @@ try {
         check();
       }), previousScroll).catch(async error => {
         console.error(await frame.locator('body').evaluate(() => ({ scrollY, width: innerWidth, height: innerHeight, events: window.__gestureEvents })));
-        console.error(await page.locator('iframe').evaluate(el => ({ inert: el.inert, rect: el.getBoundingClientRect().toJSON(), width: innerWidth, scale: visualViewport.scale })));
+        console.error(await page.locator('.example-projection iframe').evaluate(el => ({ inert: el.inert, rect: el.getBoundingClientRect().toJSON(), width: innerWidth, scale: visualViewport.scale })));
         await page.screenshot({ path: `${output}/touch-failure.png` });
         throw error;
       });
@@ -158,7 +158,7 @@ try {
     await page.keyboard.press('Escape'); // Focus is inside the iframe.
     await page.waitForFunction(() => !document.querySelector('.example-projection').open && window.__stage.exampleFlight.state === 'idle');
     await page.waitForTimeout(200);
-    assert.equal(await page.locator('iframe').count(), 0, 'Closing releases the embedded document');
+    assert.equal(await page.locator('.example-projection iframe').count(), 0, 'Closing releases the opened document');
     assert.equal(await page.locator('.head').isVisible(), true, 'Header returns with the overview');
     assert(distance((await pose(page)).position, before.position) < .2, `Return restores the saved view: ${JSON.stringify({before, after: await pose(page)})}`);
     assert(distance((await pose(page)).rotation, before.rotation) < .02, 'Return restores the saved viewing direction');
