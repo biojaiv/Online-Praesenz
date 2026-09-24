@@ -14,6 +14,7 @@ An interactive application website for an IT specialist in systems integration. 
 - Turning behind the pedestals reveals the distant machines with subdued lighting. The main structure remains episodic. Sparse, static stars sit farther behind the scene.
 - The rings rotate more noticeably while retaining a calm pace. Reduced motion keeps the background animation still.
 - The final project contains the systems integration qualification work. The project overview and CV provide spatial previews and readable content, with keyboard, touch and no WebGL fallbacks.
+- Hovering a header section gently raises its pedestal and triggers two brief light pulses. The website preview has an opaque surface. Its hologram disappears during the camera turn into the projected page; the surrounding tunnel contours combine slow waves with different wavelengths and speeds.
 
 ## Run locally
 
@@ -92,6 +93,7 @@ Eine interaktive Bewerbungsseite für einen Fachinformatiker für Systemintegrat
 - Hinter den Sockeln werden die entfernten Maschinen dezent sichtbar. Die Hauptstruktur wird weiterhin nur zeitweise beleuchtet. Einzelne ruhende Sterne liegen noch weiter im Hintergrund.
 - Die runden Elemente drehen sich deutlicher, aber ruhig. Bei reduzierter Bewegung steht die Hintergrundanimation still.
 - Abschlussprojekt, Projektübersicht und Lebenslauf besitzen räumliche Vorschauen und lesbare Inhalte. Tastatur, Touch und ein Ersatzweg ohne WebGL werden unterstützt.
+- Beim Hover über einen Bereich in der Kopfzeile hebt sich der passende Sockel leicht und zeigt zwei kurze Lichtimpulse. Die Webseitenvorschau ist deckend. Während der Kameradrehung zur projizierten Seite verschwindet ihr Hologramm; die Wellen um die Seite überlagern ruhige Schwingungen mit unterschiedlichen Längen und Geschwindigkeiten.
 
 ## Lokal starten
 

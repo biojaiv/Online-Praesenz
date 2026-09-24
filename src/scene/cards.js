@@ -1017,6 +1017,7 @@ export function createCards({ renderer, reduced = false } = {}) {
       18,
       2,
     );
+    rimLight.userData.baseIntensity = rimLight.intensity;
     rimLight.position.set(0, BASE_TOP + 1.5, 1.4);
 
     const hit = new THREE.Mesh(
@@ -1052,6 +1053,7 @@ export function createCards({ renderer, reduced = false } = {}) {
       hit,
       hover: 0,
       target: 0,
+      menuPulseStart: -Infinity,
       // Sockelmasse, Trefferkoerper und Dokumentfenster bleiben getrennt:
       // das eine rahmt die Kamera, das andere faengt Klicks.
       baseBounds: new THREE.Box3(
@@ -1089,6 +1091,8 @@ export function createCards({ renderer, reduced = false } = {}) {
   }
 
   let temporaryActive = null;
+  let projectHologramHidden = false;
+  let lastElapsed = 0;
   let resumeCard = cards.find((card) => card.key === RESUME_KEY) ?? null;
 
   const baseModels = loadSharedBases(
@@ -1207,6 +1211,22 @@ export function createCards({ renderer, reduced = false } = {}) {
       for (const card of cards) card.target = card.key === key ? 1 : 0;
     },
 
+    pulseMenuHover(key) {
+      for (const card of cards) card.menuPulseStart = card.key === key ? lastElapsed : -Infinity;
+    },
+
+    setProjectHologramHidden(value) {
+      projectHologramHidden = Boolean(value);
+      const card = cards.find(item => item.key === 'projekte');
+      if (!card) return;
+      if (card.ringJet) card.ringJet.group.visible = !projectHologramHidden;
+      if (card.resumeFrame) card.resumeFrame.group.visible = !projectHologramHidden;
+      if (projectHologramHidden) {
+        if (card.examplePreview) card.examplePreview.group.visible = false;
+        if (card.label) card.label.group.visible = false;
+      }
+    },
+
     setExplored(explored) {
       const keys = explored instanceof Set ? explored : new Set(explored || []);
       // Besuchte Bereiche treten optisch zurueck: ihr Ring leuchtet matter.
@@ -1253,9 +1273,10 @@ export function createCards({ renderer, reduced = false } = {}) {
         }
 
         card.resumeFrame?.setCompact(compact);
-        card.rimLight.intensity = isDocumentKey(card.key)
+        card.rimLight.userData.baseIntensity = isDocumentKey(card.key)
           ? (compact ? 10 : 16)
           : (compact ? 18 : 30);
+        card.rimLight.intensity = card.rimLight.userData.baseIntensity;
 
         if (card.ringJet) {
           card.ringJet.uniforms.uCompact.value =
@@ -1344,6 +1365,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     update(elapsed, delta) {
+      lastElapsed = elapsed;
       time.value = elapsed;
       ringPulse.value = reduced ? 1.6 : 1.6 + 0.85 * Math.sin(elapsed * Math.PI * 2 / 6.3);
       const k = 1 - Math.pow(0.0012, Math.min(delta, 0.1));
@@ -1361,13 +1383,18 @@ export function createCards({ renderer, reduced = false } = {}) {
           }
         }
         card.hover += (card.target - card.hover) * k;
+        const cueAge = elapsed - card.menuPulseStart - .32;
+        const menuFlash = reduced || cueAge < 0 || cueAge >= .8 ? 0
+          : Math.pow(Math.max(0, Math.sin(cueAge * Math.PI * 5)), 4) * (1 - cueAge / .8);
+        card.holder.userData.menuFlash = menuFlash;
+        card.rimLight.intensity = card.rimLight.userData.baseIntensity * (1 + menuFlash * .28);
         if (!reduced) {
           card.base.rotation.y = elapsed * .055;
           const topBase = card.ceiling?.children[0];
           if (topBase) topBase.rotation.y = elapsed * .055;
         }
         card.accentRing.material.color.lerp(new THREE.Color(card.active || card.hover > .1
-          ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue).multiplyScalar(1.5), k);
+          ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue).multiplyScalar(1.5 + menuFlash * .8), k);
         // The upper clone shares this material and therefore the same pulse.
         card.accentRing.material.opacity = Math.min(1,
           (card.accentRing.userData.idleOpacity ?? 0.58) * ringPulse.value);
@@ -1383,6 +1410,10 @@ export function createCards({ renderer, reduced = false } = {}) {
           card.hover,
         );
         card.label?.update(elapsed, delta, card.hover, card.active);
+        if (projectHologramHidden && card.key === 'projekte') {
+          if (card.examplePreview) card.examplePreview.group.visible = false;
+          if (card.label) card.label.group.visible = false;
+        }
         card.holder.userData.active = card.active;
         card.holder.userData.hover = card.hover;
 

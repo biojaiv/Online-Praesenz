@@ -4,7 +4,7 @@ import { playSound } from './audio.js';
 import { getLanguage, setLanguage, onLanguageChange, t } from '../i18n.js';
 import { getProject } from '../data/projects.js';
 
-export function createExampleProjection({ stage, container, onNavigate }) {
+export function createExampleProjection({ stage, container, onNavigate, setBrowserSuspended = () => {} }) {
   const trigger = document.getElementById('scene');
   const frame = container.closest('.frame');
   const dialog = document.createElement('dialog');
@@ -38,6 +38,8 @@ export function createExampleProjection({ stage, container, onNavigate }) {
     events?.abort(); events = null;
     iframe?.remove(); iframe = null;
     await stage?.exampleFlight.close();
+    stage?.cards.setProjectHologramHidden(false);
+    setBrowserSuspended(false);
     dialog.close(); state = 'closed';
     frame?.classList.remove('is-example-projected');
     stage?.cards.setTemporaryActive(null);
@@ -59,6 +61,8 @@ export function createExampleProjection({ stage, container, onNavigate }) {
     originFocus = source;
     playSound('focus');
     stage.cards.setTemporaryActive('projekte');
+    stage.cards.setProjectHologramHidden(true);
+    setBrowserSuspended(true);
     state = 'opening'; dialog.dataset.state = state;
     status.hidden = false;
     translate();
@@ -128,6 +132,8 @@ export function createExampleProjection({ stage, container, onNavigate }) {
       back.removeEventListener('click', onBack);
       frame?.classList.remove('is-example-projected');
       stage?.cards.setTemporaryActive(null);
+      stage?.cards.setProjectHologramHidden(false);
+      setBrowserSuspended(false);
       tunnel.dispose();
       dialog.close(); dialog.remove(); unsubscribe();
     },
