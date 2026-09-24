@@ -17,6 +17,7 @@ import { createExampleFlight } from './exampleFlight.js';
 import { createRenderBudget } from './renderBudget.js';
 
 const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
+const isZoomableKey = key => isDocumentKey(key) || key === 'projekte';
 
 /**
  * Die Buehne.
@@ -268,7 +269,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   const mobileZoom = document.createElement('div');
   mobileZoom.className = 'cv-mobile-zoom';
-  mobileZoom.setAttribute('aria-label', 'CV zoom controls');
+  mobileZoom.setAttribute('aria-label', 'Projection zoom controls');
   mobileZoom.innerHTML = `
     <button class="cv-mobile-zoom__button" type="button" data-cv-zoom="in" aria-label="Zoom in">+</button>
     <button class="cv-mobile-zoom__button" type="button" data-cv-zoom="out" aria-label="Zoom out">−</button>
@@ -276,7 +277,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   guideHost?.append(keyboardZoomHint, mobileZoom);
 
   function syncDocumentInputHints() {
-    const active = isDocumentKey(opened) && !readerOpen;
+    const active = isZoomableKey(opened) && !readerOpen;
     if (!active) {
       pinchGesture = null;
       touchPoints.clear();
@@ -309,14 +310,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function pulseDollyGuide(direction) {
     window.clearTimeout(dollyGuideTimer);
-    setDollyGuide(isDocumentKey(opened) && !readerOpen, true, direction);
+    setDollyGuide(isZoomableKey(opened) && !readerOpen, true, direction);
     const finishPulse = () => {
       if (document.documentElement.classList.contains('is-site-inspecting')) {
         dollyGuideTimer = window.setTimeout(finishPulse, 150);
         return;
       }
       if (!zoomHold) {
-        setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
+        setDollyGuide(isZoomableKey(opened) && !readerOpen, false, null);
       }
     };
     dollyGuideTimer = window.setTimeout(finishPulse, 320);
@@ -387,7 +388,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     orbit.pitchVelocity *= damping;
   }
 
-  let examplePreviewUpdate = null;
+  let examplePreviewUpdate = null, projectPreviewHover = false;
   const examplePreviewPoint = new THREE.Vector3();
   const exampleFlight = createExampleFlight({
     camera, cards, scene,
@@ -577,7 +578,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     orbit.yawVelocity = 0;
     orbit.pitchVelocity = 0;
     const isDocument = isDocumentKey(key);
-    setDollyGuide(isDocument && !readerOpen);
+    setDollyGuide(isZoomableKey(key) && !readerOpen);
     syncDocumentInputHints();
     background.setDocumentOpen?.(isDocument);
     applyBloom();
@@ -612,8 +613,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       updateDocumentLift();
     } else if (key === 'projekte') {
       // Use the same viewport height and headroom as the adjacent documents.
-      distance = focusSize.y * (view.height / docRect.height)
-        / (2 * tan) * DOCUMENT_ZOOM_DEFAULT;
+      docFitDistance = focusSize.y * (view.height / docRect.height) / (2 * tan);
+      docBoundsMaxZ = document3d.max.z;
+      docHalfWidth = focusSize.x * .5;
+      docZoomTarget = docZoom;
+      scrollLiftTarget = 0;
+      distance = docFitDistance * docZoom;
       visibleHeight = 2 * distance * tan;
       focusCenter.y -= focusSize.y * 0.04;
     } else {
@@ -626,7 +631,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }
 
     nextCam.set(focusCenter.x, focusCenter.y, document3d.max.z + distance);
-    if (isDocument) {
+    if (isZoomableKey(key)) {
       documentRouteCamera.copy(nextCam);
       documentRouteLook.copy(focusCenter);
     }
@@ -670,7 +675,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function zoomDocument(step) {
-    if (!isDocumentKey(opened) || readerOpen || !(docFitDistance > 0)) return;
+    if (!isZoomableKey(opened) || readerOpen || !(docFitDistance > 0)) return;
 
     // Erst die tatsaechliche Radbewegung uebernimmt die Kamera. Ein blosses
     // Gedrueckthalten der linken Taste unterbricht die Anfahrt nicht.
@@ -684,7 +689,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function beginDocumentWheelZoom() {
-    if (!isDocumentKey(opened) || readerOpen || !(docFitDistance > 0)) return;
+    if (!isZoomableKey(opened) || readerOpen || !(docFitDistance > 0)) return;
     zoomHold = true;
     setDollyGuide(true, true, null);
     canvas.style.cursor = 'ns-resize';
@@ -692,13 +697,13 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function endDocumentWheelZoom() {
     zoomHold = false;
-    setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
+    setDollyGuide(isZoomableKey(opened) && !readerOpen, false, null);
     canvas.style.cursor = '';
   }
 
   function onWheel(event) {
     if (exampleFlight.active) return;
-    if (!isDocumentKey(opened) || readerOpen) return;
+    if (!isZoomableKey(opened) || readerOpen) return;
     // Keyboard controls follow the document after interacting with its canvas.
     canvas.focus({ preventScroll: true });
     const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
@@ -709,7 +714,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     const delta = event.deltaY * unit;
     if (!delta) return;
     event.preventDefault();
-    if (zoomHold) {
+    if (zoomHold || opened === 'projekte') {
       if (drag) drag.wheelUsed = true;
       canvas.style.cursor = 'ns-resize';
       zoomDocument((delta / view.height) * DOCUMENT_WHEEL_SENSITIVITY);
@@ -727,11 +732,12 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (view.mobile && !opened && ['ArrowLeft', 'ArrowRight'].includes(event.key) && (event.target === canvas || mobileDots.contains(event.target))) {
       event.preventDefault(); selectMobile(mobileSelection + (event.key === 'ArrowRight' ? 1 : -1)); return;
     }
-    if (!isDocumentKey(opened) || readerOpen || event.defaultPrevented) return;
+    if (!isZoomableKey(opened) || readerOpen || event.defaultPrevented) return;
     const target = event.target;
     if (target instanceof HTMLElement
       && (target.closest('.ihk-hologram-film') || target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'VIDEO'].includes(target.tagName))) return;
 
+    if (opened === 'projekte' && !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
     switch (event.key) {
       case 'ArrowDown':
         zoomDocument(0.14);
@@ -772,7 +778,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       event.pointerType === 'touch'
       && pinchGesture
       && touchPoints.size >= 2
-      && isDocumentKey(opened)
+      && isZoomableKey(opened)
       && !readerOpen
     ) {
       event.preventDefault();
@@ -870,7 +876,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     if (
       event.pointerType === 'touch'
-      && isDocumentKey(opened)
+      && isZoomableKey(opened)
       && !readerOpen
     ) {
       touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -894,10 +900,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       }
     }
 
-    const onDocument = isDocumentKey(opened) && hitsDocument();
+    const onDocument = isZoomableKey(opened) && hitsDocument();
     const canWheelZoom = event.button === 0
       && event.pointerType !== 'touch'
-      && isDocumentKey(opened)
+      && isZoomableKey(opened)
       && !readerOpen;
 
     drag = {
@@ -925,7 +931,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         if (touchPoints.size < 2) pinchGesture = null;
         drag = null;
         cards.endResumeRotation();
-        setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
+        setDollyGuide(isZoomableKey(opened) && !readerOpen, false, null);
         return;
       }
     }
@@ -971,9 +977,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   window.addEventListener('keydown', onKeydown);
 
   function hitsDocument() {
-    if (ndc.x < -1.5 || !cards.documentPickables.length) return false;
+    if (ndc.x < -1.5) return false;
+    const meshes = opened === 'projekte' ? [cards.group.getObjectByName('example-preview')] : cards.documentPickables;
     raycaster.setFromCamera(ndc, camera);
-    return raycaster.intersectObjects(cards.documentPickables.filter((mesh) => mesh.userData.key === opened && mesh.visible), false).length > 0;
+    return raycaster.intersectObjects(meshes.filter(mesh => mesh?.userData.key === opened && mesh.visible && mesh.parent.visible), false).length > 0;
   }
 
   function pick() {
@@ -1116,7 +1123,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     if (
       !exampleFlight.active
-      && isDocumentKey(opened)
+      && isZoomableKey(opened)
       && !readerOpen
       && !viewMoving
     ) {
@@ -1124,7 +1131,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       // Beim Drehen vergroessert sich der Mindestabstand automatisch um die
       // nach vorne ragende halbe Blattbreite.
       const rotationClearance =
-        Math.abs(Math.sin(cards.documentRotation)) * docHalfWidth;
+        (isDocumentKey(opened) ? Math.abs(Math.sin(cards.documentRotation)) : 0) * docHalfWidth;
       const minimumDistance =
         Math.max(DOCUMENT_MIN_CLEARANCE, camera.near * 2.4)
         + rotationClearance;
@@ -1145,7 +1152,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       camPos.z += (targetZ - camPos.z) * dollyResponse;
       look.lerp(documentRouteLook, dollyResponse);
       visibleHeight = 2 * distance * halfFovTan();
-      updateDocumentLift();
+      if (isDocumentKey(opened)) updateDocumentLift();
     }
 
     if (bloom) {
@@ -1165,7 +1172,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       syncCursor();
       listener?.('hover', hovered);
     }
-    cards.setHover(menuHover || hovered);
+    cards.setHover(menuHover || (projectPreviewHover && opened === 'projekte' ? 'projekte' : hovered));
 
     if (!exampleFlight.active) {
       if (opened) drift.multiplyScalar(0.8);
@@ -1205,7 +1212,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (examplePreviewUpdate) {
       const mesh = cards.group.getObjectByName('example-preview');
       if (mesh && opened === 'projekte' && !exampleFlight.active) {
-        // The HTML panel replaces this plane, even while its texture is hidden.
+        // The accessible hit area follows the unchanged preview plane during zoom.
         const { width, height } = mesh.geometry.parameters;
         let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
         for (const x of [-width / 2, width / 2]) {
@@ -1233,7 +1240,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     setMenuHover(key) {
       if (menuHover === key) return;
       menuHover = key;
-      cards.setHover(menuHover || hovered);
+      cards.setHover(menuHover || (projectPreviewHover && opened === 'projekte' ? 'projekte' : hovered));
       cards.pulseMenuHover(key);
     },
 
@@ -1269,6 +1276,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     },
     get isMoving() { return viewMoving; },
     setExamplePreviewUpdate(callback) { examplePreviewUpdate = callback; },
+    setProjectPreviewHover(value) { projectPreviewHover = Boolean(value); },
+    zoomProjectPreview(step) { if (opened === 'projekte' && !exampleFlight.active && !inspectionFrozen) zoomDocument(step); },
     setRoute,
 
     /** Blickwinkel im Ruhezustand direkt setzen (Bogenmass). */
@@ -1290,7 +1299,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       readerOpen = Boolean(value);
       hologramFilm.setHidden(readerOpen);
       if (zoomHold) endDocumentWheelZoom();
-      setDollyGuide(isDocumentKey(opened) && !readerOpen, false, null);
+      setDollyGuide(isZoomableKey(opened) && !readerOpen, false, null);
       syncDocumentInputHints();
       if (readerOpen) cards.endResumeRotation();
     },

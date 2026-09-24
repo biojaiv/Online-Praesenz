@@ -12,6 +12,8 @@ The stage and its additional energy update loop stop while the HTML project is o
 
 Each Blender decoder is limited to one worker on constrained devices and two on full-quality devices to reduce simultaneous decoding work.
 
+Follow-up correction: activating the middle pedestal now retains its original mesh and canvas texture. A transparent, accessible hit area follows the thumbnail; wheel, keyboard and touch controls zoom the camera. The previous separate HTML gallery is no longer substituted for the 3D preview. This also removes its live miniature iframe from the WebGL path; the no-WebGL fallback keeps its HTML gallery.
+
 ## Comparison
 
 Same browser setup before and after: Chromium/SwiftShader, 960 × 700 CSS viewport, DPR 1.5, hardware hints set to two logical cores and 2 GB, reduced motion. The actual hardware was not restricted to these hints. All Blender assets loaded; reduced motion keeps the Orrery unlit in the front view. Each sample lasted approximately three seconds.
@@ -28,7 +30,7 @@ This measures about 75% fewer stage pixels and 60% fewer scene draw calls in thi
 ## Checks
 
 - `npm run test:render-budget`: hardware hints, pixel limits, high DPI and adaptive thresholds.
-- `npm run test:example:preview`: DE/EN desktop/mobile preview parity, resting/hover/focus colours, suspended scene, miniature/context cleanup, keyboard activation and return focus.
+- `npm run test:example:preview`: DE/EN desktop/mobile checks for identical mesh, texture and content pixels before activation, after activation, after zoom and on return; hover/focus colours, wheel/keyboard/touch zoom, suspended scene, context cleanup and return focus.
 - `npm run test:background`: authored materials, moving structural light, dark intervals, distant machines and culling pixel parity.
 - `npm run test:inspection`: freeze/resume, close navigation, annotation placement and footer anchors.
 - `TEST_DPR=0.5 npm run test:waves`: animated/static waves, projection scrolling and navigation.

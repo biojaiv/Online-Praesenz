@@ -1,3 +1,4 @@
+import { openMenu } from './menu.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -36,7 +37,8 @@ try {
     await page.locator('[data-target="projekte"]').click();
     await page.locator('.projects-browser:not([hidden])').waitFor();
     assert.equal(await page.locator('#nav-sub-projekte [data-target]').count(), 2);
-    await page.locator('[data-project-route="projekte/privat"]').click();
+    await openMenu(page, 'projekte');
+    await page.locator('#nav-sub-projekte [data-target="projekte/privat"]').click();
     await page.locator('.projects-soon').waitFor();
     assert.equal(await page.locator('.project-choice[data-project-id="systems"]').count(), 0, 'No invented private projects');
     await page.locator('[data-project-route="projekte/webseiten"]').click();
@@ -45,11 +47,11 @@ try {
       const texture = window.__stage.cards.group.getObjectByName('example-preview').material.map.image.getContext('2d');
       return {
         panel: getComputedStyle(panel).backgroundColor, choice: getComputedStyle(choice).backgroundColor,
-        image: getComputedStyle(choice.querySelector('img')).opacity,
+        previewVisible: window.__stage.cards.group.getObjectByName('example-preview').parent.visible,
         outsideAlpha: texture.getImageData(20, 20, 1, 1).data[3], imageAlpha: texture.getImageData(100, 400, 1, 1).data[3],
       };
     });
-    assert.deepEqual(preview, { panel: 'rgba(0, 0, 0, 0)', choice: 'rgba(0, 0, 0, 0)', image: '1', outsideAlpha: 0, imageAlpha: 255 }, 'Only preview images are opaque');
+    assert.deepEqual(preview, { panel: 'rgba(0, 0, 0, 0)', choice: 'rgba(0, 0, 0, 0)', previewVisible: true, outsideAlpha: 0, imageAlpha: 255 }, 'Only preview images are opaque');
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-gallery.png` });
     await page.locator('.project-choice[data-project-id="systems"]').click();
     await page.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
