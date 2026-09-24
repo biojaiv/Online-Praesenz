@@ -153,7 +153,7 @@
   object-fit: cover;
   border-block: 1px solid var(--line);
   opacity: .85;
-  filter: brightness(1.8);
+  filter: brightness(.75);
 }
 .site-inspection__background-detail figcaption {
   margin-top: var(--s-2);

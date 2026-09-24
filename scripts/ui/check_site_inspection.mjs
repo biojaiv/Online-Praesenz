@@ -64,7 +64,7 @@ try {
   assert(noteBounds.every(r => backgroundAnchor.x < r.left || backgroundAnchor.x > r.right || backgroundAnchor.y < r.top || backgroundAnchor.y > r.bottom), 'Background leader must point into the scene, not into a note');
   assert.match(await overlay.locator('#site-inspection-camera').textContent(), /Sockel/);
   assert.equal(await overlay.locator('.site-inspection__diagram').evaluate(el => getComputedStyle(el).color), 'rgb(232, 164, 90)');
-  assert.match(await overlay.locator('#site-inspection-space').textContent(), /Lichtfronten/);
+  assert.match(await overlay.locator('#site-inspection-space').textContent(), /Hintergrund\.blend/);
   await page.waitForTimeout(250);
   const first = hash(await page.locator('#frame').screenshot());
   await page.waitForTimeout(6500);
@@ -86,6 +86,8 @@ try {
   const crossesNavigation = await overlay.locator('.site-inspection__diagram').first().evaluate(svg => {
     const links = [...document.querySelectorAll('.nav__link')].filter(el => el.getClientRects().length).map(el => el.getBoundingClientRect());
     return [...svg.querySelectorAll('g > path')].some(path => {
+      // Compact layouts and unavailable anchors intentionally hide leaders.
+      if (getComputedStyle(path.parentElement).display === 'none') return false;
       const length = path.getTotalLength();
       for (let distance = 0; distance <= length; distance += 2) {
         const p = path.getPointAtLength(distance);
@@ -98,6 +100,10 @@ try {
   await page.keyboard.press('ArrowRight');
   assert.equal(new URL(page.url()).hash, '#home');
   await page.keyboard.press('Tab');
+  for (const tab of await overlay.locator('.site-inspection__tabs button:visible').all()) {
+    assert(await tab.evaluate(el => el === document.activeElement));
+    await page.keyboard.press('Tab');
+  }
   assert(await overlay.locator('.site-inspection__close').evaluate(el => el === document.activeElement));
   await page.keyboard.press('Enter');
   await overlay.waitFor({ state: 'hidden' });
@@ -180,7 +186,7 @@ try {
       await sample.evaluate(img => img.decode());
       assert(await sample.isVisible(), 'Detail must work when the real background is unavailable');
     }
-    assert.match(await mobile.locator('#site-inspection-space').textContent(), /light fronts/);
+    assert.match(await mobile.locator('#site-inspection-space').textContent(), /Hintergrund\.blend/);
     assert.equal(await mobile.locator('.site-inspection__close').evaluate(el => getComputedStyle(el).animationName), 'none');
     assert.equal(await mobile.locator('.site-inspection h2').textContent(), 'How this site is built');
     await mobile.locator('.site-inspection__tabs button').nth(3).tap();

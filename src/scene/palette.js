@@ -10,6 +10,7 @@ export const LIGHT_PALETTE = Object.freeze({
   fiber: '#c9e8ff',
   fiberBlue: '#78bfff',
   violet: '#8774df',
+  green: '#64d98b',
   amber: '#e8a45a',
   signal: '#c73546',
   base: '#23486d',

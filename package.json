@@ -19,7 +19,12 @@
     "test:waves": "node scripts/ui/check_waves.mjs",
     "test:cv:transparency": "node scripts/cv/check_transparency.mjs",
     "test:project-frame": "node scripts/ui/check_project_frame.mjs",
-    "test:inspection": "node scripts/ui/check_site_inspection.mjs"
+    "test:inspection": "node scripts/ui/check_site_inspection.mjs",
+    "build:sockel": "node scripts/sockel/build.mjs",
+    "test:sockel": "node scripts/sockel/check_browser.mjs",
+    "build:background": "node scripts/background/build.mjs",
+    "build:background-detail": "node scripts/ui/build_background_detail.mjs",
+    "test:background": "node scripts/background/check_browser.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",
@@ -27,6 +32,10 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.0",
+    "@gltf-transform/extensions": "^4.5.0",
+    "@gltf-transform/functions": "^4.5.0",
+    "draco3dgltf": "^1.5.7",
     "playwright": "^1.63.0",
     "vite": "^8.2.0"
   }

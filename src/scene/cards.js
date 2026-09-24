@@ -4,14 +4,14 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LIGHT_PALETTE, lightColor } from './palette.js';
 import { createResumeProjection, getCvAnchor } from './resumeProjection.js'; // DYNAMIC_CV_LANGUAGE_GEOMETRY_V3
 import { ihkProjectionSource, getIhkAnchor } from './ihkProjectionSource.js';
-import { t, onLanguageChange } from '../i18n.js';
+import { t, getLanguage, onLanguageChange } from '../i18n.js';
 import { createExamplePreview } from './examplePreview.js';
 
 /**
  * Die drei interaktiven Bereichssockel.
  *
- * Alle drei Bereiche teilen dieselbe geladene Sockelquelle. Die Instanzen
- * entstehen per clone(), Geometrien, Texturen und Materialien bleiben geteilt.
+ * Drei Blender-Quellen liefern die beschrifteten DE/EN-Sockel und die oberen
+ * Abschluesse. Jede Quelle enthaelt ein eigenes Modell fuer jeden Bereich.
  * Bis zum Laden hält ein leichter prozeduraler Fallback die Navigation bereit.
  *
  * Der Lebenslauf-Sockel traegt zusaetzlich das Dokumentfenster: eine Flaeche
@@ -21,9 +21,9 @@ import { createExamplePreview } from './examplePreview.js';
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const BASE_Y = -6.15;
-// Die gesamte Sockelreihe sitzt im Startbild etwas tiefer. Der Versatz
-// nimmt ungefaehr ein Drittel des bisherigen Abstandes zum unteren Rand weg.
-const HOME_ROW_DROP = -1.6;
+// Keep the full Blender foundations above the footer, with clearance for
+// the mirrored upper caps and the gentle hover movement.
+const HOME_ROW_DROP = -0.8;
 const BASE_BOTTOM = BASE_Y - 0.9;
 const BASE_TOP = BASE_Y + 0.9;
 const BASE_DIAMETER = 7.4;
@@ -76,20 +76,19 @@ const LAYOUT_SIDE_FACTOR = Math.sqrt(5) / 2;
 const LAYOUT_CENTER_RISE_DIVISOR = 55;
 const LAYOUT_OUTER_DROP_DIVISOR = 34;
 
-const MODEL_URL = new URL(
-  '../../Elemente/Sockel/Sockel_V2_web.glb',
-  import.meta.url,
-).href;
+const MODEL_URLS = {
+  de: new URL('../../Elemente/Sockel/Sockel_de_web.glb', import.meta.url).href,
+  en: new URL('../../Elemente/Sockel/Sockel_eng_web.glb', import.meta.url).href,
+  top: new URL('../../Elemente/Sockel/Sockel_oben_web.glb', import.meta.url).href,
+};
 
-const _box = new THREE.Box3();
 const _size = new THREE.Vector3();
 const _center = new THREE.Vector3();
-const _matrix = new THREE.Matrix4();
 
 function makeBase(accent = LIGHT_PALETTE.fiberBlue) {
   const g = new THREE.Group();
 
-  // Platzhalter, bis Sockel_V2 einmalig geladen und geklont wurde.
+  // Platzhalter, bis die Blender-Sockel geladen wurden.
   const body = new THREE.Mesh(
     new THREE.CylinderGeometry(2.5, 3.3, 0.62, 6, 1),
     new THREE.MeshStandardMaterial({
@@ -697,7 +696,8 @@ function updateCeiling(card, rebuild = false) {
     card.ceiling = new THREE.Group();
     card.ceiling.name = 'pedestal-ceiling';
     card.ceiling.userData.decorative = true;
-    card.ceiling.add(card.base.clone(true));
+    // The upper source has no inscription and faces the projection below.
+    card.ceiling.add((card.upperBase ?? card.base).clone(true));
     card.ceiling.add(card.accentRing.clone());
     // One central light illuminates both mirrored bodies; avoid doubling lights.
     // Shared particle buffers and uniforms keep both jets in phase.
@@ -771,105 +771,33 @@ function applyResumeScale(card) {
   card.resumeFrame?.setWindow(width, height);
 }
 
-function sharpenModel(model, maxAnisotropy, ringPulse) {
-  model.traverse((object) => {
+/** Preserve Blender's metal, gold and section colours; pulse emission only. */
+function prepareModelMaterials(source, ringPulse) {
+  const materials = new Set();
+  source.traverse(object => {
     if (!object.isMesh) return;
     object.castShadow = false;
     object.receiveShadow = false;
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of materials) {
-      if (!material) continue;
-      for (const [key, texture] of Object.entries(material)) {
-        if (!texture?.isTexture) continue;
-        texture.anisotropy = maxAnisotropy;
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.generateMipmaps = true;
-        if (key === 'map' || key === 'emissiveMap') texture.colorSpace = THREE.SRGBColorSpace;
-        texture.needsUpdate = true;
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      if (!material || materials.has(material)) continue;
+      materials.add(material);
+      if (material.name === 'VL / Violett') {
+        material.color.copy(lightColor('green'));
+        material.emissive.copy(lightColor('green')).multiplyScalar(.75);
+        material.name = 'VL / Gruen';
       }
-      // The model's baked violet/red accents must follow the shared palette too.
       material.onBeforeCompile = shader => {
-        // Include every luminous ring in the baked texture, including the
-        // inner circles and lower tiers. Dark metal stays outside the mask.
         shader.uniforms.uRingPulse = ringPulse;
-        shader.fragmentShader = `uniform float uRingPulse;
-          ${shader.fragmentShader}`;
-        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
-          #include <map_fragment>
-          float baseLight = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-          diffuseColor.rgb = baseLight * vec3(0.80, 0.91, 1.0);
-          float ringMask = smoothstep(0.12, 0.45, baseLight);
-          float ringBrightness = mix(1.0, uRingPulse, ringMask);
-          diffuseColor.rgb *= ringBrightness;
-        `).replace('#include <emissivemap_fragment>', `
-          #include <emissivemap_fragment>
-          float emissionLight = dot(totalEmissiveRadiance, vec3(0.2126, 0.7152, 0.0722));
-          totalEmissiveRadiance = emissionLight * vec3(0.47, 0.75, 1.0) * uRingPulse
-            + vec3(0.80, 0.91, 1.0) * ringMask * 0.35 * uRingPulse;
-        `);
+        shader.fragmentShader = `uniform float uRingPulse;\n${shader.fragmentShader}`;
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <emissivemap_fragment>',
+          '#include <emissivemap_fragment>\n totalEmissiveRadiance *= uRingPulse;',
+        );
       };
-      if (material.color?.isColor) material.color.lerp(lightColor('fiber'), 0.1);
-      if ('roughness' in material) material.roughness = THREE.MathUtils.clamp(material.roughness, 0.38, 0.62);
-      if ('metalness' in material) material.metalness = THREE.MathUtils.clamp(material.metalness, 0.16, 0.55);
-      if (material.emissive?.isColor) material.emissive.lerp(lightColor('fiberBlue'), 0.28);
-      if ('emissiveIntensity' in material) {
-        material.emissiveIntensity = THREE.MathUtils.clamp(material.emissiveIntensity || 0.34, 0.34, 0.5);
-      }
-      if ('envMapIntensity' in material) material.envMapIntensity = 0.7;
-      if ('normalMap' in material) material.normalMap = null;
-      material.side = THREE.FrontSide;
+      material.customProgramCacheKey = () => 'blender-pedestal-emission-v1';
       material.needsUpdate = true;
     }
   });
-}
-
-function createSharedRenderGeometry(sourceGeometry) {
-  const geometry = new THREE.BufferGeometry();
-  for (const name of ['position', 'normal', 'uv', 'tangent']) {
-    const attribute = sourceGeometry.getAttribute(name);
-    if (attribute) geometry.setAttribute(name, attribute);
-  }
-  if (sourceGeometry.index) geometry.setIndex(sourceGeometry.index);
-  geometry.boundingBox = sourceGeometry.boundingBox?.clone() ?? null;
-  geometry.boundingSphere = sourceGeometry.boundingSphere?.clone() ?? null;
-  return geometry;
-}
-
-function createStaticSource(source) {
-  const staticSource = new THREE.Group();
-  staticSource.name = 'Sockel_V2_Source';
-  const materials = new Map();
-  source.updateWorldMatrix(true, true);
-  const inverseRoot = source.matrixWorld.clone().invert();
-  source.traverse((object) => {
-    if (!object.isMesh) return;
-    // Sockel_V2 ist zwar als SkinnedMesh exportiert, besitzt aber keine
-    // Animation. Für drei ruhige Sockel wird die Bind-Pose als normales Mesh
-    // verwendet; so bleiben Geometrie, Material und Texturen wirklich geteilt.
-    if (!materials.has(object.material)) {
-      materials.set(object.material, new THREE.MeshStandardMaterial({
-        color: object.material.color,
-        map: object.material.map,
-        emissive: object.material.emissive,
-        emissiveMap: object.material.emissiveMap,
-        emissiveIntensity: object.material.emissiveIntensity,
-        roughness: object.material.roughness,
-        metalness: object.material.metalness,
-      }));
-    }
-    const mesh = new THREE.Mesh(
-      createSharedRenderGeometry(object.geometry),
-      materials.get(object.material),
-    );
-    mesh.name = object.name;
-    _matrix.copy(inverseRoot).multiply(object.matrixWorld);
-    _matrix.decompose(mesh.position, mesh.quaternion, mesh.scale);
-    mesh.renderOrder = object.renderOrder;
-    mesh.frustumCulled = object.frustumCulled;
-    staticSource.add(mesh);
-  });
-  return staticSource;
 }
 
 function loadLeanGLB(url, onLoad, onError) {
@@ -889,77 +817,130 @@ function loadLeanGLB(url, onLoad, onError) {
   );
 }
 
-function loadSharedBases(cards, maxAnisotropy, shouldFade, onSettled, ringPulse) {
-  loadLeanGLB(
-    MODEL_URL,
-    (gltf) => {
-      const source = createStaticSource(gltf.scene);
-      if (cards.every((card) => card.disposed)) {
-        disposeObject(source);
-        onSettled?.('disposed');
-        return;
+function loadSharedBases(cards, shouldFade, onSettled, ringPulse) {
+  const cache = new Map();
+  let disposed = false;
+  let revision = 0;
+
+  function load(variant) {
+    if (!cache.has(variant)) {
+      const promise = new Promise((resolve, reject) => loadLeanGLB(MODEL_URLS[variant], resolve, reject))
+        .then(gltf => {
+          const scene = gltf.scene;
+          if (disposed) { disposeObject(scene); return null; }
+          try {
+            prepareModelMaterials(scene, ringPulse);
+            const models = new Map();
+            for (const card of cards) {
+              const source = scene.getObjectByName(`pedestal-${card.key}`);
+              if (!source) throw new Error(`Missing pedestal: ${variant}/${card.key}`);
+              const model = new THREE.Group();
+              model.userData = { kind: 'blender-pedestal', variant, section: card.key };
+              // Source positions belong to Blender's studio arrangement. The
+              // existing responsive layout owns the browser arrangement.
+              const geometry = source.clone(true);
+              geometry.position.set(0, 0, 0);
+              model.add(geometry);
+              const bounds = new THREE.Box3().setFromObject(model);
+              const size = bounds.getSize(new THREE.Vector3());
+              const diameter = Math.max(size.x, size.z);
+              if (!Number.isFinite(diameter) || diameter <= 0) throw new Error('Invalid pedestal bounds');
+              geometry.scale.multiplyScalar(BASE_DIAMETER / diameter);
+              bounds.setFromObject(model);
+              const centre = bounds.getCenter(new THREE.Vector3());
+              geometry.position.set(-centre.x, BASE_TOP - bounds.max.y, -centre.z);
+              model.updateMatrixWorld(true);
+              models.set(card.key, model);
+            }
+            return { scene, models };
+          } catch (error) { disposeObject(scene); throw error; }
+        });
+      cache.set(variant, promise);
+      promise.catch(() => { if (cache.get(variant) === promise) cache.delete(variant); });
+    }
+    return cache.get(variant);
+  }
+
+  function installLower(asset, variant) {
+    for (const card of cards) {
+      const model = asset.models.get(card.key).clone(true);
+      model.name = `pedestal-base-${card.key}`;
+      model.rotation.y = card.base.rotation.y;
+      // Only the initial procedural placeholders own disposable resources.
+      // Loaded variants remain cached for instant subsequent language changes.
+      if (card.pendingFallback) {
+        card.holder.remove(card.pendingFallback);
+        disposeObject(card.pendingFallback);
+        card.pendingFallback = null;
       }
-
-      _box.setFromObject(source).getSize(_size);
-      const horizontalDiameter = Math.max(_size.x, _size.z);
-      if (!Number.isFinite(horizontalDiameter) || horizontalDiameter <= 0) {
-        console.warn('Sockel_V2 hat keine gültigen Modellabmessungen; Fallbacks bleiben sichtbar.');
-        disposeObject(source);
-        onSettled?.('fallback');
-        return;
+      const previous = card.base;
+      const fallback = previous.userData.kind !== 'blender-pedestal';
+      if (fallback && shouldFade()) {
+        card.pendingFallback = previous;
+        card.modelReveal = 0;
+        setObjectFade(model, 0);
+      } else {
+        card.holder.remove(previous);
+        if (fallback) disposeObject(previous);
+        setObjectFade(model, 1);
       }
+      card.holder.add(model);
+      card.base = model;
+      card.holder.userData.pedestalLanguage = variant;
+      // Bounds are measured in holder coordinates, independent of its current
+      // responsive scale, hover animation and rotation.
+      const modelBox = new THREE.Box3().setFromObject(asset.models.get(card.key));
+      card.surfaceY = BASE_TOP;
+      card.accentRing.position.y = card.surfaceY + 0.035;
+      card.ringJet?.setOrigin(card.surfaceY + 0.04);
+      card.resumeFrame?.setOrigin(card.surfaceY);
+      card.examplePreview?.setOrigin(card.surfaceY);
+      card.label?.setOrigin(card.surfaceY);
+      setHitBody(card, modelBox);
+      updateResumeWindow(card, false);
+      updateCeiling(card, true);
+      card.notifyBoundsChange(card.key);
+    }
+  }
 
-      sharpenModel(source, maxAnisotropy, ringPulse);
-      source.scale.multiplyScalar(BASE_DIAMETER / horizontalDiameter);
-      source.updateMatrixWorld(true);
-
-      _box.setFromObject(source).getCenter(_center);
-      source.position.x -= _center.x;
-      source.position.y += BASE_BOTTOM - _box.min.y;
-      source.position.z -= _center.z;
-      source.updateMatrixWorld(true);
-
-      const fadeIn = shouldFade();
-      for (const card of cards) {
-        if (card.disposed) continue;
-        const model = source.clone(true);
-        model.name = `Sockel_V2_${card.key}`;
-        card.holder.add(model);
-        if (fadeIn) {
-          card.pendingFallback = card.base;
-          card.modelReveal = 0;
-          setObjectFade(model, 0);
-        } else {
-          card.holder.remove(card.base);
-          disposeObject(card.base);
-        }
-        card.base = model;
-
-        card.holder.updateWorldMatrix(true, false);
-        _matrix.copy(card.holder.matrixWorld).invert();
-        const modelBox = new THREE.Box3().setFromObject(model).applyMatrix4(_matrix);
-        const modelHeight = modelBox.max.y - modelBox.min.y;
-        card.surfaceY = modelBox.max.y - Math.min(0.12, modelHeight * 0.08);
-        card.accentRing.position.y = card.surfaceY + 0.035;
-        card.rimLight.position.y = card.surfaceY + 1.5;
-        card.ringJet?.setOrigin(card.surfaceY + 0.04);
-        card.resumeFrame?.setOrigin(card.surfaceY);
-        card.examplePreview?.setOrigin(card.surfaceY);
-        card.label?.setOrigin(card.surfaceY);
-        setHitBody(card, modelBox);
-        updateResumeWindow(card, false);
-        updateCeiling(card, true);
-        card.notifyBoundsChange(card.key);
-      }
-      onSettled?.('loaded');
+  async function selectLanguage(language) {
+    const request = ++revision;
+    try {
+      const asset = await load(language);
+      if (disposed || request !== revision || !asset) return 'disposed';
+      installLower(asset, language);
+      return 'loaded';
+    } catch (error) {
+      if (!disposed) console.warn('Blender-Sockel konnten nicht geladen werden; bisherige Sockel bleiben sichtbar:', error);
+      return 'fallback';
+    }
+  }
+  const stopLanguage = onLanguageChange(language => { selectLanguage(language); });
+  const topReady = load('top').then(asset => {
+    if (disposed || !asset) return 'disposed';
+    for (const card of cards) {
+      card.upperBase = asset.models.get(card.key);
+      card.upperBase.name = `pedestal-upper-${card.key}`;
+      card.upperBase.rotation.y = card.base.rotation.y;
+      updateCeiling(card, true);
+    }
+    return 'loaded';
+  }).catch(error => {
+    if (!disposed) console.warn('Obere Blender-Sockel konnten nicht geladen werden; Ersatz bleibt sichtbar:', error);
+    return 'fallback';
+  });
+  Promise.all([selectLanguage(getLanguage()), topReady]).then(statuses => {
+    onSettled(disposed ? 'disposed' : statuses.every(status => status === 'loaded') ? 'loaded' : 'fallback');
+  });
+  return {
+    dispose() {
+      disposed = true;
+      revision++;
+      stopLanguage();
+      for (const promise of cache.values()) promise.then(asset => { if (asset) disposeObject(asset.scene); }).catch(() => {});
+      cache.clear();
     },
-    (error) => {
-      if (cards.some((card) => !card.disposed)) {
-        console.warn('Sockel_V2 konnte nicht geladen werden; Fallbacks bleiben sichtbar:', error);
-      }
-      onSettled?.('fallback');
-    },
-  );
+  };
 }
 
 export const CARD_DEFS = [
@@ -971,8 +952,8 @@ export const CARD_DEFS = [
 export function createCards({ renderer, reduced = false } = {}) {
   const group = new THREE.Group();
   const time = { value: 0 };
-  // One shared uniform also drives the mirrored upper pedestals, without
-  // additional geometry, textures or animation loops.
+  // One shared uniform drives the lower models and the separate upper caps
+  // in phase, using the existing animation loop.
   const ringPulse = { value: 1 };
   const maxAnisotropy = renderer?.capabilities.getMaxAnisotropy?.() || 1;
   const cards = [];
@@ -1110,9 +1091,8 @@ export function createCards({ renderer, reduced = false } = {}) {
   let temporaryActive = null;
   let resumeCard = cards.find((card) => card.key === RESUME_KEY) ?? null;
 
-  loadSharedBases(
+  const baseModels = loadSharedBases(
     cards,
-    maxAnisotropy,
     () => modelRevealReleased,
     (status) => resolveReady(status),
     ringPulse,
@@ -1492,10 +1472,12 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     dispose() {
+      baseModels.dispose();
       for (const card of cards) {
         card.disposed = true;
         card.resumeProjection?.dispose();
         card.examplePreview?.dispose();
+        card.label?.dispose();
       }
       disposeObject(group);
       group.clear();

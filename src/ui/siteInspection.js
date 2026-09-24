@@ -11,6 +11,7 @@ const ANNOTATIONS = [
   { key: 'html', target: 'html' },
   { key: 'delivery', target: '.foot__contact a[download]' },
 ];
+const ORRERY_REFERENCE_URL = new URL('../../Elemente/Orrery/orrery-source.png', import.meta.url).href;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // Fine outline symbols echo the reader headings and the navigation's orbital dials.
 const SYMBOLS = {
@@ -61,7 +62,8 @@ export function createSiteInspection(trigger) {
     if (key === 'space') {
       const detail = document.createElement('figure');
       detail.className = 'site-inspection__background-detail';
-      detail.innerHTML = '<img src="/inspection/orrery-detail.webp" width="640" height="220" loading="lazy" alt=""><figcaption></figcaption>';
+      detail.innerHTML = '<img width="1024" height="1024" loading="lazy" alt=""><figcaption></figcaption>';
+      detail.querySelector('img').src = ORRERY_REFERENCE_URL;
       card.querySelector('h3').after(detail);
     }
     notes.append(card);
