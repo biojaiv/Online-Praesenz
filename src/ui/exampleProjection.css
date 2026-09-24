@@ -41,22 +41,14 @@
 .example-projection__light { inset: 6% max(7%, calc((100vw - 1400px) / 2)) 90px; }
 .example-projection__screen { border: 1px solid var(--cyan); border-radius: 8px; box-shadow: 0 0 2px var(--cyan), 0 0 24px rgb(var(--fiber-blue-rgb) / .23), 0 0 100px 35px rgb(3 6 13 / .85); }
 .example-projection__screen iframe { border-radius: 7px; }
-.projection-wave { position: absolute; inset: 0; pointer-events: none; border: 1px dotted rgb(var(--fiber-blue-rgb) / .3); border-radius: 9px; opacity: 0; }
-.example-projection[data-state="open"] .projection-wave { animation: projection-depth 12s linear infinite; }
-.example-projection[data-state="open"] .projection-wave:nth-child(2) { animation-delay: -4s; }
-.example-projection[data-state="open"] .projection-wave:nth-child(3) { animation-delay: -8s; }
-@keyframes projection-depth { 0% { transform: scale(1.45); opacity: 0; } 35% { opacity: .25; } 100% { transform: scale(1); opacity: 0; } }
 @media (max-width: 600px) {
   .example-projection__light { inset: 18px 12px 90px; }
   .example-projection__controls { inset-inline: 24px; }
   .example-projection__controls button { flex: initial; justify-content: center; }
-  .projection-wave { display: none; }
   .example-projection::backdrop { backdrop-filter: blur(4px); }
 }
-@media (prefers-reduced-motion: reduce) { .projection-wave { display: none; } }
 
-.warp-tunnel { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .8; }
-.example-projection .projection-wave { display: none; }
+.warp-tunnel { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .example-projection__controls button { border: 0; border-radius: 0; background: transparent; color: var(--ink-dim); font: 500 12px var(--font-body); letter-spacing: var(--tracking-label); text-transform: uppercase; padding: 12px 18px; }
 .example-projection__controls button::before { content: ''; width: 22px; height: 1px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
 .example-projection__controls button:hover, .example-projection__controls button:focus-visible { color: var(--amber); outline: 1px solid var(--amber-dim); outline-offset: 4px; }

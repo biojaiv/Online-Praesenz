@@ -8,7 +8,7 @@ Rendering quality starts from available CPU/memory/input hints. Stage pixel budg
 
 The Orrery keeps its authored geometry and PBR materials. Conservative world-space spheres determine whether each mesh can receive any active light. Meshes outside all light ranges are removed only from the render layer; they remain available for light path selection and inspection. Distant machines remain eligible in the rear view. The lighting test compares rendered pixels with culling disabled at two lit timestamps.
 
-The stage and its additional energy update loop stop while the HTML project is open. Return navigation restarts them. Hidden miniature iframes are removed and restored on returning to the gallery. Closing the projection releases its wave canvas, renderer and WebGL context. Wave rendering uses scissor rectangles around the HTML aperture and does not retain an unnecessary GPU drawing buffer.
+The stage and its additional energy update loop stop while the HTML project is open. Return navigation restarts them. Hidden miniature iframes are removed and restored on returning to the gallery. Closing the projection releases its rectangle canvas. Its five Canvas 2D contours are drawn around the opaque HTML page without allocating a second WebGL context.
 
 Each Blender decoder is limited to one worker on constrained devices and two on full-quality devices to reduce simultaneous decoding work.
 
@@ -33,6 +33,6 @@ This measures about 75% fewer stage pixels and 60% fewer scene draw calls in thi
 - `npm run test:example:preview`: DE/EN desktop/mobile checks for identical mesh, texture and content pixels before activation, after activation, after zoom and on return; hover/focus colours, wheel/keyboard/touch zoom, suspended scene, context cleanup and return focus.
 - `npm run test:background`: authored materials, moving structural light, dark intervals, distant machines and culling pixel parity.
 - `npm run test:inspection`: freeze/resume, close navigation, annotation placement and footer anchors.
-- `TEST_DPR=0.5 npm run test:waves`: animated/static waves, projection scrolling and navigation.
+- `TEST_DPR=0.5 npm run test:waves`: animated/static projection border, scrolling and navigation.
 
 Approach reference: [MDN — WebGL best practices](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices).

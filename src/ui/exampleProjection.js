@@ -10,7 +10,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   const frame = container.closest('.frame');
   const dialog = document.createElement('dialog');
   dialog.className = 'example-projection';
-  dialog.innerHTML = `<div class="example-projection__controls"><button type="button" data-example-back></button></div><p class="example-projection__status" role="status"></p><div class="example-projection__light"><i class="projection-wave" aria-hidden="true"></i><i class="projection-wave" aria-hidden="true"></i><i class="projection-wave" aria-hidden="true"></i><div class="example-projection__screen"></div></div>`;
+  dialog.innerHTML = `<div class="example-projection__controls"><button type="button" data-example-back></button></div><p class="example-projection__status" role="status"></p><div class="example-projection__light"><div class="example-projection__screen"></div></div>`;
   document.body.append(dialog);
   const back = dialog.querySelector('[data-example-back]');
   const screen = dialog.querySelector('.example-projection__screen');
