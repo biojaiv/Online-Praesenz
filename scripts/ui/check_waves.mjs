@@ -9,7 +9,9 @@ try {
     const context = await browser.newContext({ deviceScaleFactor: Number(process.env.TEST_DPR || 1), viewport: reduced ? { width: 390, height: 844 } : { width: 1440, height: 900 }, locale: 'de-DE', reducedMotion: reduced ? 'reduce' : 'no-preference' });
     await context.addInitScript(() => localStorage.setItem('vl-intro-seen', '1'));
     const page = await context.newPage(); const errors = [];
+    page.setDefaultTimeout(60000);
     page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => { if (message.type() === 'error' && /Shader Error|VALIDATE_STATUS|gl\.getProgramInfoLog/.test(message.text())) errors.push(message.text()); });
     await page.goto(base);
     await page.waitForFunction(() => window.__stage?.cards.group.getObjectByName('pedestal-base-projekte') && document.querySelector('#boot.is-done'));
     await page.waitForTimeout(1800);
@@ -19,7 +21,10 @@ try {
       const card = root.getObjectByName('card-projekte');
       return { jets: nodes.length, lower: card.getObjectByName('pedestal-base-projekte').rotation.y, upper: card.getObjectByName('pedestal-ceiling').children[0].rotation.y, motion: nodes[0].children[0].material.uniforms.uMotion.value };
     });
-    const first = await state(); await page.waitForTimeout(1500); const last = await state();
+    const first = await state();
+    if (reduced) await page.waitForTimeout(1500);
+    else await page.waitForFunction(start => window.__stage.cards.group.getObjectByName('pedestal-base-projekte').rotation.y > start + .02, first.lower);
+    const last = await state();
     assert.equal(last.jets, 6); assert(Math.abs(last.lower - last.upper) < .001);
     assert.equal(last.motion, reduced ? 0 : 1);
     assert(reduced ? first.lower === last.lower : last.lower > first.lower + .02, `Slow paired rotation respects reduced motion: ${JSON.stringify({reduced,first,last})}`);
@@ -35,10 +40,28 @@ try {
     await page.locator('.projects-soon').waitFor();
     assert.equal(await page.locator('.project-choice[data-project-id="systems"]').count(), 0, 'No invented private projects');
     await page.locator('[data-project-route="projekte/webseiten"]').click();
+    const preview = await page.evaluate(() => {
+      const panel = document.querySelector('.projects-panel'), choice = panel.querySelector('.project-choice');
+      const texture = window.__stage.cards.group.getObjectByName('example-preview').material.map.image.getContext('2d');
+      return {
+        panel: getComputedStyle(panel).backgroundColor, choice: getComputedStyle(choice).backgroundColor,
+        image: getComputedStyle(choice.querySelector('img')).opacity,
+        outsideAlpha: texture.getImageData(20, 20, 1, 1).data[3], imageAlpha: texture.getImageData(100, 400, 1, 1).data[3],
+      };
+    });
+    assert.deepEqual(preview, { panel: 'rgba(0, 0, 0, 0)', choice: 'rgba(0, 0, 0, 0)', image: '1', outsideAlpha: 0, imageAlpha: 255 }, 'Only preview images are opaque');
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-gallery.png` });
     await page.locator('.project-choice[data-project-id="systems"]').click();
     await page.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
     const wave = () => page.locator('.warp-tunnel').evaluate(canvas => canvas.toDataURL());
+    const field = await page.locator('.warp-tunnel').evaluate(canvas => {
+      const copy = document.createElement('canvas'); copy.width = canvas.width; copy.height = canvas.height;
+      const ctx = copy.getContext('2d'); ctx.drawImage(canvas, 0, 0);
+      return { marginAlpha: ctx.getImageData(1, Math.floor(copy.height / 2), 1, 1).data[3],
+        centerAlpha: ctx.getImageData(Math.floor(copy.width / 2), Math.floor(copy.height / 2), 1, 1).data[3] };
+    });
+    assert(field.marginAlpha > 70, 'Waves cover the surrounding area as a filled surface');
+    assert.equal(field.centerAlpha, 0, 'Waves leave the readable page clear');
     const a = await wave(); await page.waitForTimeout(1200); const b = await wave();
     assert(reduced ? a === b : a !== b, 'Tunnel waves animate only when motion is permitted');
     await page.screenshot({ path: `${output}/${reduced ? 'mobile' : 'desktop'}-tunnel.png` });
