@@ -146,6 +146,7 @@
 
 .project-entry + .project-entry { margin-top: 24px; }
 .projects-panel--spatial { pointer-events: none; text-shadow: none; }
+.projects-panel:not(.projects-panel--spatial) { background: var(--deep); }
 .projects-panel--spatial .project-choice { position: absolute; left: 6.518%; top: 18.75%; width: 86.964%; height: 38.021%; padding: 0; border: 0; pointer-events: auto; touch-action: none; }
 .projects-panel--spatial .project-preview { height: 100%; background: transparent; filter: none; }
 .projects-panel--spatial .project-choice:hover { box-shadow: none; }

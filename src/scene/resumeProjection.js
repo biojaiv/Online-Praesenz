@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getLanguage, onLanguageChange } from '../i18n.js';
+import { lightColor } from './palette.js';
 
 import cvProjection from '../data/cvProjection.json';
 
@@ -1203,12 +1204,13 @@ export function createResumeProjection({
     uFade: { value: new THREE.Vector2(0.085, 0.055) },
     uGlow: { value: 1.18 },
     uBias: { value: -0.65 },
+    uSurface: { value: lightColor('deep') },
   };
 
   const material = new THREE.ShaderMaterial({
     uniforms,
     transparent: true,
-    depthWrite: false,
+    depthWrite: true,
     side: THREE.DoubleSide,
     vertexShader: /* glsl */`
       varying vec2 vUv;
@@ -1221,6 +1223,7 @@ export function createResumeProjection({
       uniform sampler2D uMap;
       uniform float uWindow, uOffset, uOpacity, uGlow, uBias;
       uniform vec2 uFade;
+      uniform vec3 uSurface;
       varying vec2 vUv;
 
       void main() {
@@ -1236,11 +1239,13 @@ export function createResumeProjection({
         float edgeRule = blueRule
           * (1.0 - smoothstep(0.003, 0.022, vUv.y));
         float fade = topFade * max(bottomFade, edgeRule);
-        float alpha = texel.a * fade * uOpacity;
-        if (alpha < 0.004) discard;
+        if (uOpacity < 0.004) discard;
 
         vec3 lifted = pow(clamp(texel.rgb, 0.0, 1.0), vec3(0.90));
-        gl_FragColor = vec4(clamp(lifted * uGlow, 0.0, 1.0), alpha);
+        // Fade the ink into the dark surface at the scrolling edges, rather
+        // than revealing the animated scene through the document.
+        vec3 ink = clamp(lifted * uGlow, 0.0, 1.0);
+        gl_FragColor = vec4(mix(uSurface, ink, texel.a * fade), uOpacity);
       }
     `,
   });

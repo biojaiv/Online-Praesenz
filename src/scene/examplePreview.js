@@ -2,16 +2,17 @@ import * as THREE from 'three';
 import { t, getLanguage, onLanguageChange } from '../i18n.js';
 import { getProject } from '../data/projects.js';
 import { getProjectionViewport } from '../ui/projectionViewport.js';
+import { LIGHT_PALETTE } from './palette.js';
 
 /** One project in the existing hologram; the actual HTML page loads on activation. */
 export function createExamplePreview() {
   const canvas = document.createElement('canvas');
   canvas.width = 1258; canvas.height = 1920;
   const ctx = canvas.getContext('2d');
-  // Only the thumbnail is opaque; the surrounding hologram stays transparent.
+  // An opaque surface in the scene palette keeps background motion behind the document.
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, opacity: 1, toneMapped: false, side: THREE.DoubleSide });
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: true, opacity: 1, toneMapped: false, side: THREE.DoubleSide });
   const colorReveal = { value: 0 };
   material.customProgramCacheKey = () => 'project-preview-hover';
   material.onBeforeCompile = shader => {
@@ -33,7 +34,7 @@ export function createExamplePreview() {
   const picture = new Image(); let disposed = false;
   function draw() {
     if (disposed) return;
-    ctx.clearRect(0, 0, 1258, 1920);
+    ctx.fillStyle = LIGHT_PALETTE.deep; ctx.fillRect(0, 0, 1258, 1920);
     ctx.fillStyle = '#08121e'; ctx.fillRect(82, 360, 1094, 730);
     ctx.strokeStyle = '#78bfff55'; ctx.lineWidth = 2; ctx.strokeRect(2, 2, 1254, 1916);
     ctx.textAlign = 'left'; ctx.fillStyle = '#e8a45a'; ctx.font = '500 26px "Barlow Condensed", sans-serif';
@@ -67,7 +68,10 @@ export function createExamplePreview() {
   return {
     group, mesh,
     setOrigin(y) { group.position.set(0, y + 1.17 + height / 2, .4); },
-    setReveal(value, immediate = false) { target = value; if (immediate) reveal = value; },
+    setReveal(value, immediate = false) {
+      target = value;
+      if (immediate) { reveal = value; material.opacity = value; group.visible = value > .01; }
+    },
     update(_time, delta, hover = 0) {
       colorReveal.value = THREE.MathUtils.smoothstep(hover, .05, .8);
       reveal += (target - reveal) * (1 - Math.pow(.01, Math.min(delta, .1)));

@@ -1132,7 +1132,7 @@ body {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   color: var(--ink);
-  background: rgb(6 13 22 / 0.9);
+  background: var(--deep);
   border: 1px solid var(--cv-edge);
   box-shadow:
     0 0 40px -12px rgb(var(--fiber-blue-rgb) / 0.35),

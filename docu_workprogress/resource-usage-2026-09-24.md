@@ -2,7 +2,7 @@
 
 ## Behaviour
 
-The middle preview uses its earlier muted colours at rest and original page colours on hover or keyboard focus. The 3D thumbnail changes colour through a shader uniform, without repainting or uploading its canvas texture each frame. Its opaque image and transparent surrounding panel are retained.
+The middle preview uses its earlier muted colours at rest and original page colours on hover or keyboard focus. The 3D thumbnail changes colour through a shader uniform, without repainting or uploading its canvas texture each frame. A later visual change fills all three hologram surfaces with the scene's opaque deep blue. The CV and qualification shader composites its existing ink over that surface; the middle canvas fills its background with the same palette colour.
 
 Rendering quality starts from available CPU/memory/input hints. Stage pixel budgets are 550,000, 1,000,000 and 1,800,000 pixels with DPR caps of 0.75, 1 and 1.5. Two sustained windows of slow frames lower quality; isolated pauses reset the measurement. HTML content is not downsampled. Constrained devices omit SMAA and use fewer bloom levels.
 

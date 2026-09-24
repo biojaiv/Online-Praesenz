@@ -55,7 +55,7 @@ const isDocumentKey = (key) => key === RESUME_KEY || key === 'abschluss';
 // Ruhehelligkeit der Lebenslauf-Vorschau, solange der Sockel nicht offen ist.
 // SACRED_CARD_LAYOUT_V4_2
 // The landing-page projection should be readable light, not a luminous plate.
-const RESUME_IDLE_OPACITY = 0.72;
+const RESUME_IDLE_OPACITY = 1;
 // Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
 // Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
 const RESUME_IDLE_SCALE = 1;
