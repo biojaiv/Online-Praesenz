@@ -38,7 +38,7 @@ export function createProjectsBrowser({container,stage}){
     <h2 class="wing-heading">${t(i?'projects.integration':'projects.websites')}</h2>
     <p class="wing-subtitle">${t(i?'projects.infrastructure':'projects.design')}</p>
     <a class="wing-preview" href="${link(project)}" data-project-id="${project.id}" data-example-open data-focus="preview-${category}" aria-label="${t(project.title)} · ${t('projects.open')}"><img src="${project.preview(getLanguage())}" alt=""/><span>${t(i?'projects.play':'projects.open')}</span></a>
-    <p class="wing-tech">${i?'DEBIAN · KVM · NFTABLES':'SVG · GSAP · JAVASCRIPT · XTERM.JS'}</p>
+    <p class="wing-tech">${i?'DEBIAN · KVM · NFTABLES':'SVG · GSAP · JAVASCRIPT'}</p>
     <ul class="wing-projects">${projects.map(p=>`<li><a href="${link(p)}" data-project-id="${p.id}" data-example-open data-focus="project-${p.id}"><span aria-hidden="true">◇</span> ${t(p.title)} <span aria-hidden="true">↗</span></a></li>`).join('')}</ul>
     ${i?`<p class="wing-planned">${t('recovery.planned')}</p><p class="wing-description">${t('recovery.short')}</p><p class="wing-tools">PostgreSQL · Restic · Ansible</p>`:`<p class="wing-description">${t('example.previewNote')}</p><ul class="wing-facts">${t('example.previewFacts').split('|').map(line=>`<li>${line}</li>`).join('')}</ul>`}
     <footer><a href="${link(project)}" data-project-id="${project.id}" data-example-open>${t(i?'projects.play':'projects.open')}</a></footer>

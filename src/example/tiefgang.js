@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getLanguage, setLanguage, onLanguageChange } from '../i18n.js';
 import { copy, number, escapeHTML as e } from './content.js';
-import { illustration } from './illustration.js';
+import { illustration, packetStops, packetX } from './illustration.js';
 import { chapterMarkup } from './reading.js';
 import { createJourney } from './state.js';
 
@@ -27,7 +27,7 @@ export function startTiefgang() {
     document.querySelector('meta[name="description"]').content=c.tagline;
     root.innerHTML=`<div class="experience">
       <header class="masthead"><a class="wordmark" href="#chapter-1" data-jump="0">TIEFGANG<span aria-hidden="true">■</span></a>
-        <p>${c.tagline}</p><div class="head-actions"><button id="example-language" aria-label="${language==='de'?'Switch to English':'Auf Deutsch wechseln'}">${language==='de'?'EN':'DE'}</button><button class="terminal-open" data-terminal>${c.terminal}<kbd>⌘K</kbd></button></div>
+        <p>${c.tagline}</p><div class="head-actions"><button id="example-language" aria-label="${language==='de'?'Switch to English':'Auf Deutsch wechseln'}">${language==='de'?'EN':'DE'}</button></div>
       </header>
       <div class="workspace">
         <aside class="story"><p class="eyebrow" id="chapter-kicker"></p><h1><span class="story-time"></span><span class="story-title"></span></h1><p class="story-text"></p>
@@ -35,7 +35,7 @@ export function startTiefgang() {
           <a class="project-link story-project" href="/#abschluss" data-portfolio="abschluss" hidden>${c.project}</a>
           <button class="reading-switch">${reading?c.immersive:c.reading} ↗</button>
         </aside>
-        <figure class="stage"><div class="drawing-wrap">${illustration(c)}<div class="layer-tag"><span class="tag-number">01</span><span class="tag-text">${c.labels[0]}</span></div></div>
+        <figure class="stage"><div class="drawing-wrap">${illustration(c)}<div class="mobile-layer-tag source-backup-caption"><span class="tag-number">01</span><span class="tag-text">${c.labels[0]}</span></div></div>
           <figcaption>${c.figure}<button class="vm-open" data-vm aria-expanded="false">${c.vm} +</button></figcaption>
           <section class="interaction-card dhcp-card" aria-labelledby="dhcp-heading" hidden><div class="card-top"><span id="dhcp-heading">DHCP / <b class="dhcp-count">01</b> — 04</span><span class="dhcp-code"></span></div><p class="dhcp-speaker"></p><p class="dhcp-sentence" aria-live="polite"></p><div class="dhcp-actions"><button data-dhcp>${c.dhcpNext} →</button><button class="dhcp-replay" data-replay hidden>↺ <span class="sr-only">${c.dhcpReplay}</span></button></div><small class="dhcp-status"></small></section>
           <section class="interaction-card vm-card" hidden aria-labelledby="vm-heading"><div class="card-top"><h2 id="vm-heading">${c.vmTitle}</h2><button data-vm aria-label="${c.close}">×</button></div><p>${c.vmText}</p><code>${c.vmSpecs}</code><a class="project-link" data-portfolio="abschluss" href="/#abschluss">${c.project}</a></section>
@@ -49,15 +49,14 @@ export function startTiefgang() {
       </div>
       <footer class="depth"><div class="depth-scale">${c.layers.map(label=>`<span>${label}</span>`).join('')}<i class="depth-needle" aria-hidden="true"></i></div><div class="scroll-controls"><button data-prev aria-label="${c.previous}">↑</button><span>${c.scroll}</span><button data-next aria-label="${c.next}">↓</button></div></footer>
     </div>
-    <main class="chapter-track" ${!reading?'aria-hidden="true" inert':''}>${chapterMarkup(c,language)}</main>
-    <dialog class="terminal-dialog" aria-labelledby="terminal-title"><div class="terminal-bar"><h2 id="terminal-title">${c.terminalTitle}</h2><button data-terminal-close aria-label="${c.close}">ESC ×</button></div><p class="terminal-notice">${c.terminalIntro}</p><div class="terminal-host"></div><p class="terminal-status" role="status"></p></dialog>`;
+    <main class="chapter-track" ${!reading?'aria-hidden="true" inert':''}>${chapterMarkup(c,language)}</main>`;
 
     const $=selector=>root.querySelector(selector), $$=selector=>[...root.querySelectorAll(selector)];
-    const scene=$('.infrastructure'), dialog=$('.terminal-dialog');
+    const scene=$('.infrastructure');
     const abort=new AbortController(), {signal}=abort;
-    let terminal=null, terminalPending=false, disposed=false, lastChapter=-1, lastLog='', lastState='', savedFocus=null, parentPaused=false;
+    let lastChapter=-1, lastLog='', lastState='', parentPaused=false;
     let scrollTrigger=null;
-    const targets=[100,248,457,495,526,560,741], layers=$$('.stage [data-layer]');
+    const targets=packetStops;
     const journey=createJourney(update);
     function update(state) {
       const {chapter,dhcp,link,vm,lease,progress}=state;
@@ -73,9 +72,8 @@ export function startTiefgang() {
         $('.story-project').hidden=![3,5,6].includes(chapter);
         $('.live-count').textContent=`${number(chapter)}/07`;
         $$('.stage .unboxing').forEach(box=>box.style.opacity=chapter===0?'1':'0');
-        $('.tag-number').textContent=number(chapter); $('.tag-text').textContent=c.labels[chapter];
-        $('.layer-tag').style.top=`${Math.min(88,targets[chapter]/840*100)}%`;
-        layers.forEach((layer,i)=>layer.classList.toggle('is-active',i===[0,2,4,4,4,4,6][chapter]));
+        $$('.stage .tag-number').forEach(label=>label.textContent=number(chapter)); $$('.stage .tag-text').forEach(label=>label.textContent=c.labels[chapter]);
+        scene.dataset.final=String(chapter===6);
         $$('[data-slot]').forEach((slot,i)=>slot.classList.toggle('is-slot-active',i===({2:0,3:1,4:0,5:2,6:3})[chapter]));
         $('[data-prev]').disabled=chapter===0; $('[data-next]').disabled=chapter===6;
         lastChapter=chapter;
@@ -116,21 +114,14 @@ export function startTiefgang() {
       const fractional=Math.max(0,Math.min(6,progress*6.5));
       const lower=Math.min(5,Math.floor(fractional));
       let y=targets[lower]+(targets[lower+1]-targets[lower])*Math.min(1,fractional-lower);
-      if(chapter===2&&!lease) y=457+dhcp*7;
-      if(link==='failing') y=329;
-      // Follow the alternate uplink only across the network layer; return to
-      // the service spine below the firewall instead of floating beside it.
-      const x=link==='failing'?243:link==='backup'&&chapter===1?438:275;
-      if(link==='backup'&&chapter===1)y=339;
+      if(chapter===2&&!lease) y=561+dhcp*7;
+      if(link==='failing') y=419;
+      if(link==='backup'&&chapter===1)y=437;
+      const x=packetX(y);
       $('.stage .packet').setAttribute('transform',`translate(${x} ${y})`);
       $('.stage .packet').classList.toggle('is-paused',link==='failing');
       $('.stage .packet').style.opacity=ready?'0':'1';
-      // Slight exploded-view rotation, driven only by scroll position.
-      if(!reading) layers.forEach((layer,i)=>{
-        const drift=Math.sin(progress*Math.PI)*((i%2?1:-1)*1.3);
-        layer.style.rotate=`${drift}deg`;
-        layer.style.translate=ready?`0 ${-i*48}px`:'0 0';
-      });
+
     }
     function go(chapter) {
       const index=Math.max(0,Math.min(6,chapter));
@@ -145,22 +136,6 @@ export function startTiefgang() {
       journey.chapter(chapter,Math.max(0,Math.min(1,position/6.5)));
     }
     scrollTrigger=ScrollTrigger.create({trigger:$('.chapter-track'),start:'top top',end:'bottom bottom',onUpdate:syncScroll,onRefresh:syncScroll});
-    function closeTerminal() { if(dialog.open)dialog.close(); savedFocus?.focus({preventScroll:true}); }
-    async function openTerminal() {
-      if(dialog.open) { closeTerminal(); return; }
-      savedFocus=document.activeElement; dialog.showModal();
-      if(terminal) { terminal.focus(); return; }
-      if(terminalPending)return;
-      terminalPending=true; $('.terminal-status').textContent=c.terminalLoading;
-      try {
-        const {createTerminal}=await import('./terminal.js');
-        if(disposed)return;
-        terminal=createTerminal($('.terminal-host'),()=>journey.state,c,closeTerminal);
-        $('.terminal-status').textContent='';
-        if(!dialog.open) savedFocus?.focus({preventScroll:true});
-      } catch { if(!disposed)$('.terminal-status').textContent=c.terminalError; }
-      finally { terminalPending=false; }
-    }
     root.addEventListener('click',event=>{
       const target=event.target.closest('button,a,[data-vm]'); if(!target)return;
       if(target.matches('[data-jump]')) {event.preventDefault();go(Number(target.dataset.jump));}
@@ -170,30 +145,20 @@ export function startTiefgang() {
       else if(target.matches('[data-replay]'))journey.dhcpReplay();
       else if(target.matches('[data-cable]'))journey.cable();
       else if(target.matches('[data-vm]'))journey.vm();
-      else if(target.matches('[data-terminal]'))openTerminal();
-      else if(target.matches('[data-terminal-close]'))closeTerminal();
       else if(target.matches('[data-restart]'))go(0);
       else if(target.id==='example-language') {setLanguage(language==='de'?'en':'de');post('language',{language:getLanguage()});}
       else if(target.matches('.reading-switch')) {manualReading=!reading;if(motion.matches)manualReading=true;render(journey.state.chapter);}
       else if(target.matches('[data-portfolio]')&&embedded) {event.preventDefault();post('navigate',{route:target.dataset.portfolio});}
     },{signal});
     document.addEventListener('keydown',event=>{
-      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k') {event.preventDefault();openTerminal();}
       if(event.key==='Escape') {
         event.preventDefault();
-        if(dialog.open)closeTerminal();else if(journey.state.vm)journey.vm();else post('close');
+        if(journey.state.vm)journey.vm();else post('close');
       }
       if((event.key==='Enter'||event.key===' ')&&event.target.matches('g[data-vm]')) {event.preventDefault();journey.vm();}
-      if(['PageDown','PageUp','Home','End'].includes(event.key)&&!dialog.open&&!reading&&!/INPUT|TEXTAREA/.test(event.target.tagName)) {
+      if(['PageDown','PageUp','Home','End'].includes(event.key)&&!reading&&!/INPUT|TEXTAREA/.test(event.target.tagName)) {
         event.preventDefault(); go(event.key==='Home'?0:event.key==='End'?6:journey.state.chapter+(event.key==='PageDown'?1:-1));
       }
-    },{signal});
-    dialog.addEventListener('cancel',event=>{event.preventDefault();closeTerminal();},{signal});
-    dialog.addEventListener('keydown',event=>{
-      if(event.key!=='Tab')return;
-      const controls=[...dialog.querySelectorAll('button,textarea')];
-      const index=controls.indexOf(document.activeElement);
-      event.preventDefault();controls[(index+(event.shiftKey?-1:1)+controls.length)%controls.length]?.focus();
     },{signal});
     const pause=()=>journey.pause(document.hidden||parentPaused);
     document.addEventListener('visibilitychange',pause,{signal});
@@ -207,7 +172,7 @@ export function startTiefgang() {
       $('.reading-switch').hidden=motion.matches;
       journey.chapter(savedChapter,savedChapter/6);
     } else { scrollTo({top:savedChapter*innerHeight,behavior:'instant'});syncScroll(); }
-    cleanup=()=>{disposed=true;abort.abort();journey.dispose();terminal?.dispose();scrollTrigger?.kill();};
+    cleanup=()=>{abort.abort();journey.dispose();scrollTrigger?.kill();};
     post('ready');
   }
   render();

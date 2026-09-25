@@ -1,6 +1,6 @@
 export const copy = {
   de: {
-    tagline: 'Ein Arbeitsplatz. Sieben Schichten. Ein Scroll.', terminal: 'Terminal öffnen', close: 'Schließen',
+    tagline: 'Ein Arbeitsplatz. Sieben Schichten. Ein Scroll.', close: 'Schließen',
     chapters: 'Kapitel', log: 'LIVE · PAKETSPUR', cable: 'Kabel ziehen', reconnect: 'Kabel einstecken',
     cableHint: 'Was passiert, wenn ein Uplink ausfällt?', primary: 'Pfad A verbunden · Pfad B bereit',
     failing: 'Uplink A getrennt. Ersatzpfad wird aktiviert …', backup: 'Pfad B übernimmt. Der Arbeitsplatz bleibt erreichbar.',
@@ -25,13 +25,6 @@ export const copy = {
     ready: 'Guten Morgen, Jana.', readyText: 'Dein Arbeitsplatz ist bereit.', manual: 'Ohne Automatisierung: ein halber Tag.',
     modelNote: 'Illustrativer Vergleich, keine gemessene Projektlaufzeit.', restart: 'Noch einmal von vorn ↑',
     reading: 'Lesefassung', immersive: 'Zur Scrollansicht', nojs: 'Statische Lesefassung · English / Deutsch',
-    terminalTitle: 'JANA-01 / Diagnose', terminalIntro: 'Lokale Simulation. help zeigt die Befehle. ESC schließt.',
-    terminalLoading: 'Terminal wird geladen …', terminalError: 'Terminal konnte nicht geladen werden. Bitte erneut öffnen.',
-    offline: 'Noch keine Netzwerkverbindung.', noLease: 'Noch keine DHCP-Lease. Das DHCP-Gespräch in Kapitel 03 abschließen.',
-    noOS: 'WinPE / Bereitstellung: noch kein angemeldeter Benutzer.', noDomain: 'Noch keine Domänenanmeldung.',
-    unknown: 'Unbekannter Befehl. help zeigt die verfügbaren Befehle.', pingUsage: 'ping 10.20.0.1 | ping dc01 | ping files01',
-    unreachable: 'Ziel nicht erreichbar.', pingLost: 'Zeitüberschreitung. Uplink A ausgefallen.',
-    help: ['help               Befehle anzeigen', 'ping dc01          Erreichbarkeit prüfen', 'ipconfig           Netzwerkkonfiguration', 'gpresult           Angewandte Gruppenrichtlinien', 'whoami             Aktuelle Identität', 'clear              Bildschirm leeren', 'exit               Terminal schließen'],
     chaptersData: [
       ['Auspacken', '08:00', 'Ein neuer Tag.\nEin leeres Gerät.', 'Jana fängt heute an. Ihr Laptop ist ausgepackt — aber ohne Netz, Betriebssystem und Identität ist er noch kein Arbeitsplatz.', 'Asset erfassen, Gerät zuordnen, Strom anschließen. Automatisierung beginnt mit einem sauberen Inventar.'],
       ['Das Netz', '08:03', 'Janas Laptop\nmeldet sich.', 'Das Netz ist der erste Kontakt. Im Client-VLAN bekommt Janas Gerät seinen Platz; die Firewall begrenzt den Weg zu den Diensten.', 'Der Laptop startet am kabelgebundenen Dock. Der Access Point versorgt WLAN-Clients; zwei unabhängige Uplinks sichern hier die Verbindung zwischen Switch und Firewall.'],
@@ -43,7 +36,7 @@ export const copy = {
     ],
   },
   en: {
-    tagline: 'One workplace. Seven layers. One scroll.', terminal: 'Open terminal', close: 'Close',
+    tagline: 'One workplace. Seven layers. One scroll.', close: 'Close',
     chapters: 'Chapters', log: 'LIVE · PACKET TRACE', cable: 'Pull the cable', reconnect: 'Reconnect cable',
     cableHint: 'What happens when an uplink fails?', primary: 'Path A connected · Path B ready',
     failing: 'Uplink A disconnected. Activating the alternate path …', backup: 'Path B takes over. The workstation stays reachable.',
@@ -68,13 +61,6 @@ export const copy = {
     ready: 'Good morning, Jana.', readyText: 'Your workstation is ready.', manual: 'Without automation: half a day.',
     modelNote: 'Illustrative comparison, not a measured project duration.', restart: 'Start again ↑',
     reading: 'Reading view', immersive: 'Back to scroll view', nojs: 'Static reading view · English / Deutsch',
-    terminalTitle: 'JANA-01 / Diagnostics', terminalIntro: 'Local simulation. Type help for commands. ESC closes.',
-    terminalLoading: 'Loading terminal …', terminalError: 'The terminal could not be loaded. Please open it again.',
-    offline: 'No network connection yet.', noLease: 'No DHCP lease yet. Complete the DHCP conversation in chapter 03.',
-    noOS: 'WinPE / deployment: no signed-in user yet.', noDomain: 'No domain sign-in yet.',
-    unknown: 'Unknown command. Type help for available commands.', pingUsage: 'ping 10.20.0.1 | ping dc01 | ping files01',
-    unreachable: 'Destination unreachable.', pingLost: 'Request timed out. Uplink A failed.',
-    help: ['help               List commands', 'ping dc01          Check connectivity', 'ipconfig           Network configuration', 'gpresult           Applied group policies', 'whoami             Current identity', 'clear              Clear screen', 'exit               Close terminal'],
     chaptersData: [
       ['Unboxing', '08:00', 'A new day.\nAn empty device.', 'It is Jana’s first day. Her laptop is unpacked — but without a network, operating system or identity, it is not a workplace yet.', 'Register the asset, assign the device, connect power. Automation starts with a reliable inventory.'],
       ['The network', '08:03', 'Jana’s laptop\nsays hello.', 'The network is the first point of contact. Jana’s device joins the client VLAN; the firewall controls the path to the services.', 'The laptop starts on a wired dock. The access point serves wireless clients; two independent uplinks protect the switch-to-firewall connection in this model.'],

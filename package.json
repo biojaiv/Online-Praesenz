@@ -29,15 +29,13 @@
     "build:background-detail": "node scripts/ui/build_background_detail.mjs",
     "test:background": "node scripts/background/check_browser.mjs",
     "test:tiefgang": "node scripts/example/check_tiefgang.mjs",
-    "test:tunnel": "node scripts/ui/check_tunnel.mjs",
     "build:recovery-film": "node scripts/recovery/render.mjs",
     "test:project-wings": "node scripts/ui/check_project_wings.mjs",
     "build:cv-hologram": "node scripts/cv/build_legacy_projection.mjs --hologram-only",
-    "test:hologram-alignment": "node scripts/ui/check_hologram_alignment.mjs"
+    "test:hologram-alignment": "node scripts/ui/check_hologram_alignment.mjs",
+    "test:fullscreen": "node scripts/ui/check_fullscreen.mjs"
   },
   "dependencies": {
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "^6.0.0",
     "gsap": "^3.15.0",
     "postprocessing": "^6.39.4",
     "three": "^0.185.1"

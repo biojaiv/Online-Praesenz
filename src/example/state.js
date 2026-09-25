@@ -62,23 +62,3 @@ export function createJourney(onChange) {
     dispose() { clear(); },
   };
 }
-
-export function interpret(command, state, c) {
-  const [name, target] = command.trim().toLowerCase().split(/\s+/);
-  const connected = state.chapter > 0;
-  const configured = state.chapter > 2 || (state.chapter === 2 && state.lease);
-  if (!name) return '';
-  if (name === 'help') return c.help.join('\r\n');
-  if (name === 'whoami') return state.chapter >= 4 ? 'TIEFGANG\\jana' : state.chapter >= 3 ? c.noOS : 'JANA-01\\SYSTEM (UEFI / preboot)';
-  if (name === 'ipconfig') return !connected ? c.offline : !configured ? c.noLease : 'Ethernet / VLAN 20\r\nIPv4:    10.20.0.42\r\nMask:    255.255.255.0\r\nGateway: 10.20.0.1\r\nDNS:     10.20.0.10\r\nDHCP:    10.20.0.10';
-  if (name === 'gpresult') return state.chapter < 4 ? c.noDomain : 'Domain: tiefgang.example\r\nUser: jana\r\nApplied GPOs:\r\n  Workstation-Baseline\r\n  User-File-Access\r\n  Security-Policy';
-  if (name === 'ping') {
-    if (!target) return c.pingUsage;
-    if (!connected) return c.offline;
-    if (!configured) return c.noLease;
-    if (state.link === 'failing') return c.pingLost;
-    const ip = ({'dc01':'10.20.0.10','dc01.tiefgang.example':'10.20.0.10','files01':'10.20.0.20','10.20.0.1':'10.20.0.1','10.20.0.10':'10.20.0.10','10.20.0.20':'10.20.0.20'})[target];
-    return ip ? `Reply from ${ip}: bytes=32 time<1ms TTL=128\r\n4 sent, 4 received, 0 lost · uplink ${state.link==='backup'?'B':'A'}` : c.unreachable;
-  }
-  return c.unknown;
-}

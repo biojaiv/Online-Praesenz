@@ -30,7 +30,7 @@ export function createExamplePreview({ reduced = false } = {}) {
    ctx.fillStyle='#acbac8';ctx.font='30px Barlow,sans-serif';ctx.fillText(t(i?'projects.infrastructure':'projects.design'),400,230,704);
    ctx.fillStyle='#030a12';ctx.fillRect(48,280,704,470);
    if(picture.complete&&picture.naturalWidth){const scale=Math.min(704/picture.naturalWidth,470/picture.naturalHeight);const w=picture.naturalWidth*scale,h=picture.naturalHeight*scale;ctx.globalAlpha=.5;ctx.drawImage(picture,48+(704-w)/2,280+(470-h)/2,w,h);ctx.globalAlpha=1;}
-   ctx.fillStyle=accent;ctx.font='500 28px "Barlow Condensed",sans-serif';ctx.fillText(i?'DEBIAN · KVM · NFTABLES':'SVG · GSAP · JAVASCRIPT · XTERM.JS',400,820,704);
+   ctx.fillStyle=accent;ctx.font='500 28px "Barlow Condensed",sans-serif';ctx.fillText(i?'DEBIAN · KVM · NFTABLES':'SVG · GSAP · JAVASCRIPT',400,820,704);
    ctx.fillStyle='#d4e8f8';ctx.font='500 39px "Barlow Condensed",sans-serif';ctx.fillText(t(projectsIn(category)[0].title),400,910,704);
    ctx.textAlign='left';ctx.fillStyle='#afc2d1';ctx.font='31px Barlow,sans-serif';
    if(i){paragraph(t('recovery.short'),995);ctx.fillStyle=accent;ctx.font='500 28px "Barlow Condensed",sans-serif';ctx.textAlign='center';ctx.fillText(t('recovery.planned'),400,1235,704);}
