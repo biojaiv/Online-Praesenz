@@ -47,10 +47,10 @@ try {
       header,footer{display:flex;justify-content:space-between;color:#6f95ac;font:400 23px 'Barlow Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase}
       header{padding-bottom:28px;border-bottom:1px solid #52769066;margin-bottom:38px}footer{position:absolute;bottom:48px;left:94px;right:94px;border-top:1px solid #52769066;padding-top:22px}
       .kicker{color:#e5a05c;font:500 25px 'Barlow Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase;margin:0 0 16px}
-      h1{color:#edfaff;font:500 65px/1.04 'Barlow Condensed',sans-serif;letter-spacing:2px;margin:0 0 25px;text-transform:uppercase}
-      h2{color:#e5a05c;font:500 38px/1.2 'Barlow Condensed',sans-serif;margin:0 0 18px}
-      .ihk-icon{width:54px;height:54px;flex:0 0 54px;color:#e5a05c}.symbol-heading{display:flex;align-items:center;gap:25px}
-      .areas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:28px 0 38px}.areas>div{display:flex;gap:25px}.areas h3{color:#e5a05c;font:500 35px 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 10px}.areas p{font-size:28px;line-height:1.4;margin:0}
+      h1{text-align:center;color:#edfaff;font:500 65px/1.04 'Barlow Condensed',sans-serif;letter-spacing:2px;margin:0 0 25px;text-transform:uppercase}
+      h2{text-align:center;color:#e5a05c;font:500 38px/1.2 'Barlow Condensed',sans-serif;margin:0 0 18px}
+      .ihk-icon{width:54px;height:54px;flex:0 0 54px;color:#e5a05c}.symbol-heading{display:flex;justify-content:center;align-items:center;gap:25px}
+      .areas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin:28px 0 38px}.areas>div{display:flex;gap:25px}.areas h3{text-align:center;color:#e5a05c;font:500 35px 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 10px}.areas p{font-size:28px;line-height:1.4;margin:0}
       p{font:400 30px/1.5 Barlow,sans-serif;margin:0 0 24px}.subtitle{color:#9fc2d5;font-size:32px;margin-bottom:36px}
       .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin:36px 0 44px}.facts .ihk-icon{margin-bottom:14px}.facts strong{display:block;color:#e5a05c;font:500 47px 'Barlow Condensed',sans-serif}.facts small{display:block;color:#9fc2d5;font-size:23px;line-height:1.4;margin-top:12px}
       .result{border-left:2px solid #e5a05c;padding-left:25px;font-size:28px}.signature{color:#e5a05c;font-size:26px;line-height:1.6}

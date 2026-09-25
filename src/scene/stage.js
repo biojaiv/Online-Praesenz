@@ -45,8 +45,8 @@ const DOC_MAX_PX = 640;
 const DOC_GUTTER_X = 42;
 const DOC_GUTTER_Y = 42;
 // Kameraabstand beim geoeffneten Lebenslauf als Vielfaches des Zielbilds.
-// Mausrad ohne Zusatztaste blaettert. Linke Maustaste halten plus Mausrad
-// faehrt die Kamera entlang ihrer festen Blickachse vor und zurueck.
+// The wheel zooms all three holograms. Hold the left button (or Shift)
+// while wheeling to scroll a document; Ctrl/Meta keeps pinch zoom available.
 const DOCUMENT_ZOOM_DEFAULT = 1.08;
 const DOCUMENT_ZOOM_MIN = 0.12;
 const DOCUMENT_ZOOM_MAX = 3.2;
@@ -278,6 +278,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function syncDocumentInputHints() {
     const active = isZoomableKey(opened) && !readerOpen;
+    canvas.title = active ? translate('scene.zoomHelp') : '';
+    dollyGuide.title = translate('scene.zoomHelp');
     if (!active) {
       pinchGesture = null;
       touchPoints.clear();
@@ -531,6 +533,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   // the 3D projection tied to the same language-specific page geometry.
   const unsubscribeDocumentLanguage = onLanguageChange(() => {
     syncDocumentAspect();
+    syncDocumentInputHints();
   });
 
   function updateDocumentLift() {
@@ -587,7 +590,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     const isDocument = isDocumentKey(key);
     setDollyGuide(isZoomableKey(key) && !readerOpen);
     syncDocumentInputHints();
-    background.setDocumentOpen?.(isDocument);
+    background.setDocumentOpen?.(false);
     applyBloom();
 
     if (isDocument || key === 'projekte') syncDocumentAspect();
@@ -600,11 +603,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     let distance;
     if (isDocument) {
-      // Das Fenster deckt auf dem Schirm genau das Rechteck ab, in dem auch
-      // die Lesefassung steht: der Wechsel zwischen beiden ist kein Groessen-
-      // und kein Ortssprung.
+      // Reserve space below the document for the pedestal title and subtitle.
+      // The page geometry is unchanged; only the initial camera fit widens.
       const rect = docRect;
-      const visibleHeightWorld = focusSize.y * (view.height / rect.height);
+      const visibleHeightWorld = focusSize.y * 1.18 * (view.height / rect.height);
       const fitDistance = visibleHeightWorld / (2 * tan);
       distance = fitDistance * docZoom;
       visibleHeight = 2 * distance * tan;
@@ -612,7 +614,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       focusCenter.y = document3d.max.y - focusSize.y * 0.5;
       // Blickpunkt etwas tiefer: die Seite sitzt hoeher im Bild, waehrend
       // unter ihr wieder ein Teil des Sockels sichtbar bleibt.
-      focusCenter.y -= focusSize.y * 0.04;
+      focusCenter.y -= focusSize.y * 0.13;
       docBoundsMaxZ = document3d.max.z;
       docFitDistance = fitDistance;
       docHalfWidth = focusSize.x * 0.5;
@@ -620,14 +622,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       updateDocumentLift();
     } else if (key === 'projekte') {
       // Use the same viewport height and headroom as the adjacent documents.
-      docFitDistance = focusSize.y * (view.height / docRect.height) / (2 * tan);
+      docFitDistance = Math.max(focusSize.y * 1.18 * (view.height / docRect.height) / (2 * tan), focusSize.x * 1.16 / (2 * tan * view.aspect));
       docBoundsMaxZ = document3d.max.z;
       docHalfWidth = focusSize.x * .5;
       docZoomTarget = docZoom;
       scrollLiftTarget = 0;
       distance = docFitDistance * docZoom;
       visibleHeight = 2 * distance * tan;
-      focusCenter.y -= focusSize.y * 0.04;
+      focusCenter.y -= focusSize.y * 0.13;
     } else {
       distance = Math.max(
         (focusSize.y * 1.2) / (2 * tan),
@@ -722,7 +724,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (!delta) return;
     event.preventDefault();
     if (drag) drag.wheelUsed = true;
-    if (opened === 'projekte' || event.ctrlKey || event.metaKey) {
+    const scrolling = isDocumentKey(opened)
+      && (documentPointerHeld || (event.buttons & 1) !== 0 || event.shiftKey)
+      && !event.ctrlKey && !event.metaKey;
+    if (!scrolling) {
       zoomDocument((delta / view.height) * DOCUMENT_WHEEL_SENSITIVITY);
       pulseDollyGuide(delta < 0 ? 'near' : 'far');
     } else {
@@ -982,7 +987,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function hitsDocument() {
     if (ndc.x < -1.5) return false;
-    const meshes = opened === 'projekte' ? [cards.group.getObjectByName('example-preview')] : cards.documentPickables;
+    const meshes = opened === 'projekte' ? ['example-preview', 'example-preview-systemintegration'].map(name => cards.group.getObjectByName(name)) : cards.documentPickables;
     raycaster.setFromCamera(ndc, camera);
     return raycaster.intersectObjects(meshes.filter(mesh => mesh?.userData.key === opened && mesh.visible && mesh.parent.visible), false).length > 0;
   }
@@ -1014,12 +1019,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   function applyBloom() {
     if (!bloom) return;
     const base = view.compact ? 1.22 : 1.62;
-    // CV_BLOOM_CONTROL_V4_2
-    // The document carries its own luminous ink. Global bloom must not turn
-    // the page into a white light panel when the camera moves into CV focus.
-    bloomBaseTarget = isDocumentKey(opened)
-      ? base * 0.24
-      : base;
+    // Opening a pedestal changes the camera, never the scene lighting.
+    bloomBaseTarget = base;
   }
 
   let resizeFrame = 0;
@@ -1213,23 +1214,17 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     else renderer.render(scene, camera);
     hologramFilm.update(cards.documentPickables.find(mesh => mesh.userData.key === 'abschluss'),
       camera, view.width, view.height, opened === 'abschluss' && !readerOpen && !exampleFlight.active);
-    if (examplePreviewUpdate) {
-      const mesh = cards.group.getObjectByName('example-preview');
-      if (mesh && opened === 'projekte' && !exampleFlight.active) {
-        // The accessible hit area follows the unchanged preview plane during zoom.
+    if (examplePreviewUpdate && opened === 'projekte' && !exampleFlight.active) {
+      const wings = ['example-preview', 'example-preview-systemintegration'].map(name => {
+        const mesh = cards.group.getObjectByName(name);
         const { width, height } = mesh.geometry.parameters;
-        let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
-        for (const x of [-width / 2, width / 2]) {
-          for (const y of [-height / 2, height / 2]) {
-            mesh.localToWorld(examplePreviewPoint.set(x, y, 0)).project(camera);
-            const sx = (examplePreviewPoint.x + 1) * view.width / 2;
-            const sy = (1 - examplePreviewPoint.y) * view.height / 2;
-            left = Math.min(left, sx); right = Math.max(right, sx);
-            top = Math.min(top, sy); bottom = Math.max(bottom, sy);
-          }
-        }
-        examplePreviewUpdate({ left, top, width: right - left, height: bottom - top });
-      }
+        const corners = [[-1,1],[1,1],[1,-1],[-1,-1]].map(([x,y]) => {
+          mesh.localToWorld(examplePreviewPoint.set(x*width/2,y*height/2,0)).project(camera);
+          return { x:(examplePreviewPoint.x+1)*view.width/2, y:(1-examplePreviewPoint.y)*view.height/2 };
+        });
+        return { section:mesh.userData.section, corners };
+      });
+      examplePreviewUpdate({ wings, zoom: 1 / docZoom });
     }
   }
 
@@ -1281,7 +1276,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     get isMoving() { return viewMoving; },
     setExamplePreviewUpdate(callback) { examplePreviewUpdate = callback; },
     setProjectPreviewHover(value) { projectPreviewHover = Boolean(value); },
-    zoomProjectPreview(step) { if (opened === 'projekte' && !exampleFlight.active && !inspectionFrozen) zoomDocument(step); },
+    zoomProjectPreview(step) {
+      if (opened !== 'projekte' || exampleFlight.active || inspectionFrozen) return;
+      zoomDocument(step); pulseDollyGuide(step < 0 ? 'near' : 'far');
+    },
     setRoute,
 
     /** Blickwinkel im Ruhezustand direkt setzen (Bogenmass). */

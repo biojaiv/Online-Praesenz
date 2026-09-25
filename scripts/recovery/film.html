@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{font-family:Barlow;font-weight:400;src:url(../../public/knallblau/fonts/barlow-400.woff2)}
+@font-face{font-family:Barlow;font-weight:600;src:url(../../public/knallblau/fonts/barlow-600.woff2)}
+@font-face{font-family:BarlowC;font-weight:700;src:url(../../public/knallblau/fonts/barlow-condensed-700.woff2)}
+:root{--bg:#050a14;--panel:#0a1422;--line:#1d3047;--ink:#e2eef9;--dim:#8ea3b8;--mute:#5b7086;--cyan:#6fc3ff;--amber:#f0a95b;--red:#ff6b6b;--ok:#7fe0b0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Barlow,sans-serif}
+#bgglow{position:absolute;inset:0;background:radial-gradient(1200px 700px at 35% 55%,#0c1b30 0%,transparent 70%),radial-gradient(700px 500px at 88% 40%,#0d1726 0%,transparent 70%)}
+#grid{position:absolute;inset:0;background-image:linear-gradient(#0e1a2a 1px,transparent 1px),linear-gradient(90deg,#0e1a2a 1px,transparent 1px);background-size:48px 48px;opacity:.35}
+header{position:absolute;left:60px;right:60px;top:34px;height:90px}
+.kicker{font-family:BarlowC;font-size:20px;letter-spacing:.22em;color:var(--amber)}
+.kicker b{color:var(--mute);font-weight:700}
+h1{font-family:BarlowC;font-weight:700;font-size:50px;letter-spacing:.01em;margin-top:4px}
+.corner{position:absolute;right:0;top:2px;font-family:BarlowC;font-size:20px;letter-spacing:.2em;color:var(--mute)}
+#rail{position:absolute;left:60px;right:60px;top:138px;height:44px;display:flex;gap:14px}
+.phase{flex:1;position:relative}
+.phase .pl{font-family:BarlowC;font-size:17px;letter-spacing:.2em;color:var(--mute);height:22px}
+.phase .ticks{display:flex;gap:6px}
+.tick{flex:1;height:5px;border-radius:3px;background:#17273a;position:relative;overflow:hidden}
+.tick i{position:absolute;left:0;top:0;bottom:0;background:var(--cyan)}
+.tick.cur i{background:var(--amber)}
+#stage{position:absolute;left:40px;top:200px;width:1260px;height:850px;overflow:hidden;border-radius:18px}
+#panel{position:absolute;left:1330px;top:200px;width:530px;height:850px}
+.card{position:absolute;inset:0;background:linear-gradient(180deg,#0c1828,#08111d);border:1px solid var(--line);border-radius:18px;padding:40px 40px 34px;overflow:hidden}
+.num{font-family:BarlowC;font-size:120px;line-height:.9;color:var(--amber)}
+.num small{font-size:34px;color:var(--mute);margin-left:6px}
+.meta{display:flex;align-items:center;gap:14px;margin-top:14px}
+.ph{font-family:BarlowC;font-size:20px;letter-spacing:.2em;color:var(--dim)}
+.chip{font-family:BarlowC;font-size:18px;letter-spacing:.14em;padding:4px 12px 3px;border-radius:999px;border:1.5px solid}
+.chip.plan{color:var(--amber);border-color:var(--amber);border-style:dashed}
+.chip.ist{color:var(--ok);border-color:var(--ok)}
+.chip.ziel{color:var(--cyan);border-color:var(--cyan)}
+.title{font-family:BarlowC;font-size:44px;line-height:1.08;margin-top:26px;min-height:144px}
+.lbl{font-family:BarlowC;font-size:18px;letter-spacing:.24em;margin-top:26px}
+.lbl.w{color:var(--cyan)}.lbl.m{color:var(--amber)}
+.txt{font-size:25px;line-height:1.36;margin-top:6px;color:var(--ink)}
+.txt.m{color:#c3d3e3}
+.bar{position:absolute;left:40px;right:40px;bottom:34px;height:4px;background:#17273a;border-radius:2px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--amber);border-radius:2px}
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(5,10,20,.95)}
+#overlay .ok{font-family:BarlowC;font-size:24px;letter-spacing:.26em;color:var(--amber)}
+#overlay .big{font-family:BarlowC;font-size:92px;line-height:1;margin-top:18px;text-align:center}
+#overlay .sub{font-size:28px;color:var(--dim);margin-top:24px}
+#outro{position:absolute;inset:0;background:rgba(5,10,20,.975);padding:170px 160px}
+#outro h2{font-family:BarlowC;font-size:64px}
+#outro .cols{display:flex;gap:60px;margin-top:50px}
+#outro .col{flex:1;border:1.5px solid;border-radius:18px;padding:34px 40px}
+#outro .col h3{font-family:BarlowC;font-size:26px;letter-spacing:.2em;margin-bottom:18px}
+#outro li{list-style:none;font-size:28px;line-height:1.3;padding:10px 0 10px 34px;position:relative}
+#outro li:before{content:"";position:absolute;left:0;top:22px;width:14px;height:14px;border-radius:50%}
+#outro .ist{border-color:var(--ok)} #outro .ist h3{color:var(--ok)} #outro .ist li:before{background:var(--ok)}
+#outro .plan{border-color:var(--amber);border-style:dashed} #outro .plan h3{color:var(--amber)} #outro .plan li:before{border:2px dashed var(--amber)}
+#outro .foot{margin-top:40px;font-size:24px;color:var(--dim)}
+svg text{font-family:Barlow,sans-serif}
+.cap{font-family:BarlowC;letter-spacing:.16em}
+</style>
+</head>
+<body>
+<div id="bgglow"></div><div id="grid"></div>
+<header>
+  <div class="kicker">RECOVERY LAB <b>/</b> BESTAND + GEPLANTE ERWEITERUNG</div>
+  <h1>Wiederanlauf mit Anwendung und Datenbank</h1>
+  <div class="corner">VL / 2026</div>
+</header>
+<div id="rail"></div>
+<div id="stage"><svg id="svg" width="1260" height="850" viewBox="0 0 1260 850"><g id="cam"></g></svg></div>
+<div id="panel"><div class="card" id="card"></div></div>
+<div id="overlay"></div>
+<div id="outro"></div>
+<script>
+const C={cyan:'#6fc3ff',amber:'#f0a95b',red:'#ff6b6b',ok:'#7fe0b0',ink:'#e2eef9',dim:'#8ea3b8',mute:'#5b7086',line:'#243a55',panel:'#0b1626',node:'#0e1c2f'};
+
+const STEPS=[
+ {ph:0,st:'ziel',d:9.5,t:'Zweck: Ausfälle erkennen, gezielt beheben und den Erfolg belegen',
+  w:'Nach einem Ausfall sollen Anwendung, Daten und Schutzregeln wieder korrekt funktionieren.',
+  m:'Vier Debian-VMs; Erweiterung um PostgreSQL, Zustandsprüfung und geregelte Wiederherstellung.',
+  on:'*',flows:[],cam:[0,0,1260,850]},
+ {ph:0,st:'ist',d:9.5,t:'Die vorhandene Grundlage schützt Speicher und schafft einen Sollbestand',
+  w:'Gespeicherte Lab-Daten schützen und definierte Einstellungen später wiederherstellen können.',
+  m:'LUKS2/ext4, KVM/libvirt und 21 geprüfte Dateien; der Konfigurationsvergleich schreibt noch nichts zurück.',
+  on:['lab','host','soll','gw','svc'],flows:[],cam:[0,0,1260,660]},
+ {ph:0,st:'ist',d:9.5,t:'Netzzonen begrenzen die Zugriffe',
+  w:'Verwaltung erlauben und ungewollte Zugriffe gezielt unterbinden.',
+  m:'Drei Netze, nftables und SSH-Schlüssel; Ops → Services geroutet, Client → Ops gesperrt.',
+  on:['ops','gw','svc','client','zones'],flows:['ssh1','ssh2','block'],cam:[290,90,940,360]},
+ {ph:0,st:'ist',d:9.5,t:'Geprüfte Software wird offline übertragen',
+  w:'Pakete kontrolliert bereitstellen, ohne direkten Internetzugang der Gäste.',
+  m:'Debian-Signaturen, SHA256, apt-offline und nur lesbare ISO-Medien; Ansible ist auf Ops installiert.',
+  on:['host','ops'],flows:['iso'],cam:[0,40,620,440]},
+ {ph:1,st:'plan',d:9.5,t:'Eine Anwendung mit einer PostgreSQL-Datenbank',
+  w:'Veränderliche Daten machen den Wiederanlauf überprüfbar: Läuft auch die Anwendung wieder?',
+  m:'Kleine Geräteverwaltung auf Services; PostgreSQL speichert Geräte und Wartungsvorgänge.',
+  on:['svc','app','db'],flows:['db'],cam:[880,90,360,370]},
+ {ph:1,st:'plan',d:10.5,t:'Konsistente Sicherungen außerhalb des Laptops',
+  w:'Eine Sicherung muss zurückspielbar sein und den Verlust des Originaldatenträgers überstehen.',
+  m:'pg_dump für konsistente Exporte, von Ops abgerufen; Restic sichert sie mit Rollen, Konfiguration und Ops-Unterlagen.',
+  on:['db','ops','restic','gw'],flows:['backup'],cam:[0,90,1260,760]},
+ {ph:2,st:'plan',d:10,t:'Ops erkennt Abweichungen vom erwarteten Zustand',
+  w:'Ein laufender Prozess allein beweist nicht, dass Anwendung und Datenbank funktionieren.',
+  m:'systemd-Timer + Prüfdienst: Anwendungsaufruf, SQL-Testabfrage und Vergleich verwalteter Konfigurationen.',
+  on:['ops','app','db','rk','rk0','gw'],flows:['check'],cam:[290,90,940,540]},
+ {ph:2,st:'plan',d:9.5,t:'Erst bestätigen und einordnen, dann handeln',
+  w:'Ein kurzer Aussetzer oder eine legitime Datenänderung darf keine Rücksicherung auslösen.',
+  m:'Mehrere Fehlprüfungen, festgelegte Fehlerklassen, nur ein Reparaturlauf und begrenzte Wiederholungen.',
+  on:['ops','rk','rk0','rk1'],flows:[],cam:[290,90,940,540]},
+ {ph:2,st:'plan',d:9.5,t:'Testfall 1: Ein Dienst wurde beendet',
+  w:'Einen behebbaren Dienstausfall reparieren, ohne Daten auf einen älteren Stand zurückzusetzen.',
+  m:'Prüfdienst bestätigt den Ausfall; Ansible prüft die Ursache, startet den Dienst und testet erneut.',
+  on:['ops','gw','svc','app','rk','rk1','rk2a'],flows:['ssh1','ssh2'],note:'Beispiel: Dienst beendet',cam:[290,90,940,540]},
+ {ph:2,st:'plan',d:9.5,t:'Testfall 2: Eine verwaltete Konfiguration weicht ab',
+  w:'Die freigegebene Konfiguration herstellen, ohne beliebige Änderungen blind zu überschreiben.',
+  m:'Ansible übernimmt den Sollbestand, prüft die Syntax und lädt den betroffenen Dienst kontrolliert neu.',
+  on:['ops','gw','svc','soll','rk','rk1','rk2b'],flows:['ssh1','ssh2'],note:'Beispiel: Konfiguration verändert',cam:[290,90,940,540]},
+ {ph:2,st:'plan',d:11,t:'Testfall 3: Definierter Datenverlust',
+  w:'Fehlende Daten zurückholen und gültige neuere Änderungen vor ungezieltem Überschreiben schützen.',
+  m:'Schreibstopp → pg_restore in getrennte Datenbank → Daten prüfen → kontrolliert umschalten.',
+  on:['restic','ops','gw','db','svc','rk','rk1','rk2c'],flows:['restore'],note:'Rücksicherung in getrennte Ziel-Datenbank',cam:[0,90,1260,760]},
+ {ph:3,st:'plan',d:10.5,t:'Der Wiederanlauf wird aus Benutzersicht abgenommen',
+  w:'Erst Funktion, korrekte Daten und wirksame Schutzregeln belegen eine erfolgreiche Wiederherstellung.',
+  m:'Client-Test, Datenvergleich, Rechte- und Firewalltests; Wiederanlaufdauer und tatsächlichen Datenverlust messen.',
+  on:['client','gw','svc','app','db','rk','rk3','rk4'],flows:['https','db'],note:'RTO / RPO vorher als Ziele festlegen',cam:[560,90,690,540]},
+ {ph:3,st:'plan',d:11,t:'Automatik mit Grenzen: unbekannter Fehler oder erfolglose Reparatur',
+  w:'Endlosschleifen und eine falsche Rücksicherung dürfen den ursprünglichen Schaden nicht vergrößern.',
+  m:'Anhalten, Diagnose sichern und melden; bei SSH-Ausfall Konsolenweg, Ops-Unterlagen separat sichern.',
+  on:['ops','rk','rk1','rk3','rk4','stop'],flows:[],cam:[290,90,940,560]},
+];
+const PHASES=['GRUNDLAGE · BESTAND','ERWEITERUNG · GEPLANT','REGELKREIS · GEPLANT','ABNAHME · GEPLANT'];
+const INTRO=3.5, OUTRO=7;
+let t0=INTRO; STEPS.forEach(s=>{s.a=t0;t0+=s.d;s.b=t0});
+const TOTAL=t0+OUTRO;
+window.TOTAL=TOTAL;
+
+// ---------- SVG helpers
+const NS='http://www.w3.org/2000/svg';
+const cam=document.getElementById('cam');
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||cam).appendChild(e);return e}
+function txt(x,y,s,o={},p){const e=el('text',Object.assign({x,y,fill:o.fill||C.ink,'font-size':o.size||16,'text-anchor':o.anchor||'middle','font-weight':o.w||400},o.cls?{class:o.cls}:{}),p);e.textContent=s;if(o.ls)e.setAttribute('letter-spacing',o.ls);return e}
+function g(id){const e=el('g',{id});G[id]=e;return e}
+const G={};
+function box(p,x,y,w,h,plan,r=12,fill=C.node){return el('rect',{x,y,width:w,height:h,rx:r,fill,stroke:plan?C.amber:C.cyan,'stroke-width':1.6,'stroke-opacity':plan?.75:.55,'stroke-dasharray':plan?'7 6':'none'},p)}
+function server(p,cx,cy,col){for(let i=0;i<3;i++){el('rect',{x:cx-20,y:cy-24+i*16,width:40,height:13,rx:3,fill:'none',stroke:col,'stroke-width':1.8},p);el('circle',{cx:cx-12,cy:cy-17.5+i*16,r:1.8,fill:col},p);el('line',{x1:cx-4,y1:cy-17.5+i*16,x2:cx+13,y2:cy-17.5+i*16,stroke:col,'stroke-width':1.4},p)}}
+function monitor(p,cx,cy,col){el('rect',{x:cx-24,y:cy-18,width:48,height:31,rx:3,fill:'none',stroke:col,'stroke-width':1.8},p);el('line',{x1:cx,y1:cy+13,x2:cx,y2:cy+21,stroke:col,'stroke-width':1.8},p);el('line',{x1:cx-12,y1:cy+21,x2:cx+12,y2:cy+21,stroke:col,'stroke-width':1.8},p)}
+function cyl(p,cx,cy,col,s=1){const w=22*s,h=30*s,e=6*s;el('path',{d:`M${cx-w} ${cy-h/2} v${h} a${w} ${e} 0 0 0 ${2*w} 0 v${-h} a${w} ${e} 0 0 0 ${-2*w} 0 a${w} ${e} 0 0 0 ${2*w} 0 M${cx-w} ${cy} a${w} ${e} 0 0 0 ${2*w} 0`,fill:'none',stroke:col,'stroke-width':1.8},p)}
+function disc(p,cx,cy,col){el('circle',{cx,cy,r:26,fill:'none',stroke:col,'stroke-width':1.8},p);el('circle',{cx,cy,r:7,fill:'none',stroke:col,'stroke-width':1.8},p)}
+function check(p,x,y){el('path',{d:`M${x-7} ${y} l5 5 l10 -11`,fill:'none',stroke:C.ok,'stroke-width':2.4,'stroke-linecap':'round','stroke-linejoin':'round'},p)}
+function tag(p,x,y,s,col){const w=s.length*8.6+26;el('rect',{x:x-w/2,y:y-15,width:w,height:24,rx:12,fill:'#0a1422',stroke:col,'stroke-width':1.3,'stroke-dasharray':col===C.amber?'5 4':'none'},p);txt(x,y+2.5,s,{size:13,fill:col,cls:'cap',w:700},p)}
+
+// ---------- static scene
+const layerFlows=el('g',{id:'flows'});
+// laptop frame
+const gLap=g('laptop');
+el('rect',{x:10,y:10,width:1240,height:645,rx:18,fill:'#07101c',stroke:'#2a4262','stroke-width':1.4},gLap);
+txt(30,38,'LAPTOP · PARROT OS',{anchor:'start',size:15,fill:C.mute,cls:'cap',w:700},gLap);
+// host
+const gHost=g('host');
+box(gHost,30,55,225,580,false,14,'#0a1626');
+txt(142,88,'PARROT-HOST',{size:16,fill:C.amber,cls:'cap',w:700},gHost);
+monitor(gHost,142,132,C.amber);txt(142,184,'Download + Prüfung',{size:16,fill:C.ink},gHost);
+disc(gHost,142,250,C.amber);txt(142,305,'ISO · nur lesbar',{size:18,w:600},gHost);txt(142,328,'Signatur + SHA256',{size:15,fill:C.dim},gHost);
+el('line',{x1:55,y1:360,x2:230,y2:360,stroke:C.line},gHost);
+txt(142,395,'KVM / libvirt',{size:17,w:600},gHost);txt(142,418,'Virtualisierung',{size:14,fill:C.dim},gHost);
+txt(142,470,'LUKS2 / ext4',{size:17,w:600},gHost);txt(142,493,'verschlüsselter Speicher',{size:14,fill:C.dim},gHost);
+check(gHost,142,540);txt(142,580,'Bestand',{size:14,fill:C.ok,cls:'cap',w:700},gHost);
+// lab frame
+const gLab=g('lab');
+el('rect',{x:280,y:55,width:955,height:580,rx:14,fill:'#081322',stroke:C.cyan,'stroke-opacity':.4,'stroke-width':1.4},gLab);
+txt(300,84,'LAB · VM-LAUFWERKE IM LUKS2-CONTAINER',{anchor:'start',size:15,fill:C.amber,cls:'cap',w:700},gLab);
+txt(1215,84,'BESTAND: 4 VMs · 3 NETZE',{anchor:'end',size:14,fill:C.ok,cls:'cap',w:700},gLab);
+// zones
+const gZ=g('zones');
+el('rect',{x:300,y:100,width:262,height:200,rx:12,fill:'none',stroke:C.cyan,'stroke-opacity':.35,'stroke-dasharray':'2 5'},gZ);
+el('rect',{x:915,y:100,width:300,height:330,rx:12,fill:'none',stroke:C.cyan,'stroke-opacity':.35,'stroke-dasharray':'2 5'},gZ);
+el('rect',{x:615,y:318,width:260,height:112,rx:12,fill:'none',stroke:C.cyan,'stroke-opacity':.35,'stroke-dasharray':'2 5'},gZ);
+txt(431,122,'NETZ MANAGEMENT',{size:13,fill:C.cyan,cls:'cap',w:700},gZ);
+txt(1065,122,'NETZ SERVICES',{size:13,fill:C.cyan,cls:'cap',w:700},gZ);
+txt(745,340,'NETZ CLIENT',{size:13,fill:C.cyan,cls:'cap',w:700},gZ);
+// ops
+const gOps=g('ops');
+box(gOps,330,138,202,112,false);server(gOps,380,194,C.amber);
+txt(470,190,'Ops',{size:26,w:600},gOps);txt(470,214,'Ansible · SSH',{size:14,fill:C.dim},gOps);
+check(gOps,512,152);
+txt(431,278,'Prüfdienst + Timer · geplant',{size:14,fill:C.amber},gOps);
+// gateway
+const gGw=g('gw');
+box(gGw,650,145,190,100,false);server(gGw,695,195,C.amber);
+txt(785,192,'Gateway',{size:22,w:600},gGw);txt(785,215,'nftables',{size:14,fill:C.dim},gGw);
+check(gGw,822,158);txt(745,268,'Routing + Filter',{size:14,fill:C.dim},gGw);
+// services
+const gSvc=g('svc');
+server(gSvc,960,150,C.amber);txt(1000,158,'Services-VM',{size:22,w:600,anchor:'start'},gSvc);check(gSvc,1180,150);
+const gApp=g('app');
+box(gApp,935,192,125,92,true);monitor(gApp,997,228,C.cyan);txt(997,272,'Anwendung',{size:15,w:600},gApp);
+const gDb=g('db');
+box(gDb,1075,192,125,92,true);cyl(gDb,1137,228,C.cyan,.85);txt(1137,272,'PostgreSQL',{size:15,w:600},gDb);
+const gSvc2=g('svc2');
+tag(gSvc2,1065,312,'ANWENDUNG + DATENBANK · GEPLANT',C.amber);
+txt(1065,346,'Geräte + Wartungsvorgänge',{size:15,fill:C.dim},gSvc2);
+const noteT=txt(1065,400,'',{size:15,fill:C.amber,w:600},gSvc2);
+// client
+const gCl=g('client');
+monitor(gCl,690,388,C.amber);txt(770,386,'Client',{size:22,w:600,anchor:'start'},gCl);check(gCl,850,372);
+txt(770,410,'Funktionstest · geplant',{size:13,fill:C.amber,anchor:'start'},gCl);
+// sollbestand
+const gSoll=g('soll');
+box(gSoll,300,318,290,112,false);
+txt(318,342,'SOLLBESTAND · GEPRÜFT',{anchor:'start',size:13,fill:C.ok,cls:'cap',w:700},gSoll);
+txt(346,398,'21',{size:48,fill:C.ok,w:600},gSoll);
+txt(392,372,'12 Gateway + 9 Services',{anchor:'start',size:15},gSoll);
+txt(392,393,'Inhalt · Besitzer · Rechte',{anchor:'start',size:14,fill:C.dim},gSoll);
+txt(392,414,'noch nicht zurückgeschrieben',{anchor:'start',size:13,fill:C.amber},gSoll);
+// regelkreis
+const gRk=g('rk');
+box(gRk,300,452,915,165,true,14,'#0a1524');
+txt(320,480,'REGELKREIS AUF OPS · GEPLANT',{anchor:'start',size:14,fill:C.amber,cls:'cap',w:700},gRk);
+const RK=[['rk0','Prüfen',325,535,125],['rk1','Einordnen',478,535,130],['rk2a','Dienst starten',645,495,160],['rk2b','Konfiguration',645,535,160],['rk2c','Daten zurück',645,575,160],['rk3','Erfolg prüfen',845,535,145],['rk4','Protokoll',1025,535,150]];
+const rkLines=el('g',{},gRk);
+[['M450 535 H478'],['M608 535 H625 V495 H645'],['M625 535 H645'],['M625 535 V575 H645'],['M805 495 H825 V535 H845'],['M805 535 H845'],['M805 575 H825 V535'],['M990 535 H1025']].forEach(([d])=>el('path',{d,fill:'none',stroke:C.line,'stroke-width':1.6},rkLines));
+RK.forEach(([id,s,x,y,w])=>{const e=el('g',{id},gRk);G[id]=e;el('rect',{x,y:y-15,width:w,height:30,rx:15,fill:'#0e1c2f',stroke:C.line,'stroke-width':1.4},e);txt(x+w/2,y+5.5,s,{size:15,fill:C.dim},e)});
+const gStop=g('stop');
+tag(gStop,1030,482,'UNBEKANNT / NICHT BEHOBEN → STOPP + MELDUNG',C.red);
+// restic outside laptop
+const gRes=g('restic');
+box(gRes,10,690,580,145,true,16,'#0a1422');
+txt(30,718,'AUSSERHALB DES LAPTOPS · GEPLANT',{anchor:'start',size:14,fill:C.amber,cls:'cap',w:700},gRes);
+cyl(gRes,85,775,C.amber,1.2);
+txt(140,768,'Restic-Sicherungsziel',{anchor:'start',size:24,w:600},gRes);
+txt(140,796,'Daten + Konfiguration + Ops-Unterlagen',{anchor:'start',size:15,fill:C.dim},gRes);
+txt(140,818,'übersteht den Verlust des Laptops',{anchor:'start',size:15,fill:C.dim},gRes);
+// legend
+const gLeg=g('legend');
+el('rect',{x:620,y:690,width:630,height:145,rx:16,fill:'#081220',stroke:C.line},gLeg);
+txt(645,718,'LEGENDE',{anchor:'start',size:14,fill:C.mute,cls:'cap',w:700},gLeg);
+el('rect',{x:645,y:738,width:44,height:26,rx:7,fill:'none',stroke:C.cyan,'stroke-width':1.6,'stroke-opacity':.7},gLeg);check(gLeg,667,751);
+txt(700,757,'Bestand · umgesetzt',{anchor:'start',size:16},gLeg);
+el('rect',{x:645,y:782,width:44,height:26,rx:7,fill:'none',stroke:C.amber,'stroke-width':1.6,'stroke-dasharray':'6 5'},gLeg);
+txt(700,801,'geplant · noch nicht getestet',{anchor:'start',size:16},gLeg);
+el('line',{x1:950,y1:751,x2:1000,y2:751,stroke:C.cyan,'stroke-width':2.4},gLeg);el('circle',{cx:985,cy:751,r:5,fill:C.cyan},gLeg);
+txt(1012,757,'Verbindung / Datenfluss',{anchor:'start',size:16},gLeg);
+el('line',{x1:950,y1:795,x2:1000,y2:795,stroke:C.red,'stroke-width':2.4},gLeg);
+el('path',{d:'M968 788 l14 14 M982 788 l-14 14',stroke:C.red,'stroke-width':2.4},gLeg);
+txt(1012,801,'gesperrt',{anchor:'start',size:16},gLeg);
+
+// ---------- flows (drawn below nodes)
+cam.insertBefore(layerFlows,G.laptop.nextSibling);
+const FLOWS={
+ ssh1:{d:['M532 195 H650'],col:C.cyan,label:[591,184,'SSH']},
+ ssh2:{d:['M840 195 H945'],col:C.cyan,label:[878,184,'SSH geroutet']},
+ block:{d:['M660 318 V292 H566'],col:C.red,label:[640,284,'Client → Ops gesperrt'],x:[566,292]},
+ iso:{d:['M168 250 H292 V215 H330'],col:C.amber,label:[268,236,'offline']},
+ db:{d:['M1060 238 H1075'],col:C.cyan},
+ https:{d:['M745 318 V245','M840 228 H900 V238 H935'],col:C.cyan,label:[755,292,'HTTPS'],la:'start'},
+ check:{d:['M532 225 H900 V250 H935','M900 250 V292 H1137 V284'],col:C.amber,label:[590,238,'HTTP + SQL-Test']},
+ backup:{d:['M1137 192 V176 H532','M330 176 H268 V690'],col:C.amber,label:[590,168,'pg_dump-Abruf'],label2:[276,665,'Restic']},
+ restore:{d:['M268 690 V176 H330','M532 176 H1137 V192'],col:C.amber,label:[590,168,'pg_restore'],label2:[276,665,'Restic']},
+};
+for(const k in FLOWS){const f=FLOWS[k];const e=el('g',{id:'f_'+k,opacity:0},layerFlows);f.g=e;f.paths=f.d.map(d=>el('path',{d,fill:'none',stroke:f.col,'stroke-width':2.4,'stroke-dasharray':k==='block'?'none':'8 7','stroke-linecap':'round'},e));
+ f.len=f.paths.map(p=>p.getTotalLength());f.dots=[0,1,2].map(()=>el('circle',{r:5,fill:f.col},e));
+ if(f.label){const lt=el('g',{},e);const [x,y,s]=f.label;const w=s.length*8+16;el('rect',{x:(f.la==='start'?x-6:x-w/2),y:y-14,width:w,height:20,rx:5,fill:'#07101c'},lt);txt(x,y+1,s,{size:14,fill:f.col,w:600,anchor:f.la||'middle'},lt)}
+ if(f.label2){const [x,y,s]=f.label2;txt(x,y,s,{size:14,fill:f.col,w:600,anchor:'start'},e)}
+ if(f.x){el('path',{d:`M${f.x[0]-8} ${f.x[1]-8} l16 16 M${f.x[0]+8} ${f.x[1]-8} l-16 16`,stroke:C.red,'stroke-width':3,'stroke-linecap':'round'},e)}}
+// ensure node groups above flows
+['ops','gw','svc','app','db','client'].forEach(k=>cam.appendChild(G[k]));
+cam.appendChild(G.svc2);
+
+// ---------- rail + card
+const rail=document.getElementById('rail');
+PHASES.forEach((p,i)=>{const d=document.createElement('div');d.className='phase';d.innerHTML=`<div class="pl">${p}</div><div class="ticks">${STEPS.map((s,j)=>s.ph===i?`<div class="tick" data-j="${j}"><i></i></div>`:'').join('')}</div>`;rail.appendChild(d)});
+const ticks=[...rail.querySelectorAll('.tick')];
+const card=document.getElementById('card');
+const STL={ziel:['ziel','ZIEL'],ist:['ist','BESTAND'],plan:['plan','GEPLANT']};
+let curCard=-1;
+function setCard(i){if(i===curCard)return;curCard=i;const s=STEPS[i];card.innerHTML=`<div class="num">${String(i+1).padStart(2,'0')}<small>/ 13</small></div><div class="meta"><span class="ph">${PHASES[s.ph].split(' · ')[0]}</span><span class="chip ${STL[s.st][0]}">${STL[s.st][1]}</span></div><div class="title">${s.t}</div><div class="lbl w">WARUM</div><div class="txt">${s.w}</div><div class="lbl m">MITTEL</div><div class="txt m">${s.m}</div><div class="bar"><i id="bar"></i></div>`}
+
+// ---------- timeline
+const ease=x=>x<0?0:x>1?1:x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,k)=>a+(b-a)*k;
+function camFor(s){const [x,y,w,h]=s.cam;const sc=Math.min(1260/w,850/h,1.5);return [sc,x+w/2,y+h/2]}
+function stepAt(t){for(let i=0;i<STEPS.length;i++)if(t<STEPS[i].b)return i;return STEPS.length-1}
+const ALL=['host','lab','zones','ops','gw','svc','svc2','app','db','client','soll','rk','restic','legend','laptop'];
+const ov=document.getElementById('overlay'),outro=document.getElementById('outro');
+ov.innerHTML='<div class="ok">RECOVERY LAB · PROJEKTFILM</div><div class="big">Wiederanlauf mit<br>Anwendung und Datenbank</div><div class="sub">Was schon steht – und was als Nächstes kommt. 13 Schritte.</div>';
+outro.innerHTML=`<h2>Stand des Projekts</h2><div class="cols"><div class="col ist"><h3>BESTAND · UMGESETZT</h3><ul><li>Vier Debian-VMs in drei Netzzonen</li><li>nftables-Regeln und SSH-Schlüssel</li><li>Offline-Pakete mit Signatur- und SHA256-Prüfung</li><li>Sollbestand aus 21 geprüften Dateien</li></ul></div><div class="col plan"><h3>GEPLANT · NOCH NICHT GETESTET</h3><ul><li>Anwendung mit PostgreSQL</li><li>Restic-Sicherung außerhalb des Laptops</li><li>Prüfdienst und Regelkreis auf Ops</li><li>Abnahme mit gemessener Dauer und Datenverlust</li></ul></div></div><div class="foot">Geplante Bausteine werden erst nach bestandener Abnahme als umgesetzt geführt.</div>`;
+
+window.render=function(t){
+ // intro / outro
+ ov.style.opacity=t<INTRO-0.8?1:clamp(1-(t-(INTRO-0.8))/0.8);
+ ov.style.display=ov.style.opacity>0?'flex':'none';
+ const endS=STEPS[STEPS.length-1].b;
+ const oo=clamp((t-endS)/0.8);outro.style.opacity=oo;outro.style.display=oo>0?'block':'none';
+ const ts=clamp(t,INTRO,endS-0.001);const i=stepAt(ts);const s=STEPS[i];const loc=ts-s.a;
+ // camera
+ const prev=STEPS[Math.max(0,i-1)];const k=ease(clamp(loc/1.1));
+ const [s0,x0,y0]=camFor(prev),[s1,x1,y1]=camFor(s);
+ const sc=i===0?s1:lerp(s0,s1,k),cx=i===0?x1:lerp(x0,x1,k),cy=i===0?y1:lerp(y0,y1,k);
+ cam.setAttribute('transform',`translate(630 425) scale(${sc}) translate(${-cx} ${-cy})`);
+ // highlight
+ const onP=prev.on,onC=s.on;const fk=ease(clamp(loc/0.7));
+ const lvl=(on,id)=>on==='*'?1:(on.includes(id)?1:(['laptop','lab','legend'].includes(id)?0.55:0.22));
+ ALL.forEach(id=>{const a=i===0?lvl(onC,id):lerp(lvl(onP,id),lvl(onC,id),fk);G[id].setAttribute('opacity',a.toFixed(3))});
+ if(onC!=='*'&&onC.includes('svc')&&!onC.includes('svc2')){} // svc2 follows svc/app/db
+ const s2=x=>x==='*'||x.includes('svc')||x.includes('app')||x.includes('db')?1:0.22;
+ G.svc2.setAttribute('opacity',(i===0?s2(onC):lerp(s2(onP),s2(onC),fk)).toFixed(3));
+ // regelkreis nodes
+ RK.forEach(([id])=>{const e=G[id];const act=onC!=='*'&&onC.includes(id);const r=e.firstChild,tx=e.lastChild;r.setAttribute('stroke',act?C.amber:C.line);r.setAttribute('fill',act?'#2a1d0e':'#0e1c2f');tx.setAttribute('fill',act?'#ffd9ac':C.dim);tx.setAttribute('font-weight',act?600:400)});
+ G.stop.setAttribute('opacity',onC!=='*'&&onC.includes('stop')?clamp((loc-0.6)/0.6):0);
+ // note
+ const nt=s.note||'';noteT.textContent=nt;noteT.setAttribute('opacity',clamp((loc-0.5)/0.5));
+ // flows
+ for(const k2 in FLOWS){const f=FLOWS[k2];const act=s.flows.includes(k2);const was=prev.flows.includes(k2)&&i>0;
+  const a=act?(was?1:clamp((loc-0.6)/0.6)):(was?clamp(1-loc/0.5):0);f.g.setAttribute('opacity',a.toFixed(3));
+  if(a<=0)continue;f.paths.forEach(p=>p.setAttribute('stroke-dashoffset',(-t*22).toFixed(1)));
+  const total=f.len.reduce((x,y)=>x+y,0);
+  f.dots.forEach((d,j)=>{if(k2==='block'){const L=f.len[0];const u=((t*0.5+j/3)%1);const q=f.paths[0].getPointAtLength(u*L);d.setAttribute('cx',q.x);d.setAttribute('cy',q.y);d.setAttribute('opacity',(1-u).toFixed(2));return}
+   let u=((t*0.35+j/3)%1)*total;let pi=0;while(pi<f.len.length-1&&u>f.len[pi]){u-=f.len[pi];pi++}
+   const q=f.paths[pi].getPointAtLength(Math.min(u,f.len[pi]));d.setAttribute('cx',q.x);d.setAttribute('cy',q.y);d.setAttribute('opacity',1)})}
+ // rail
+ ticks.forEach(tk=>{const j=+tk.dataset.j;const f=j<i?1:j>i?0:clamp(loc/s.d);tk.firstChild.style.width=(f*100)+'%';tk.classList.toggle('cur',j===i)});
+ rail.querySelectorAll('.phase').forEach((p,pi)=>{p.firstChild.style.color=pi===s.ph?C.amber:C.mute});
+ // card
+ setCard(i);const ca=clamp(loc/0.5);card.style.opacity=i===0?1:ca;card.style.transform=`translateY(${(1-ease(ca))*14}px)`;
+ document.getElementById('bar').style.width=(clamp(loc/s.d)*100)+'%';
+};
+window.render(0);
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@ try {
   for (const mobile of [false, true].filter(value => !process.env.EXAMPLE_TEST_DEVICE || process.env.EXAMPLE_TEST_DEVICE === (value ? 'mobile' : 'desktop'))) {
     const context = await browser.newContext({ deviceScaleFactor: Number(process.env.TEST_DPR || 1), viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }, reducedMotion: mobile ? 'reduce' : 'no-preference', isMobile: mobile, hasTouch: mobile });
     const page = await context.newPage();
+    if (process.env.EXAMPLE_TEST_LIGHT) await page.route('**/*Hintergrund_web*.glb*', route => route.abort());
     const errors = [], requests = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => requests.push(new URL(request.url()).pathname));
@@ -38,8 +39,8 @@ try {
     const homePose = await pose(page);
     if (mobile) await page.touchscreen.tap(centre.x, centre.y);
     else await page.mouse.click(centre.x, centre.y);
-    await page.waitForURL('**/#projekte');
-    await page.locator('.project-choice[data-project-id="systems"]').waitFor({ state: 'visible' });
+    await page.waitForURL('**/#projekte/webseiten');
+    await page.locator('[data-example-open][data-project-id="systems"]').waitFor({ state: 'visible' });
     await page.waitForTimeout(400);
     assert.equal(await page.locator('.example-projection').isVisible(), false, 'First click opens the project collection');
     const before = await pose(page);
@@ -52,8 +53,8 @@ try {
         window.__exampleSamples.push({ at: performance.now(), state: exampleFlight.state, yaw: exampleFlight.yaw, position: camera.position.toArray(), direction: camera.getWorldDirection(camera.position.clone()).toArray() });
       }, 30);
     });
-    await page.locator('.project-choice[data-project-id="systems"]').click();
-    await page.evaluate(() => document.querySelector('.project-choice[data-project-id="systems"]').click()); // Guard a queued second activation.
+    await page.locator('[data-example-open][data-project-id="systems"]').click();
+    await page.evaluate(() => document.querySelector('[data-example-open][data-project-id="systems"]').click()); // Guard a queued second activation.
     await page.waitForSelector('.example-projection[data-state="open"]', { timeout: 30000 }).catch(async error => {
       console.error(await page.evaluate(() => ({ flight: window.__stage.exampleFlight.state,
         dialog: document.querySelector('.example-projection').dataset.state,
@@ -140,17 +141,19 @@ try {
       assert.deepEqual(await pose(page), final);
       await cdp.detach();
     }
-    await frame.locator('a[href="#projekte"]').click();
-    await frame.locator('summary').click();
-    assert(await frame.locator('details').evaluate(el => el.open), 'Native interaction works');
-    await frame.locator('#work-title').evaluate(el => {
+    await frame.locator('.chapter-nav [data-jump="3"]').click();
+    if (mobile) await frame.locator('.wordmark').evaluate(el => el.scrollIntoView());
+    await frame.locator('.vm-open').click();
+    assert(await frame.locator('.vm-card').isVisible(), 'VM interaction works');
+    await page.keyboard.press('Escape');
+    assert(await page.locator('.example-projection').isVisible(), 'First Escape closes the VM, keeping the projection');
+    await frame.locator('.story-title').evaluate(el => {
       const range = document.createRange(); range.selectNodeContents(el);
       getSelection().removeAllRanges(); getSelection().addRange(range);
     });
     assert((await frame.locator('body').evaluate(() => getSelection().toString())).length > 10, 'Text remains selectable');
-    await frame.locator('a[href="#top"]').last().click();
     await frame.locator('#example-language').click();
-    assert.match(await frame.locator('h1').innerText(), /Systems/);
+    assert.equal(await frame.locator('html').getAttribute('lang'), 'en');
     assert.equal(await frame.locator('html').evaluate(el => el.scrollWidth <= innerWidth), true, 'No horizontal overflow');
     await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-projection-en.png` });
     await frame.locator('#example-language').click();
@@ -164,7 +167,7 @@ try {
     assert(distance((await pose(page)).rotation, before.rotation) < .02, 'Return restores the saved viewing direction');
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains('project-choice')), true, 'Return restores focus to the scene trigger');
     // Keyboard opening from the scene and closing via the touch-sized return control.
-    await page.locator('.project-choice[data-project-id="systems"]').focus();
+    await page.locator('[data-example-open][data-project-id="systems"]').focus();
     await page.keyboard.press('Enter');
     await page.waitForSelector('.example-projection[data-state="open"]');
     await page.locator('[data-example-back]').click();
@@ -191,7 +194,7 @@ try {
     await page.locator('h1').waitFor();
     assert.equal(await page.locator('canvas').count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    assert.equal(await page.locator('[data-portfolio="abschluss"]').getAttribute('href'), '/#abschluss');
+    assert.equal(await page.locator('[data-portfolio="abschluss"]').first().getAttribute('href'), '/#abschluss');
     await page.screenshot({ path: `${output}/direct-mobile-${lang}.png`, fullPage: true });
   }
   await page.close();

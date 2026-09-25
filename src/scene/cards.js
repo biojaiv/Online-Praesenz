@@ -1,3 +1,4 @@
+import { HOLOGRAM_HEIGHT, HOLOGRAM_LIFT } from './projectionLayout.js';
 import * as THREE from 'three';
 import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -45,7 +46,7 @@ const HIT_HEADROOM = { abschluss: JET_HEIGHT, projekte: 5.6, lebenslauf: JET_HEI
 const DOC_MAX_WIDTH = 7.35;
 // Der Strahl endet an dieser Dokumentkante; seine maximale Hoehe folgt
 // dem verbleibenden Abstand zur Duese, auch im kompakten Layout.
-const DOC_LIFT = JET_HEIGHT - 0.13;
+const DOC_LIFT = HOLOGRAM_LIFT;
 // Das Blatt schwebt nahezu zentrisch ueber dem Sockel — direkt ueber dem
 // Partikelstrahl, nicht weit davor. Ein kleiner Z-Versatz haelt den
 // vorderen Sockelrand aus dem Blick auf den Seitenfuss.
@@ -74,8 +75,6 @@ const RESUME_ROTATION_DAMPING = 0.055;
 // shallow, deliberately constructed triad instead of three arbitrary offsets.
 const LAYOUT_PHI = (1 + Math.sqrt(5)) / 2;
 const LAYOUT_SIDE_FACTOR = Math.sqrt(5) / 2;
-const LAYOUT_CENTER_RISE_DIVISOR = 55;
-const LAYOUT_OUTER_DROP_DIVISOR = 34;
 
 const MODEL_URLS = {
   de: new URL('../../Elemente/Sockel/Sockel_de_web.glb', import.meta.url).href,
@@ -269,7 +268,7 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
         vDocumentEdge = vec3(normal, -dot(normal, edgeA));
 
         // Stetiges Verwehen statt harter Kante: die Fahne loest sich oben auf.
-        vSpark = smoothstep(0.0, 0.04, t) * pow(1.0 - t, 1.7);
+        vSpark = smoothstep(0.0, 0.04, t) * pow(1.0 - t, 0.7);
 
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         // Perspektivisch korrekte Punktgroesse: der Strahl wird beim
@@ -450,7 +449,7 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
   let hidden = false;
 
   function applyTarget(immediate) {
-    opacityTarget = hidden ? 0 : (open ? 1 : idle);
+    opacityTarget = hidden ? 0 : idle;
     if (immediate || reduced) uniforms.uOpacity.value = opacityTarget;
     if (opacityTarget > 0) group.visible = true;
     else if (immediate || reduced) group.visible = false;
@@ -503,7 +502,7 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
  * Beschriftung eines Sockels im Startbild: Ordnungszahl, Titel und eine
  * Zeile Stichworte. Sie steht vorn an der Sockelkante, hell und ruhig, damit
  * man ohne Umweg ueber das Menue erkennt, was hinter jedem Sockel liegt.
- * Sobald ein Bereich geoeffnet ist, tritt sie ab.
+ * Alle drei Titel bleiben auch beim Heranfahren an einen Sockel sichtbar.
  */
 function makeCardLabel(def, maxAnisotropy = 1) {
   const canvas = document.createElement('canvas');
@@ -524,12 +523,6 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     context.clearRect(0, 0, width, height);
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillStyle = 'rgba(7, 16, 29, 0.96)';
-    context.fillRect(48, 38, width - 96, height - 76);
-    context.strokeStyle = 'rgba(201, 232, 255, 0.28)';
-    context.lineWidth = 2;
-    context.strokeRect(49, 39, width - 98, height - 78);
-
     // Live titles are separate from the model's ornamental engraving.
     context.letterSpacing = '0.06em';
     context.shadowBlur = 0;
@@ -587,13 +580,13 @@ function makeCardLabel(def, maxAnisotropy = 1) {
       revealTarget = value;
       if (immediate) reveal = value;
     },
-    /** Der aktive Titel bleibt sichtbar; benachbarte Titel treten zurück. */
-    setOpened(anyOpen, active) { openTarget = !anyOpen || active ? 1 : 0; },
+    /** Keep the same labels on every visible pedestal, including neighbours. */
+    setOpened() { openTarget = 1; },
     update(elapsed, delta, hover, active) {
       if (hover > .05) hoverStart ??= elapsed;
       else hoverStart = null;
       const pulse = reducedMotion() ? .7 : (1 - Math.cos(Math.max(0, elapsed - (hoverStart ?? elapsed)) * Math.PI / 2.4)) * .5;
-      const amount = active ? 1 : hover * pulse;
+      const amount = hover * pulse;
       material.color.copy(blue).lerp(amber, amount);
       mesh.userData.orange = amount;
       const target = revealTarget * openTarget;
@@ -729,19 +722,12 @@ function updateResumeWindow(card, notify = true) {
   const pageAspect = projection?.pageAspect;
   if (!projection?.ready || !pageAspect || card.disposed) return;
 
-  card.baseBounds.getSize(_size);
-  const fullWidth = Math.min(
-    DOC_MAX_WIDTH,
-    Math.max(_size.x, _size.z, 1),
-  );
-  // Die Unterkante bleibt an derselben Stelle. Nur die Blattabmessungen
-  // werden verkleinert; dadurch wandern obere Dokument- und Rahmenkante
-  // sicher nach unten, ohne Sockel, Kamera oder Interaktionen zu veraendern.
-  const width = fullWidth * RESUME_WORLD_SCALE;
+  const height = HOLOGRAM_HEIGHT;
+  const width = height * pageAspect;
 
   // Eine Seite behaelt immer ihr echtes Seitenverhaeltnis.
   // Bildschirmformat und Lesefassung duerfen die 3D-Projektion nicht stauchen.
-  const height = width / pageAspect;
+
   const bottom = card.surfaceY + DOC_LIFT;
 
   card.windowWidth = width;
@@ -998,7 +984,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     // aus dem weissen Ring der Oberflaeche aus.
     const ringJet = makeRingJet(time, { originY: BASE_TOP + 0.04 });
     // The middle pedestal carries the interactive website preview.
-    const examplePreview = def.key === 'projekte' ? createExamplePreview() : null;
+    const examplePreview = def.key === 'projekte' ? createExamplePreview({ reduced }) : null;
     const label = makeCardLabel(def, maxAnisotropy);
     label.setOrigin(BASE_TOP);
     const resumeFrame = makeResumeFrame(time, { reduced, idleOpacity: 0.60 });
@@ -1045,9 +1031,9 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     holder.add(base, accentRing, rimLight, hit);
     if (ringJet) holder.add(ringJet.group);
-    if (examplePreview) { holder.add(examplePreview.group); pickables.push(examplePreview.mesh); }
+    if (examplePreview) { holder.add(examplePreview.group); pickables.push(...examplePreview.meshes); }
     holder.add(label.group);
-    if (resumeFrame) holder.add(resumeFrame.group);
+    if (resumeFrame && !examplePreview) holder.add(resumeFrame.group);
     if (resumeProjection) {
       holder.add(resumeProjection.mesh);
       documentPickables.push(resumeProjection.mesh);
@@ -1079,7 +1065,7 @@ export function createCards({ renderer, reduced = false } = {}) {
       documentBounds: new THREE.Box3(),
       surfaceY: BASE_TOP,
       windowWidth: 0,
-      windowHeight: DOC_MAX_WIDTH * RESUME_WORLD_SCALE / (1258 / 1920),
+      windowHeight: HOLOGRAM_HEIGHT,
       // Seitenverhaeltnis des Fensters auf dem Schirm, von der Buehne gesetzt.
       windowAspect: 0,
       // Die physische Seitengroesse bleibt beim Oeffnen unveraendert.
@@ -1267,17 +1253,13 @@ export function createCards({ renderer, reduced = false } = {}) {
     setLayout({ spacing = 7.8, scale = 1, compact = false, stagger = 0 } = {}) {
       layoutScale = scale;
       const sideRadius = spacing * LAYOUT_SIDE_FACTOR;
-      const centerRise = spacing / LAYOUT_CENTER_RISE_DIVISOR;
-      const outerDrop = spacing / LAYOUT_OUTER_DROP_DIVISOR + stagger;
 
       for (const card of cards) {
         const axis = card.layoutIndex - 1;
         card.holder.position.x = axis * sideRadius;
 
-        // Mirror symmetry plus Fibonacci-derived shallow arc: centre is the
-        // apex, both outer pedestals sit at the exact same level.
-        card.layoutY = HOME_ROW_DROP
-          + (card.layoutIndex === 1 ? centerRise : -outerDrop);
+        // All three sheets and their paired jets share one vertical level.
+        card.layoutY = HOME_ROW_DROP;
 
         // Die Grundskalierung bleibt beim Anflug stabil.
         // Die Kamera uebernimmt das Heranfahren.
@@ -1305,9 +1287,7 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     /** Welt-Bounding-Box des Sockels, fuer das Kamera-Framing. */
     projectBounds(out = new THREE.Box3()) {
-      const mesh = group.getObjectByName('example-preview');
-      mesh.updateWorldMatrix(true, false);
-      return out.setFromObject(mesh);
+      return cards.find(c => c.key === 'projekte').examplePreview.bounds(out);
     },
     faceLabels(camera) {
       for (const card of cards) {
@@ -1345,6 +1325,7 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     setOpened(key, _isolate = false) {
       openedKey = key;
+      cards.find(c => c.key === 'projekte')?.examplePreview?.setOpen(key === 'projekte');
       if (isDocumentKey(key)) resumeCard = cards.find((card) => card.key === key);
       for (const card of cards) {
         // Nachbarsockel verschwinden nicht schlagartig, sondern laufen
@@ -1408,7 +1389,7 @@ export function createCards({ renderer, reduced = false } = {}) {
           const topBase = card.ceiling?.children[0];
           if (topBase) topBase.rotation.y = elapsed * .055;
         }
-        card.accentRing.material.color.lerp(new THREE.Color(card.active || card.hover > .1
+        card.accentRing.material.color.lerp(new THREE.Color(card.hover > .1
           ? LIGHT_PALETTE.amber : LIGHT_PALETTE.fiberBlue).multiplyScalar(1.5 + menuFlash * .8), k);
         // The upper clone shares this material and therefore the same pulse.
         card.accentRing.material.opacity = Math.min(1,
@@ -1435,14 +1416,10 @@ export function createCards({ renderer, reduced = false } = {}) {
         card.resumeFrame?.update(delta);
         card.resumeProjection?.update(delta);
 
-        // Mirrored side elements also breathe in phase; the centre uses
-        // the complementary golden-ratio phase instead of a key-length accident.
+        // Gentle rotation is retained; vertical breathing is shared by all three.
         const phase = card.layoutIndex === 1 ? Math.PI / LAYOUT_PHI : 0;
-        // The HTML controls share this plane: hold it still while browsing.
-        // The pedestal bodies retain their independent slow rotation.
-        card.holder.position.y = card.layoutY + (card.key === 'projekte' && openedKey === card.key
-          ? 0
-          : Math.sin(elapsed * 0.18 + phase) * 0.11 + card.hover * 0.16);
+        // The controls follow the sheet; activation never changes its vertical offset.
+        card.holder.position.y = card.layoutY + Math.sin(elapsed * .18) * .11 + card.hover * .16;
         if (isDocumentKey(card.key)) {
           if (
             !card.rotationDragging

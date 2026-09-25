@@ -11,11 +11,12 @@ await mkdir(output, { recursive: true });
 await mkdir('public/cv', { recursive: true });
 const browser = await chromium.launch({ ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}), args: ['--no-sandbox'] });
 const manifest = {};
+const hologramOnly = process.argv.includes('--hologram-only');
 try {
   for (const language of ['de', 'en']) {
     const source = await readFile(`Elemente/lebenslauf${language === 'en' ? '.en' : ''}.svg`, 'utf8');
     const page = await browser.newPage({ viewport: { width: 1258, height: 3840 } });
-    const dimensions = await page.evaluate(source => {
+    const dimensions = await page.evaluate(({source,language,hologramOnly}) => {
       const xml = new DOMParser().parseFromString(source, 'image/svg+xml');
       const svg = xml.documentElement;
       const width = Number(svg.getAttribute('width')), height = Number(svg.getAttribute('height'));
@@ -36,12 +37,58 @@ try {
       document.documentElement.style.background = '#03060d';
       document.body.style.cssText = 'margin:0;background:transparent';
       document.body.replaceChildren(document.importNode(svg, true));
+      if (hologramOnly) {
+        const live = document.querySelector('svg');
+        const overlay = document.createElementNS(ns, 'g');
+        overlay.setAttribute('transform', `scale(${width/1258} ${height/3840})`);
+        // Remove only the decorative perimeter, retaining all document text.
+        const mask = document.createElementNS(ns, 'clipPath'); mask.id='hologram-content';
+        for(let page=0;page<2;page++){
+          const rect=document.createElementNS(ns,'rect');
+          for(const [key,value] of Object.entries({x:width*.042,y:page*height/2+height/2*.016,width:width*.916,height:height/2*.98}))rect.setAttribute(key,value);
+          mask.append(rect);
+        }
+        live.querySelector('defs').append(mask);
+        const content=document.createElementNS(ns,'g');
+        const original=live.querySelector('g');original.replaceWith(content);content.append(original);content.setAttribute('clip-path','url(#hologram-content)');
+        const erase=document.createElementNS(ns,'mask');erase.id='centred-heading-mask';erase.setAttribute('maskUnits','userSpaceOnUse');
+        for(const [key,value] of Object.entries({x:0,y:0,width,height}))erase.setAttribute(key,value);
+        const white=document.createElementNS(ns,'rect');for(const [key,value] of Object.entries({width,height,fill:'white'}))white.setAttribute(key,value);erase.append(white);
+        live.querySelector('defs').append(erase);content.setAttribute('mask','url(#centred-heading-mask)');
+        const headings = [
+          [50,30,1158,165,629,143,66,'Vladimir Leicht','Vladimir Leicht'],
+          [60,707,1138,82,629,763,36,'BILDUNGSWEG','EDUCATION & TRAINING'],
+          [400,928,785,54,797,972,29,'Praxisphase','Practical Experience'],
+          [60,1358,595,72,355,1414,34,'FÄHIGKEITEN','SKILLS'],
+          [713,1358,485,72,949,1414,34,'INTERESSEN','INTERESTS'],
+          [60,1440,595,38,355,1471,20,'SYSTEME & INFRASTRUKTUR','SYSTEMS & INFRASTRUCTURE'],
+          [60,1551,595,40,355,1584,20,'ENDPOINT-MANAGEMENT & MONITORING','ENDPOINT MANAGEMENT & MONITORING'],
+          [60,1638,595,42,355,1672,20,'AUTOMATISIERUNG & ENTWICKLUNG','AUTOMATION & DEVELOPMENT'],
+          [60,1756,595,43,355,1792,20,'DOKUMENTATION & SPRACHEN','DOCUMENTATION & LANGUAGES'],
+          [713,1630,485,58,949,1674,27,'PERSÖNLICHE INFORMATIONEN','PERSONAL INFORMATION'],
+          [60,1980,1138,104,629,2058,36,'ARBEITSLEBEN','PROFESSIONAL EXPERIENCE'],
+          [60,3340,1138,83,629,3400,34,'ZIVILDIENST','CIVILIAN SERVICE'],
+          [60,3555,1138,84,629,3614,34,'AUSLANDSERFAHRUNG','INTERNATIONAL EXPERIENCE'],
+        ];
+        for(const [x,y,w,h,cx,baseline,size,de,en] of headings){
+          const rect=document.createElementNS(ns,'rect');for(const [key,value] of Object.entries({x,y,width:w,height:h,fill:'black'}))rect.setAttribute(key,value);rect.setAttribute('transform',`scale(${width/1258} ${height/3840})`);erase.append(rect);
+          const text=document.createElementNS(ns,'text');for(const [key,value] of Object.entries({x:cx,y:baseline,fill:baseline===143?'#d4e8f8':'#e77d1a','font-family':'Projection Heading, sans-serif','font-size':size,'font-weight':600,'text-anchor':'middle'}))text.setAttribute(key,value);
+          text.textContent=language==='de'?de:en;overlay.append(text);
+        }
+        live.append(overlay);
+      }
+
       return { width, height, portrait: { x, y, w, h } };
-    }, source);
+    }, {source,language,hologramOnly});
     await page.setViewportSize({ width: dimensions.width, height: dimensions.height });
+    if(hologramOnly){const font=await readFile('public/knallblau/fonts/barlow-condensed-700.woff2');await page.addStyleTag({content:`@font-face{font-family:'Projection Heading';font-weight:600;src:url(data:font/woff2;base64,${font.toString('base64')})}`});}
     await page.evaluate(async () => { await Promise.all([...document.querySelectorAll('image')].map(el => { const image = new Image(); image.src = el.href.baseVal; return image.decode(); })); await document.fonts.ready; });
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${output}/${language}.png`, omitBackground: true, fullPage: true });
+    if(hologramOnly){
+      const result=spawnSync(process.env.CV_PYTHON || 'python3',['-c', 'from PIL import Image;import sys;Image.open(sys.argv[1]).save(sys.argv[2],quality=95,method=6)',`${output}/${language}.png`,`public/cv/CV_Hologram_${language.toUpperCase()}.webp`],{encoding:'utf8'});
+      assert.equal(result.status,0,result.stderr);await page.close();console.log(`${language}: centred hologram headings, decorative perimeter removed`);continue;
+    }
     const python = process.env.CV_PYTHON || 'python3';
     const result = spawnSync(python, ['-c', `from PIL import Image
 import pymupdf,sys,json
@@ -76,5 +123,5 @@ reader.save('public/cv/CV_Reader_'+lang+'.docx')
     await page.close();
     console.log(`${language}: original layout without portrait/birth date, WebP + PDF + DOCX`);
   }
-  await writeFile('src/data/cvProjection.json', JSON.stringify(manifest, null, 2) + '\n');
+  if(!hologramOnly) await writeFile('src/data/cvProjection.json', JSON.stringify(manifest, null, 2) + '\n');
 } finally { await browser.close(); }

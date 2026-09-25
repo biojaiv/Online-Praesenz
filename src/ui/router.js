@@ -56,7 +56,10 @@ export function createRouter({ onEnter, onMenuHover }) {
   });
 
   function normalise(raw) {
-    return (raw || '').replace(/^#/, '').trim() || 'home';
+    const route = (raw || '').replace(/^#/, '').trim() || 'home';
+    if (route === 'projekte') return 'projekte/webseiten';
+    if (route === 'projekte/privat') return 'projekte/systemintegration';
+    return route;
   }
 
   function markActive(target) {

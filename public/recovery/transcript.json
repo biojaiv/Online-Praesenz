@@ -1,0 +1,214 @@
+{
+  "de": [
+    {
+      "t": "Zweck: Ausfälle erkennen, gezielt beheben und den Erfolg belegen",
+      "w": "Nach einem Ausfall sollen Anwendung, Daten und Schutzregeln wieder korrekt funktionieren.",
+      "m": "Vier Debian-VMs; Erweiterung um PostgreSQL, Zustandsprüfung und geregelte Wiederherstellung.",
+      "a": 3.5,
+      "b": 13,
+      "st": "ziel"
+    },
+    {
+      "t": "Die vorhandene Grundlage schützt Speicher und schafft einen Sollbestand",
+      "w": "Gespeicherte Lab-Daten schützen und definierte Einstellungen später wiederherstellen können.",
+      "m": "LUKS2/ext4, KVM/libvirt und 21 geprüfte Dateien; der Konfigurationsvergleich schreibt noch nichts zurück.",
+      "a": 13,
+      "b": 22.5,
+      "st": "ist"
+    },
+    {
+      "t": "Netzzonen begrenzen die Zugriffe",
+      "w": "Verwaltung erlauben und ungewollte Zugriffe gezielt unterbinden.",
+      "m": "Drei Netze, nftables und SSH-Schlüssel; Ops → Services geroutet, Client → Ops gesperrt.",
+      "a": 22.5,
+      "b": 32,
+      "st": "ist"
+    },
+    {
+      "t": "Geprüfte Software wird offline übertragen",
+      "w": "Pakete kontrolliert bereitstellen, ohne direkten Internetzugang der Gäste.",
+      "m": "Debian-Signaturen, SHA256, apt-offline und nur lesbare ISO-Medien; Ansible ist auf Ops installiert.",
+      "a": 32,
+      "b": 41.5,
+      "st": "ist"
+    },
+    {
+      "t": "Eine Anwendung mit einer PostgreSQL-Datenbank",
+      "w": "Veränderliche Daten machen den Wiederanlauf überprüfbar: Läuft auch die Anwendung wieder?",
+      "m": "Kleine Geräteverwaltung auf Services; PostgreSQL speichert Geräte und Wartungsvorgänge.",
+      "a": 41.5,
+      "b": 51,
+      "st": "plan"
+    },
+    {
+      "t": "Konsistente Sicherungen außerhalb des Laptops",
+      "w": "Eine Sicherung muss zurückspielbar sein und den Verlust des Originaldatenträgers überstehen.",
+      "m": "pg_dump für konsistente Exporte, von Ops abgerufen; Restic sichert sie mit Rollen, Konfiguration und Ops-Unterlagen.",
+      "a": 51,
+      "b": 61.5,
+      "st": "plan"
+    },
+    {
+      "t": "Ops erkennt Abweichungen vom erwarteten Zustand",
+      "w": "Ein laufender Prozess allein beweist nicht, dass Anwendung und Datenbank funktionieren.",
+      "m": "systemd-Timer + Prüfdienst: Anwendungsaufruf, SQL-Testabfrage und Vergleich verwalteter Konfigurationen.",
+      "a": 61.5,
+      "b": 71.5,
+      "st": "plan"
+    },
+    {
+      "t": "Erst bestätigen und einordnen, dann handeln",
+      "w": "Ein kurzer Aussetzer oder eine legitime Datenänderung darf keine Rücksicherung auslösen.",
+      "m": "Mehrere Fehlprüfungen, festgelegte Fehlerklassen, nur ein Reparaturlauf und begrenzte Wiederholungen.",
+      "a": 71.5,
+      "b": 81,
+      "st": "plan"
+    },
+    {
+      "t": "Testfall 1: Ein Dienst wurde beendet",
+      "w": "Einen behebbaren Dienstausfall reparieren, ohne Daten auf einen älteren Stand zurückzusetzen.",
+      "m": "Prüfdienst bestätigt den Ausfall; Ansible prüft die Ursache, startet den Dienst und testet erneut.",
+      "a": 81,
+      "b": 90.5,
+      "st": "plan"
+    },
+    {
+      "t": "Testfall 2: Eine verwaltete Konfiguration weicht ab",
+      "w": "Die freigegebene Konfiguration herstellen, ohne beliebige Änderungen blind zu überschreiben.",
+      "m": "Ansible übernimmt den Sollbestand, prüft die Syntax und lädt den betroffenen Dienst kontrolliert neu.",
+      "a": 90.5,
+      "b": 100,
+      "st": "plan"
+    },
+    {
+      "t": "Testfall 3: Definierter Datenverlust",
+      "w": "Fehlende Daten zurückholen und gültige neuere Änderungen vor ungezieltem Überschreiben schützen.",
+      "m": "Schreibstopp → pg_restore in getrennte Datenbank → Daten prüfen → kontrolliert umschalten.",
+      "a": 100,
+      "b": 111,
+      "st": "plan"
+    },
+    {
+      "t": "Der Wiederanlauf wird aus Benutzersicht abgenommen",
+      "w": "Erst Funktion, korrekte Daten und wirksame Schutzregeln belegen eine erfolgreiche Wiederherstellung.",
+      "m": "Client-Test, Datenvergleich, Rechte- und Firewalltests; Wiederanlaufdauer und tatsächlichen Datenverlust messen.",
+      "a": 111,
+      "b": 121.5,
+      "st": "plan"
+    },
+    {
+      "t": "Automatik mit Grenzen: unbekannter Fehler oder erfolglose Reparatur",
+      "w": "Endlosschleifen und eine falsche Rücksicherung dürfen den ursprünglichen Schaden nicht vergrößern.",
+      "m": "Anhalten, Diagnose sichern und melden; bei SSH-Ausfall Konsolenweg, Ops-Unterlagen separat sichern.",
+      "a": 121.5,
+      "b": 132.5,
+      "st": "plan"
+    }
+  ],
+  "en": [
+    {
+      "t": "Purpose: detect faults, repair them precisely and verify recovery",
+      "w": "After an outage, the application, data and security rules should work correctly again.",
+      "m": "Four Debian VMs; planned additions: PostgreSQL, health checks and controlled recovery.",
+      "a": 3.5,
+      "b": 13,
+      "st": "ziel"
+    },
+    {
+      "t": "The existing foundation protects storage and defines a baseline",
+      "w": "Protect stored lab data and make it possible to restore approved settings later.",
+      "m": "LUKS2/ext4, KVM/libvirt and 21 verified files; configuration comparison does not yet write changes back.",
+      "a": 13,
+      "b": 22.5,
+      "st": "ist"
+    },
+    {
+      "t": "Network zones restrict access",
+      "w": "Allow administration while deliberately blocking unwanted access.",
+      "m": "Three networks, nftables and SSH keys; Ops → Services is routed, Client → Ops is blocked.",
+      "a": 22.5,
+      "b": 32,
+      "st": "ist"
+    },
+    {
+      "t": "Verified software is transferred offline",
+      "w": "Supply packages in a controlled way without direct internet access for guests.",
+      "m": "Debian signatures, SHA256, apt-offline and read-only ISO media; Ansible is installed on Ops.",
+      "a": 32,
+      "b": 41.5,
+      "st": "ist"
+    },
+    {
+      "t": "An application with a PostgreSQL database",
+      "w": "Changing data makes recovery testable: does the application work again as well?",
+      "m": "A small asset management app on Services; PostgreSQL stores devices and maintenance records.",
+      "a": 41.5,
+      "b": 51,
+      "st": "plan"
+    },
+    {
+      "t": "Consistent backups outside the laptop",
+      "w": "A backup must be restorable and survive the loss of the original storage device.",
+      "m": "Consistent pg_dump exports, fetched by Ops; Restic backs them up with roles, configuration and Ops documentation.",
+      "a": 51,
+      "b": 61.5,
+      "st": "plan"
+    },
+    {
+      "t": "Ops detects deviations from the expected state",
+      "w": "A running process alone does not prove that the application and database work.",
+      "m": "A systemd timer and health checker: application requests, an SQL test query and managed configuration comparisons.",
+      "a": 61.5,
+      "b": 71.5,
+      "st": "plan"
+    },
+    {
+      "t": "Confirm and classify before taking action",
+      "w": "A brief interruption or legitimate data change must not trigger a restore.",
+      "m": "Multiple failed checks, predefined fault classes, one repair run at a time and bounded retries.",
+      "a": 71.5,
+      "b": 81,
+      "st": "plan"
+    },
+    {
+      "t": "Test case 1: a service was stopped",
+      "w": "Repair a recoverable service failure without rolling data back to an older state.",
+      "m": "The checker confirms the failure; Ansible checks the cause, starts the service and tests again.",
+      "a": 81,
+      "b": 90.5,
+      "st": "plan"
+    },
+    {
+      "t": "Test case 2: a managed configuration has changed",
+      "w": "Restore the approved configuration without blindly overwriting arbitrary changes.",
+      "m": "Ansible applies the baseline, validates syntax and reloads the affected service in a controlled way.",
+      "a": 90.5,
+      "b": 100,
+      "st": "plan"
+    },
+    {
+      "t": "Test case 3: defined data loss",
+      "w": "Recover missing data while protecting valid newer changes from indiscriminate overwriting.",
+      "m": "Stop writes → pg_restore into a separate database → validate data → switch over under control.",
+      "a": 100,
+      "b": 111,
+      "st": "plan"
+    },
+    {
+      "t": "Recovery is accepted from the user’s perspective",
+      "w": "Only working functionality, correct data and effective security rules prove successful recovery.",
+      "m": "Client tests, data comparison, permission and firewall tests; measure recovery time and actual data loss.",
+      "a": 111,
+      "b": 121.5,
+      "st": "plan"
+    },
+    {
+      "t": "Automation with limits: unknown fault or unsuccessful repair",
+      "w": "Endless retries and an incorrect restore must not make the original damage worse.",
+      "m": "Stop, preserve diagnostics and report; use the console if SSH fails, keep Ops documentation separately.",
+      "a": 121.5,
+      "b": 132.5,
+      "st": "plan"
+    }
+  ]
+}

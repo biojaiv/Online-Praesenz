@@ -22,7 +22,9 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   }
   resize(); window.addEventListener('resize', resize);
   const status = dialog.querySelector('[role=status]');
-  const tunnel = createWarpTunnel(dialog, screen);
+  const tunnel = createWarpTunnel(dialog, screen, {
+    reflectionSource: () => project.preview(getLanguage(), getProjectionViewport().width <= 580),
+  });
   let state = 'closed', originFocus = null, iframe = null, events = null, timer = 0, ticket = 0;
   let project = getProject('systems'), separate = null;
   const post = type => iframe?.contentWindow?.postMessage({ type: `example:${type}` }, location.origin);
@@ -32,6 +34,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     status.textContent = t('example.loading');
     if (iframe) iframe.title = t(project.title);
     if (separate) separate.textContent = t('example.separate');
+    tunnel.refresh();
   }
   translate();
   const unsubscribe = onLanguageChange(translate);
@@ -51,7 +54,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     dialog.close(); state = 'closed';
     frame?.classList.remove('is-example-projected');
     stage?.cards.setTemporaryActive(null);
-    const restoredFocus = originFocus?.isConnected ? originFocus : document.querySelector(`.project-choice[data-project-id="${project.id}"]`) || trigger;
+    const restoredFocus = originFocus?.isConnected ? originFocus : document.querySelector(`[data-example-open][data-project-id="${project.id}"]`) || trigger;
     restoredFocus?.focus?.({ preventScroll: true });
     if (route) onNavigate(route);
   }

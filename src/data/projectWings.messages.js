@@ -1,0 +1,26 @@
+export const projectWingsMessages = {
+ de: {
+  'projects.integration':'Systemintegration','projects.active':'AKTIV','projects.works':'Arbeiten','projects.work':'Arbeit',
+  'projects.design':'Gestaltung · Aufbau · Barrierefreiheit','projects.infrastructure':'Netz · Server · Wiederanlauf',
+  'projects.tischlerei':'Tischlerei · Branchen-Demo','projects.praxis':'Praxis · Branchen-Demo','projects.kanzlei':'Kanzlei · Branchen-Demo','projects.demo':'Fiktives Beispiel · kein realer Betrieb',
+  'projects.select':'Bereich wählen','projects.open':'Öffnen ↗','projects.play':'Projektfilm ansehen ↗',
+  'projects.hint':'← → Bereich wechseln · ↑ ↓ Zoom · ESC zurück','projects.concepts':'Freie Gestaltungskonzepte · keine Kundenaufträge',
+  'recovery.title':'Recovery Lab','recovery.note':'Wiederanlauf mit Anwendung und Datenbank',
+  'recovery.status':'BESTAND + GEPLANTE ERWEITERUNG','recovery.planned':'ERWEITERUNG GEPLANT',
+  'recovery.summary':'Vier Debian-VMs, getrennte Netzzonen und geprüfte Konfigurationen bilden die Grundlage. Der Film zeigt den vorhandenen Aufbau und die geplante Erweiterung um PostgreSQL, externe Sicherungen und einen kontrollierten Wiederanlauf.',
+  'recovery.short':'Vorhandenes Lab mit vier Debian-VMs. Anwendung, externe Sicherung und automatisierter Wiederanlauf sind als Erweiterung geplant.',
+  'recovery.transcript':'Film als Text · 13 Schritte','recovery.why':'Warum','recovery.how':'Umsetzung / Mittel','recovery.existing':'BESTAND','recovery.goal':'ZIEL','recovery.plan':'GEPLANT','recovery.silent':'02:20 · ohne Ton · Texte im Film auf Deutsch','recovery.back':'Zurück zu den Projekten',
+ },
+ en: {
+  'projects.integration':'Systems integration','projects.active':'ACTIVE','projects.works':'works','projects.work':'work',
+  'projects.design':'Design · Structure · Accessibility','projects.infrastructure':'Networks · Servers · Recovery',
+  'projects.tischlerei':'Joinery · Industry demo','projects.praxis':'Medical practice · Industry demo','projects.kanzlei':'Law office · Industry demo','projects.demo':'Fictional example · not a real business',
+  'projects.select':'Choose a section','projects.open':'Open ↗','projects.play':'Watch project film ↗',
+  'projects.hint':'← → Switch section · ↑ ↓ Zoom · ESC back','projects.concepts':'Independent design concepts · not commissioned work',
+  'recovery.title':'Recovery Lab','recovery.note':'Application and database recovery',
+  'recovery.status':'EXISTING SETUP + PLANNED EXTENSION','recovery.planned':'EXTENSION PLANNED',
+  'recovery.summary':'Four Debian VMs, separate network zones and verified configurations form the foundation. The film shows the existing setup and planned additions: PostgreSQL, external backups and controlled recovery.',
+  'recovery.short':'An existing lab with four Debian VMs. The application, external backup and automated recovery are planned extensions.',
+  'recovery.transcript':'Film transcript · 13 steps','recovery.why':'Why','recovery.how':'Implementation / tools','recovery.existing':'EXISTING','recovery.goal':'GOAL','recovery.plan':'PLANNED','recovery.silent':'02:20 · silent film · English on-screen text','recovery.back':'Back to projects',
+ },
+};

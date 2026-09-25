@@ -19,14 +19,14 @@ try {
     for (const lang of ['de', 'en']) {
       const response = await page.goto(`${base}/beispiel/?lang=${lang}`);
       assert.equal(response.status(), 200);
-      await page.locator('.hardware').evaluate(image => image.decode());
+      await page.locator('.infrastructure').first().waitFor();
+      await page.evaluate(() => document.fonts.ready);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-      assert.equal(await page.locator('nav a').count(), 3);
+      assert.equal(await page.locator('.chapter-nav a').count(), 7);
       await page.screenshot({ path: `${output}/direct-${width}-${lang}.png` });
-      await page.locator('nav a[href="#lebenslauf"]').click();
-      await page.locator('#cv-title').waitFor();
-      assert(await page.locator('.education').count() > 0);
-      assert.match(await page.locator('a.contact').getAttribute('href'), /^mailto:/);
+      await page.locator('.chapter-nav [data-jump="5"]').click();
+      await page.waitForFunction(() => document.querySelector('.chapter-nav [aria-current]')?.dataset.jump === '5');
+      assert.equal(await page.locator('.story-project').getAttribute('href'), '/#abschluss');
       results.push({ width, height, lang, passed: true });
     }
   }
@@ -50,7 +50,7 @@ try {
   await fallbackPage.goto(`${base}/#home`);
   await fallbackPage.locator('.stage.is-fallback').waitFor();
   await fallbackPage.locator('.nav__link[data-target="projekte"]').click();
-  await fallbackPage.locator('.project-choice[data-project-id="systems"]').click();
+  await fallbackPage.locator('[data-example-open][data-project-id="systems"]').click();
   await fallbackPage.waitForURL(url => url.pathname === '/beispiel/' && ['de', 'en'].includes(url.searchParams.get('lang')));
   await fallbackPage.locator('h1').waitFor();
   results.push({ webglFallback: true });
@@ -63,7 +63,7 @@ try {
   await scene.goto(`${base}/#projekte`);
   await scene.waitForFunction(() => document.querySelector('#boot.is-done'));
   await scene.locator('.nav__link[data-target="projekte"]').click();
-  await scene.locator('.project-choice[data-project-id="systems"]').click();
+  await scene.locator('[data-example-open][data-project-id="systems"]').click();
   await scene.locator('.example-projection[data-state="open"] iframe[data-ready="true"]').waitFor();
   const embedded = scene.frameLocator('.example-projection iframe');
   await embedded.locator('h1').click();
@@ -73,7 +73,8 @@ try {
   assert.equal(await scene.locator('[data-example-separate]').count(), 0);
   assert.equal(await scene.locator('.head').isVisible(), false);
   assert.equal(await scene.locator('[data-example-back]').isVisible(), true);
-  await embedded.locator('[data-portfolio="abschluss"]').click();
+  await embedded.locator('.chapter-nav [data-jump="3"]').click();
+  await embedded.locator('.story-project').click();
   await scene.waitForFunction(() => !document.querySelector('.example-projection').open);
   await scene.waitForURL('**/#abschluss');
   await scene.locator('.nav__link[data-target="abschluss"]').click();

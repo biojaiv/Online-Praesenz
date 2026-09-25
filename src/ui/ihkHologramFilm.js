@@ -74,6 +74,7 @@ export function createIhkHologramFilm(canvas) {
     canvas.dispatchEvent(new WheelEvent('wheel', {
       deltaX: event.deltaX, deltaY: event.deltaY, deltaMode: event.deltaMode,
       clientX: event.clientX, clientY: event.clientY, ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey, shiftKey: event.shiftKey, buttons: event.buttons,
       bubbles: true, cancelable: true,
     }));
   }

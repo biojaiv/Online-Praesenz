@@ -40,7 +40,8 @@ const PALETTE = Object.freeze({
 // Lage der Maschine in der Welt. Der Kern sitzt hinter und ueber den
 // Sockeln, die Scheibe ist zum Betrachter geneigt, die aeusseren Ringe
 // umschliessen Sockel und Kamera.
-const MACHINE_CENTRE = new THREE.Vector3(-7, 6, -34);
+// Pedestals lie at z=0: reduce the original depth separation by 15%.
+const MACHINE_CENTRE = new THREE.Vector3(-7, 6, -34 * 0.85);
 const MACHINE_TILT = new THREE.Euler(0.5, 0.3, -0.06);
 // Mittelpunkt der Sockelreihe: um diesen Punkt kreist die Kamera. Zwei
 // flache Ringe liegen genau darum.
@@ -812,7 +813,7 @@ function createGlowBody(radius, haloScale) {
 
 /* ---------- Die Maschine ---------- */
 
-export function createOrreryMachine({ renderer = null } = {}) {
+export function createOrreryMachine({ renderer = null, buildWorld = null, reduced = false } = {}) {
   const group = new THREE.Group();
   group.name = 'epic-orrery-machine-v6';
 
@@ -827,113 +828,123 @@ export function createOrreryMachine({ renderer = null } = {}) {
   const gearSets = [];
   const paths = [];
 
-  // Hauptmaschine, geneigt hinter den Sockeln.
-  const main = buildOrrery({ material, orbGeometry, gearGeometry, rng, scale: 1, detail: 1 });
-  const machine = new THREE.Group();
-  machine.name = 'orrery-main';
-  machine.position.copy(MACHINE_CENTRE);
-  machine.rotation.copy(MACHINE_TILT);
-  machine.add(main.root);
-  group.add(machine);
-  rotors.push(...main.rotors, { object: machine, speed: 0.0024, axis: 'y' });
-  orbSets.push(...main.orbSets);
-  gearSets.push(...main.gearSets);
-  paths.push(...main.paths);
-
-  // Drei Satelliten-Mechanismen rund um die Sockel, damit jeder Blickwinkel
-  // Struktur zeigt.
   const satellites = [];
-  const satelliteSpecs = [
-    { position: [58, 18, -12], tilt: [0.9, 0.4, 0.5], scale: 0.34, speed: -0.014 },
-    { position: [-52, 24, 18], tilt: [1.2, -0.6, 0.2], scale: 0.28, speed: 0.011 },
-    // Die beiden hinteren liegen im Ruecken der Ausgangskamera: erst der
-    // Orbit bringt sie ins Bild.
-    { position: [-28, 10, 76], tilt: [0.55, 1.5, 0.8], scale: 0.52, speed: 0.009 },
-    { position: [46, -6, 62], tilt: [-0.7, 0.9, -0.3], scale: 0.36, speed: -0.012 },
-  ];
-  for (const spec of satelliteSpecs) {
-    const satellite = buildOrrery({ material, orbGeometry, gearGeometry, rng, scale: spec.scale, detail: 0.5 });
-    const holder = new THREE.Group();
-    holder.position.fromArray(spec.position);
-    holder.rotation.set(...spec.tilt);
-    holder.add(satellite.root);
-    group.add(holder);
-    satellites.push(holder);
-    rotors.push(...satellite.rotors, { object: holder, speed: spec.speed, axis: 'y' });
-    orbSets.push(...satellite.orbSets);
-    gearSets.push(...satellite.gearSets);
-    for (const path of satellite.paths) paths.push({ ...path, weight: path.weight * 0.35, holder });
-  }
+  if (buildWorld) {
+    const world = buildWorld({ material, centre: MACHINE_CENTRE });
+    group.add(world.root);
+    rotors.push(...world.rotors);
+    paths.push(...world.paths);
+    satellites.push(...world.satellites);
+  } else {
+    // Hauptmaschine, geneigt hinter den Sockeln.
+    const main = buildOrrery({ material, orbGeometry, gearGeometry, rng, scale: 1, detail: 1 });
+    const machine = new THREE.Group();
+    machine.name = 'orrery-main';
+    machine.position.copy(MACHINE_CENTRE);
+    machine.rotation.copy(MACHINE_TILT);
+    machine.add(main.root);
+    group.add(machine);
+    rotors.push(...main.rotors, { object: machine, speed: 0.0024, axis: 'y' });
+    orbSets.push(...main.orbSets);
+    gearSets.push(...main.gearSets);
+    paths.push(...main.paths);
 
-  // Zwei flache Skalenringe genau um den Kamera-Drehpunkt: sie fassen die
-  // drei Sockel ein und bleiben beim Orbit an ihrem Ort.
-  {
-    const parts = [];
-    ring(parts, 30, 0.22, 220, { y: -4.2 });
-    ticks(parts, 30, 180, { y: -4.2, length: 0.5, majorEvery: 15, majorLength: 1.3, thickness: 0.07 });
-    ring(parts, 37, 0.14, 240, { y: -6.4, tilt: new THREE.Euler(0.07, 0, -0.04) });
-    for (let index = 0; index < 24; index += 1) {
-      const angle = (index / 24) * Math.PI * 2 + 0.13;
-      TMP_A.set(Math.cos(angle) * 30, -4.2, Math.sin(angle) * 30);
-      TMP_B.set(Math.cos(angle) * 37, -6.4, Math.sin(angle) * 37);
-      bar(parts, TMP_A, TMP_B, 0.09, 0.09);
-      node(parts, TMP_B, 0.3);
-    }
-    const halo = new THREE.Mesh(mergeParts(parts), material);
-    halo.name = 'pivot-halo';
-    halo.position.copy(PIVOT);
-    group.add(halo);
-    rotors.push({ object: halo, speed: -0.0036, axis: 'y' });
-    paths.push({ object: halo, radius: 30, y: -4.2, weight: 1.5 });
-    paths.push({ object: halo, radius: 37, y: -6.4, weight: 1.0 });
+    // Vier Satelliten-Mechanismen rund um die Sockel, damit jeder Blickwinkel
+    // Struktur zeigt.
 
-    // Zwei grosse, steil stehende Ringe um den Drehpunkt: eine Armillarsphaere,
-    // in der die Sockel stehen. Sie schliessen die Szene auch nach hinten.
-    const armillarySpecs = [
-      { r: 46, tube: 0.26, tilt: new THREE.Euler(1.15, 0.55, 0.35), speed: 0.0028, orbs: 3 },
-      { r: 56, tube: 0.30, tilt: new THREE.Euler(-0.95, -0.7, 1.05), speed: -0.0021, orbs: 4 },
+    const satelliteSpecs = [
+      { position: [58, 18, -12], tilt: [0.9, 0.4, 0.5], scale: 0.34, speed: -0.014 },
+      { position: [-52, 24, 18], tilt: [1.2, -0.6, 0.2], scale: 0.28, speed: 0.011 },
+      // Die beiden hinteren liegen im Ruecken der Ausgangskamera: erst der
+      // Orbit bringt sie ins Bild.
+      { position: [-28, 10, 76], tilt: [0.55, 1.5, 0.8], scale: 0.52, speed: 0.009 },
+      { position: [46, -6, 62], tilt: [-0.7, 0.9, -0.3], scale: 0.36, speed: -0.012 },
     ];
-    for (const spec of armillarySpecs) {
-      const armParts = [];
-      ring(armParts, spec.r, spec.tube, Math.round(150 + spec.r * 3), {});
-      ticks(armParts, spec.r, Math.round(spec.r * 4), { length: 0.6, majorEvery: 12, majorLength: 1.5, thickness: 0.08 });
-      ring(armParts, spec.r - 1.8, spec.tube * 0.4, Math.round(130 + spec.r * 2.5), {});
-      for (let index = 0; index < 48; index += 1) {
-        const angle = (index / 48) * Math.PI * 2;
-        TMP_A.set(Math.cos(angle) * spec.r, 0, Math.sin(angle) * spec.r);
-        TMP_B.set(Math.cos(angle) * (spec.r - 1.8), 0, Math.sin(angle) * (spec.r - 1.8));
-        bar(armParts, TMP_A, TMP_B, 0.07, 0.07);
-      }
-      const armillary = new THREE.Mesh(mergeParts(armParts), material);
-      armillary.name = 'pivot-armillary';
-      armillary.position.copy(PIVOT);
-      armillary.rotation.copy(spec.tilt);
-      // Auch die Armillarringe kreisen um die Achse ihres Mittelpunkts.
-      const armHolder = new THREE.Group();
-      armHolder.position.copy(PIVOT);
-      armillary.position.set(0, 0, 0);
-      armHolder.add(armillary);
-      group.add(armHolder);
-      rotors.push({ object: armHolder, speed: spec.speed * 1.6, axis: 'y' });
-      rotors.push({ object: armillary, speed: spec.speed, axis: 'local' });
-      paths.push({ object: armillary, radius: spec.r, y: 0, weight: 1.3 });
-
-      const items = [];
-      for (let index = 0; index < spec.orbs; index += 1) {
-        const angle = rng() * Math.PI * 2;
-        items.push({
-          position: new THREE.Vector3(Math.cos(angle) * spec.r, 0, Math.sin(angle) * spec.r),
-          size: 1.4 + rng() * 2.2, spin: (rng() - 0.5) * 0.6, phase: rng() * 6.28,
-        });
-      }
-      const orbs = new THREE.InstancedMesh(orbGeometry, material, items.length);
-      armillary.add(orbs);
-      orbSets.push({ mesh: orbs, items });
+    for (const spec of satelliteSpecs) {
+      const satellite = buildOrrery({ material, orbGeometry, gearGeometry, rng, scale: spec.scale, detail: 0.5 });
+      const holder = new THREE.Group();
+      holder.position.fromArray(spec.position);
+      holder.rotation.set(...spec.tilt);
+      holder.add(satellite.root);
+      group.add(holder);
+      satellites.push(holder);
+      rotors.push(...satellite.rotors, { object: holder, speed: spec.speed, axis: 'y' });
+      orbSets.push(...satellite.orbSets);
+      gearSets.push(...satellite.gearSets);
+      for (const path of satellite.paths) paths.push({ ...path, weight: path.weight * 0.35, holder });
     }
+
+    // Zwei flache Skalenringe genau um den Kamera-Drehpunkt: sie fassen die
+    // drei Sockel ein und bleiben beim Orbit an ihrem Ort.
+    {
+      const parts = [];
+      ring(parts, 30, 0.22, 220, { y: -4.2 });
+      ticks(parts, 30, 180, { y: -4.2, length: 0.5, majorEvery: 15, majorLength: 1.3, thickness: 0.07 });
+      ring(parts, 37, 0.14, 240, { y: -6.4, tilt: new THREE.Euler(0.07, 0, -0.04) });
+      for (let index = 0; index < 24; index += 1) {
+        const angle = (index / 24) * Math.PI * 2 + 0.13;
+        TMP_A.set(Math.cos(angle) * 30, -4.2, Math.sin(angle) * 30);
+        TMP_B.set(Math.cos(angle) * 37, -6.4, Math.sin(angle) * 37);
+        bar(parts, TMP_A, TMP_B, 0.09, 0.09);
+        node(parts, TMP_B, 0.3);
+      }
+      const halo = new THREE.Mesh(mergeParts(parts), material);
+      halo.name = 'pivot-halo';
+      halo.position.copy(PIVOT);
+      group.add(halo);
+      rotors.push({ object: halo, speed: -0.0036, axis: 'y' });
+      paths.push({ object: halo, radius: 30, y: -4.2, weight: 1.5 });
+      paths.push({ object: halo, radius: 37, y: -6.4, weight: 1.0 });
+
+      // Zwei grosse, steil stehende Ringe um den Drehpunkt: eine Armillarsphaere,
+      // in der die Sockel stehen. Sie schliessen die Szene auch nach hinten.
+      const armillarySpecs = [
+        { r: 46, tube: 0.26, tilt: new THREE.Euler(1.15, 0.55, 0.35), speed: 0.0028, orbs: 3 },
+        { r: 56, tube: 0.30, tilt: new THREE.Euler(-0.95, -0.7, 1.05), speed: -0.0021, orbs: 4 },
+      ];
+      for (const spec of armillarySpecs) {
+        const armParts = [];
+        ring(armParts, spec.r, spec.tube, Math.round(150 + spec.r * 3), {});
+        ticks(armParts, spec.r, Math.round(spec.r * 4), { length: 0.6, majorEvery: 12, majorLength: 1.5, thickness: 0.08 });
+        ring(armParts, spec.r - 1.8, spec.tube * 0.4, Math.round(130 + spec.r * 2.5), {});
+        for (let index = 0; index < 48; index += 1) {
+          const angle = (index / 48) * Math.PI * 2;
+          TMP_A.set(Math.cos(angle) * spec.r, 0, Math.sin(angle) * spec.r);
+          TMP_B.set(Math.cos(angle) * (spec.r - 1.8), 0, Math.sin(angle) * (spec.r - 1.8));
+          bar(armParts, TMP_A, TMP_B, 0.07, 0.07);
+        }
+        const armillary = new THREE.Mesh(mergeParts(armParts), material);
+        armillary.name = 'pivot-armillary';
+        armillary.position.copy(PIVOT);
+        armillary.rotation.copy(spec.tilt);
+        // Auch die Armillarringe kreisen um die Achse ihres Mittelpunkts.
+        const armHolder = new THREE.Group();
+        armHolder.position.copy(PIVOT);
+        armillary.position.set(0, 0, 0);
+        armHolder.add(armillary);
+        group.add(armHolder);
+        rotors.push({ object: armHolder, speed: spec.speed * 1.6, axis: 'y' });
+        rotors.push({ object: armillary, speed: spec.speed, axis: 'local' });
+        paths.push({ object: armillary, radius: spec.r, y: 0, weight: 1.3 });
+
+        const items = [];
+        for (let index = 0; index < spec.orbs; index += 1) {
+          const angle = rng() * Math.PI * 2;
+          items.push({
+            position: new THREE.Vector3(Math.cos(angle) * spec.r, 0, Math.sin(angle) * spec.r),
+            size: 1.4 + rng() * 2.2, spin: (rng() - 0.5) * 0.6, phase: rng() * 6.28,
+          });
+        }
+        const orbs = new THREE.InstancedMesh(orbGeometry, material, items.length);
+        armillary.add(orbs);
+        orbSets.push({ mesh: orbs, items });
+      }
+    }
+
   }
 
-  const dust = createDust(uniforms, rng);
-  group.add(dust.points);
+  const dust = buildWorld ? null : createDust(uniforms, rng);
+  if (dust) group.add(dust.points);
 
   const coreGlow = createGlowBody(0.55, 2.6);
   group.add(coreGlow.group);
@@ -987,11 +998,12 @@ export function createOrreryMachine({ renderer = null } = {}) {
 
   function updateRunners(elapsed, dt) {
     const activeCount = runners.filter((runner) => runner.active).length;
-    if (activeCount < RUNNER_MAX_ACTIVE && elapsed >= nextRunnerAt) {
+    if (waveActive && activeCount < RUNNER_MAX_ACTIVE && elapsed >= nextRunnerAt) {
       launchRunner(elapsed);
       nextRunnerAt = elapsed + RUNNER_PAUSE_MIN + rng() * (RUNNER_PAUSE_MAX - RUNNER_PAUSE_MIN);
     }
     for (const runner of runners) {
+      if (!waveActive) runner.active = false;
       if (!runner.active) {
         runner.colourUniform.set(0, 0, 0, 0);
         runner.glow.set(runner.position, runner.colour, 0);
@@ -1008,7 +1020,8 @@ export function createOrreryMachine({ renderer = null } = {}) {
       // Weich auf- und abblenden, dazwischen ein leichtes Flackern.
       const envelope = smooth01(age / 1.2) * (1 - smooth01((age - runner.duration + 1.8) / 1.8));
       const flicker = 0.88 + 0.12 * Math.sin(elapsed * 5.3 + runner.angle * 3.0);
-      runner.strength = envelope * flicker * visibility;
+      const episodeFade = 1 - smooth01((uniforms.uWaveRadius.value - WAVE_MAX_RADIUS) / 20);
+      runner.strength = envelope * flicker * visibility * episodeFade;
       runner.path.object.updateWorldMatrix(true, false);
       TMP_A.set(
         Math.cos(runner.angle) * runner.path.radius,
@@ -1148,6 +1161,10 @@ export function createOrreryMachine({ renderer = null } = {}) {
     if (object.isMesh || object.isPoints) object.renderOrder = -10;
   });
 
+  // Reduced motion stays dark until the user requests the inspection light.
+  // In normal playback, runners share the wave's active window, followed by
+  // an entirely dark pause of 11–22 seconds.
+
   const api = {
     group,
     ready: Promise.resolve(true),
@@ -1214,7 +1231,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
     setCompact(value) {
       compact = Boolean(value);
       for (const holder of satellites) holder.visible = !compact;
-      dust.setCompact(compact);
+      dust?.setCompact(compact);
     },
 
     setPointerNdc() {
@@ -1222,7 +1239,7 @@ export function createOrreryMachine({ renderer = null } = {}) {
     },
 
     setPixelRatio(value) {
-      dust.material.uniforms.uPixelRatio.value = Math.min(1.6, Math.max(0.75, Number(value) || 1));
+      if (dust) dust.material.uniforms.uPixelRatio.value = Math.min(1.6, Math.max(0.75, Number(value) || 1));
     },
 
     /** Kompatibel zur Intro-Steuerung, aber ohne dauerhafte Grundhelligkeit. */
@@ -1245,9 +1262,9 @@ export function createOrreryMachine({ renderer = null } = {}) {
     update(elapsed, delta) {
       lastElapsed = Number.isFinite(elapsed) ? elapsed : lastElapsed;
       const dt = Math.min(0.1, Math.max(0, delta || 0));
-      visibility += (visibilityTarget - visibility) * (1 - Math.pow(0.02, dt));
+      visibility = reduced ? visibilityTarget : visibility + (visibilityTarget - visibility) * (1 - Math.pow(0.02, dt));
       uniforms.uVisible.value = visibility;
-      uniforms.uTime.value = elapsed;
+      uniforms.uTime.value = reduced ? 0 : elapsed;
       // Der Dokumentzustand wandert in etwa einer Sekunde, statt zu springen.
       uniforms.uDocumentOpen.value += ((documentOpen ? 1 : 0) - uniforms.uDocumentOpen.value)
         * (1 - Math.pow(0.03, dt));
@@ -1258,9 +1275,11 @@ export function createOrreryMachine({ renderer = null } = {}) {
       }
       group.visible = true;
 
-      updateRotors(elapsed, dt);
-      updateWave(elapsed);
-      updateRunners(elapsed, dt);
+      if (!reduced) {
+        updateRotors(elapsed, dt);
+        updateWave(elapsed);
+        updateRunners(elapsed, dt);
+      }
 
       // Nur beim Start einer Front flammt der Kern kurz auf.
       coreFlash = Math.max(0, coreFlash - dt / 2.2);
@@ -1272,15 +1291,17 @@ export function createOrreryMachine({ renderer = null } = {}) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      const ownedGeometry = new Set();
       group.traverse((object) => {
         if (object.isMesh && object.geometry !== orbGeometry && object.geometry !== gearGeometry) {
-          object.geometry?.dispose?.();
+          ownedGeometry.add(object.geometry);
         }
       });
+      ownedGeometry.forEach(geometry => geometry?.dispose());
       orbGeometry.dispose();
       gearGeometry.dispose();
       material.dispose();
-      dust.dispose();
+      dust?.dispose();
       coreGlow.dispose();
       for (const runner of runners) runner.glow.dispose();
       group.clear();

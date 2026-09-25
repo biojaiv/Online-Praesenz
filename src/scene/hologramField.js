@@ -608,12 +608,9 @@ export function createHologramField({ cards, reduced = false } = {}) {
       }
 
       for (const state of states) {
-        state.target = activeRoot === 'home'
-          ? 0.66
-          : state.key === activeRoot
-            ? 1.22
-            : 0.32;
-        if (state.key === activeRoot) state.localPulse = 1;
+        // Camera navigation must not recolour or brighten the hologram volume.
+        state.target = 0.66;
+        state.localPulse = 0;
       }
 
       // Kein erzwungener Synchronlauf beim Fokus: das Dokument soll ruhig

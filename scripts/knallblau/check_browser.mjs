@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { chromium } from 'playwright';
+import { routes } from '../../src/knallblau/content.js';
+const base=process.env.KNALLBLAU_URL||'http://127.0.0.1:5176';
+const output=process.env.KNALLBLAU_TEST_OUTPUT||'/tmp/knallblau-check';
+await mkdir(output,{recursive:true});
+const browser=await chromium.launch({...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}),args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const results=[];const errors=[];
+try {
+ const page=await browser.newPage({locale:'de-DE',reducedMotion:'reduce'});
+ page.on('pageerror',e=>errors.push(e.message));
+ for(const width of [1440,768,390])for(const route of routes){
+  await page.setViewportSize({width,height:900});
+  const response=await page.goto(`${base}${route.path}?lang=${route.lang}`);
+  assert.equal(response.status(),200);await page.evaluate(()=>document.fonts.ready);
+  assert.equal(await page.locator('html').getAttribute('lang'),route.lang);
+  assert(await page.locator('h1').isVisible());
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`Overflow ${width} ${route.path}`);
+  assert(await page.evaluate(()=>[...document.images].filter(i=>i.loading!=='lazy').every(i=>i.complete&&i.naturalWidth>0)));
+  if(route.kind==='home')await page.screenshot({path:`${output}/home-${width}-${route.lang}.png`,fullPage:true});
+  results.push({route:route.path,width,status:response.status()});
+ }
+ await page.goto(`${base}/beispiele/knallblau/?lang=de`);
+ const form=page.locator('[data-demo-form]');
+ const posts=[];page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ await form.locator('button').click();assert.equal(await page.locator('#contact-email').getAttribute('aria-invalid'),'true');
+ await page.locator('#contact-email').fill('invalid');await page.locator('#contact-message').fill('Beispielanfrage');
+ await form.locator('button').click();assert.equal(await page.locator('#contact-email').getAttribute('aria-invalid'),'true');
+ await page.locator('#contact-email').fill('test@example.com');await form.locator('button').click();
+ assert.match(await page.locator('.form-status').textContent(),/nicht|keine|versendet/);assert.deepEqual(posts,[]);
+ await page.locator('[data-top]').click();assert.equal(await page.locator('#contact-message').inputValue(),'Beispielanfrage');
+ await page.locator('[data-project-choice="kanzlei"]').click();
+ await page.waitForFunction(()=>document.querySelector('.project-screen img').src.includes('kanzlei'));
+ await page.goto(`${base}/beispiele/knallblau/demo/tischlerei/?lang=de`);
+ await page.locator('[data-filter="working"]').click();assert.equal(await page.locator('[data-category]:visible').count(),1);
+ await page.locator('[data-filter="all"]').click();assert.equal(await page.locator('[data-category]:visible').count(),3);
+ await page.locator('summary').first().click();assert.equal(await page.locator('details[open]').count(),1);
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.goto(`${base}/beispiele/knallblau/?lang=de`);
+ await page.locator('[data-intro-replay]').click();assert.equal(await page.locator('html').getAttribute('data-opening'),'true');
+ await page.locator('[data-intro-skip]').click();assert.equal(await page.locator('html').getAttribute('data-opening'),null);
+ await page.locator('[data-intro-replay]').click();await page.waitForTimeout(2450);assert.equal(await page.locator('html').getAttribute('data-opening'),null);
+ await page.locator('[data-motif]').evaluate(b=>{for(let i=0;i<8;i++)b.click();});await page.waitForTimeout(950);
+ assert.equal(await page.evaluate(()=>document.getAnimations().length),0);
+ await page.locator('[data-intro-replay]').click();await page.locator('[data-motion-toggle]').click();
+ assert.equal(await page.evaluate(()=>document.getAnimations().length),0);
+ await page.emulateMedia({reducedMotion:'reduce'});await page.locator('[data-motion-toggle]').evaluate(b=>b.click());
+ assert.equal(await page.locator('html').getAttribute('data-reduced'),'true');
+ const nojs=await browser.newPage({javaScriptEnabled:false,locale:'de-DE'});
+ await nojs.goto(`${base}/beispiele/knallblau/`);assert(await nojs.locator('h1').isVisible());assert.equal(await nojs.locator('[data-demo-submit]').isDisabled(),true);
+ await nojs.locator('.project-story a').first().click();assert.match(nojs.url(),/arbeit\/tischlerei/);assert(await nojs.locator('h1').isVisible());await nojs.close();
+ assert.deepEqual(errors,[]);results.push({forms:true,noJavaScript:true,motionControls:true,gallery:true,errors});
+ await writeFile(`${output}/results.json`,JSON.stringify(results,null,2));console.log('Knallblau: 42 responsive route checks, forms, gallery, motion and no-JS passed.');
+}finally{await browser.close();}
