@@ -52,7 +52,7 @@ export function startTiefgang() {
           <div class="counter"><output class="time">00:00:00</output><p>${c.elapsed}</p><div class="progress-row"><progress max="100" value="0" aria-label="${c.elapsed}"></progress><span class="percentage">0%</span></div><small>${c.simulation}</small></div>
         </div><p class="signature">VL / VLADIMIR LEICHT<br><span>SYSTEMS INTEGRATION · 2026</span></p></aside>
       </div>
-      <footer class="depth"><div class="depth-scale">${c.layers.map(label=>`<span>${label}</span>`).join('')}<i class="depth-needle" aria-hidden="true"></i></div><div class="scroll-controls"><button data-prev aria-label="${c.previous}">↑</button><span>${c.scroll}</span><button data-next aria-label="${c.next}">↓</button></div></footer>
+      <footer class="depth"><div class="depth-scale">${c.layers.map(label=>`<span>${label}</span>`).join('')}<i class="depth-needle" aria-hidden="true"></i></div><div class="scroll-controls"><button data-prev aria-label="${c.previous}">↑</button><span class="scroll-hint">${c.scroll}</span><button data-next aria-label="${c.next}">↓</button></div></footer>
     </div>
     <main class="chapter-track" ${!reading?'aria-hidden="true" inert':''}>${chapterMarkup(c,language)}</main>`;
 
@@ -221,7 +221,20 @@ export function startTiefgang() {
       $('.reading-switch').hidden=motion.matches;
       journey.chapter(savedChapter,savedChapter/6);
     } else { scrollTo({top:savedChapter*innerHeight,behavior:'instant'});syncScroll(); }
-    cleanup=()=>{stopRoute();abort.abort();annotations.dispose();journey.dispose();scrollTrigger?.kill();};
+    let lastScroll = scrollY, scrollHold = 0;
+    const noteScroll = (direction) => {
+      if (!direction) return;
+      $('.scroll-controls').dataset.scroll = direction < 0 ? 'up' : 'down';
+      clearTimeout(scrollHold);
+      scrollHold = setTimeout(() => { delete $('.scroll-controls').dataset.scroll; }, 160);
+    };
+    window.addEventListener('scroll', () => {
+      const next = scrollY;
+      noteScroll(Math.sign(next - lastScroll));
+      lastScroll = next;
+    }, { signal, passive: true });
+    window.addEventListener('wheel', (event) => noteScroll(Math.sign(event.deltaY)), { signal, passive: true });
+    cleanup=()=>{clearTimeout(scrollHold);stopRoute();abort.abort();annotations.dispose();journey.dispose();scrollTrigger?.kill();};
     post('ready');
   }
   render();

@@ -329,3 +329,6 @@
 .source-infrastructure .vm-slide path{fill:#f6f1e6;stroke:#f2551d;stroke-width:1}
 .source-infrastructure .vm-slide text{fill:#f2551d;font:7px ui-monospace,Consolas,monospace}
 @media (prefers-reduced-motion:reduce){.source-infrastructure .led,.source-infrastructure .client-laptop{animation:none!important}.source-infrastructure *{transition:none!important}}
+.scroll-controls{translate:28px 0}.scroll-controls .scroll-hint{animation:scroll-hint-blink 2.8s ease-in-out infinite}
+@keyframes scroll-hint-blink{0%,22%{color:var(--muted)}40%,60%{color:#e8a45a}78%,100%{color:var(--muted)}}
+.scroll-controls[data-scroll=up] [data-prev],.scroll-controls[data-scroll=down] [data-next]{color:#e8a45a}
