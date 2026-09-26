@@ -39,14 +39,13 @@ const DESKTOP_MAX_WIDTH = 1241;
 const COMPACT_MAX_WIDTH = 820;
 const MAX_PIXELS = 5_200_000;
 const LINK_BOX_FALLBACK = Object.freeze({ start: 0.56, end: 0.71 });
-// Die sichtbare blaue Abschlusskante der ersten Seite liegt in der
-// Vorlage rund 10,6 % oberhalb des Seitenendes. Der Partikelrahmen bleibt
-// unverändert; nur diese dekorative Rasterkante wird an seine bestehende
-// Unterkante versetzt.
-const FIRST_PAGE_BOTTOM_RULE_OFFSET = 0.106;
-const FIRST_PAGE_BOTTOM_RULE_SEARCH = 0.028;
-const FIRST_PAGE_BOTTOM_RULE_BAND = 0.0035;
-const FIRST_PAGE_BOTTOM_RULE_EDGE_INSET = 0.0015;
+// Randstreifen jeder Seite, in denen die Vorlagen ihren eigenen Seitenrahmen
+// tragen (Anteile von Breite bzw. Seitenhöhe). Den Abschluss liefert allein
+// der gemeinsame Partikelrahmen.
+const PAGE_FRAME_BANDS = Object.freeze({
+  lebenslauf: { left: 0.043, right: 0.0403, top: 0.018, bottom: 0.008, soft: 0.001, zone: 0.06, zoneBottom: 0.1, dimLuma: 80 },
+  abschluss: { left: 0.012, right: 0.012, top: 0.005, bottom: 0.005, soft: 0.002 },
+});
 
 function chooseRasterSize(width, height, maxTextureSize, compact) {
   const aspect = width / height;
@@ -269,667 +268,60 @@ function makePageTransparent(context, width, pageHeight, pageTop = 0) {
 }
 
 
-function isBlueBottomRulePixel(r, g, b, a) {
-  return a >= 24
-    && b >= 42
-    && b - r >= 8
-    && g - r >= 2
-    && b >= g * 0.82;
-}
-
-function longestBlueBottomRuleRun(pixels, width, y, xStart, xEnd) {
-  let bestStart = -1;
-  let bestEnd = -1;
-  let runStart = -1;
-  let runEnd = -1;
-  let gap = 0;
-
-  const finishRun = () => {
-    if (runStart < 0 || runEnd < runStart) return;
-    if (
-      bestStart < 0
-      || (runEnd - runStart) > (bestEnd - bestStart)
-    ) {
-      bestStart = runStart;
-      bestEnd = runEnd;
-    }
-  };
-
-  for (let x = xStart; x < xEnd; x += 1) {
-    const index = (y * width + x) * 4;
-    const blue = isBlueBottomRulePixel(
-      pixels[index],
-      pixels[index + 1],
-      pixels[index + 2],
-      pixels[index + 3],
-    );
-
-    if (blue) {
-      if (runStart < 0) runStart = x;
-      runEnd = x;
-      gap = 0;
-    } else if (runStart >= 0 && gap < 3) {
-      gap += 1;
-    } else if (runStart >= 0) {
-      finishRun();
-      runStart = -1;
-      runEnd = -1;
-      gap = 0;
-    }
-  }
-
-  finishRun();
-
-  return {
-    start: bestStart,
-    end: bestEnd,
-    length: bestStart >= 0 ? bestEnd - bestStart + 1 : 0,
-  };
-}
-
 /**
- * Versetzt ausschließlich die bereits vorhandene blaue horizontale
- * Abschlusskante der ersten Seite. Dokumentinhalt, Dokumentgeometrie und
- * Partikelrahmen bleiben an ihren Positionen.
+ * Blendet den eingebrannten Seitenrahmen der Vorlage aus, damit jedes
+ * Hologramm nur vom gemeinsamen Partikelrahmen begrenzt wird. Innerhalb der
+ * Randzone verschwinden nur dunkle Pixel (Rahmenschein, Dekor); Text und
+ * Symbole sind deutlich heller und bleiben erhalten.
  */
-function alignFirstPageBottomRule(context, width, pageHeight) {
-  const image = context.getImageData(0, 0, width, pageHeight);
+function clearPageFrame(context, width, height, pageCount, bands) {
+  const image = context.getImageData(0, 0, width, height);
   const pixels = image.data;
-  const expectedY = Math.round(
-    pageHeight * (1 - FIRST_PAGE_BOTTOM_RULE_OFFSET),
-  );
-  const searchRadius = Math.max(
-    4,
-    Math.round(pageHeight * FIRST_PAGE_BOTTOM_RULE_SEARCH),
-  );
-  const yStart = Math.max(0, expectedY - searchRadius);
-  const yEnd = Math.min(pageHeight - 1, expectedY + searchRadius);
-  const xStart = Math.floor(width * 0.08);
-  const xEnd = Math.ceil(width * 0.92);
-  const minimumRun = width * 0.24;
-
-  let best = null;
-
-  for (let y = yStart; y <= yEnd; y += 1) {
-    const run = longestBlueBottomRuleRun(
-      pixels,
-      width,
-      y,
-      xStart,
-      xEnd,
-    );
-    if (!best || run.length > best.length) {
-      best = { ...run, y };
-    }
+  const soft = Math.max(1, bands.soft * width);
+  const left = bands.left * width;
+  const right = width - bands.right * width;
+  const sideZone = Math.max(1, (bands.zone ?? 0) * width);
+  const hardColumn = new Float32Array(width);
+  const zoneColumn = new Float32Array(width);
+  for (let x = 0; x < width; x += 1) {
+    hardColumn[x] = smoothUnit(left, left + soft, x) * (1 - smoothUnit(right - soft, right, x));
+    zoneColumn[x] = bands.zone
+      ? smoothUnit(left, left + sideZone, x) * (1 - smoothUnit(right - sideZone, right, x))
+      : 1;
   }
 
-  if (!best || best.length < minimumRun) {
-    console.warn(
-      'Webprojektion: blaue Abschlusskante nicht sicher erkannt; '
-      + 'Position bleibt unverändert.',
-      {
-        expectedY: expectedY / pageHeight,
-        bestRun: best?.length ?? 0,
-        minimumRun,
-      },
-    );
-    return false;
-  }
-
-  const bandRadius = Math.max(
-    2,
-    Math.round(pageHeight * FIRST_PAGE_BOTTOM_RULE_BAND),
-  );
-  const sourceY = Math.max(0, best.y - bandRadius);
-  const sourceBottom = Math.min(pageHeight, best.y + bandRadius + 1);
-  const bandHeight = sourceBottom - sourceY;
-  const horizontalMargin = Math.max(2, Math.round(width * 0.008));
-  const sourceX = Math.max(0, best.start - horizontalMargin);
-  const sourceRight = Math.min(width, best.end + horizontalMargin + 1);
-  const stripWidth = sourceRight - sourceX;
-  const edgeInset = Math.max(
-    1,
-    Math.round(pageHeight * FIRST_PAGE_BOTTOM_RULE_EDGE_INSET),
-  );
-  const targetY = pageHeight - edgeInset - bandHeight;
-
-  if (targetY <= sourceBottom || stripWidth <= 0 || bandHeight <= 0) {
-    console.warn(
-      'Webprojektion: blaue Abschlusskante konnte nicht sicher versetzt werden.',
-    );
-    return false;
-  }
-
-  const strip = context.getImageData(
-    sourceX,
-    sourceY,
-    stripWidth,
-    bandHeight,
-  );
-
-  // Nur der erkannte horizontale Streifen wird versetzt. Die seitlichen
-  // Dekore und alle übrigen Dokumentpixel bleiben exakt an ihrem Ort.
-  context.clearRect(sourceX, sourceY, stripWidth, bandHeight);
-  context.putImageData(strip, sourceX, targetY);
-
-  console.info(
-    'Webprojektion: blaue Abschlusskante an Partikelrahmen ausgerichtet.',
-    {
-      from: best.y / pageHeight,
-      to: (targetY + bandHeight * 0.5) / pageHeight,
-    },
-  );
-
-  return true;
-}
-
-
-/**
- * Seite zwei wird nach dem Entfernen des Linkkastens nach oben verdichtet.
- * Nur die tatsächlich blauen/cyanfarbenen Abschlusselemente dürfen davon
- * entkoppelt und an die physische Dokumentunterkante gesetzt werden.
- *
- * Wichtig: Die Maske ist bewusst farbstreng. Weiße Schrift wird weder
- * ausgeblendet noch nach unten kopiert. Damit bleiben Datums- und Textzeilen
- * vollständig an ihrer Originalposition und in ihrer Originalhelligkeit.
- */
-function secondPageBlueSignal(r, g, b, a) {
-  if (a < 20) return 0;
-
-  const peak = Math.max(g, b);
-  const floor = Math.min(r, g, b);
-  const chroma = Math.max(r, g, b) - floor;
-  const blueLead = b - r;
-  const cyanLead = g - r;
-
-  // Weiße bzw. graue Schrift bleibt vollständig außerhalb der Maske.
-  // Insbesondere dürfen leicht bläulich antialiaste Textkanten nicht mehr
-  // verschoben oder an ihrer ursprünglichen Position abgeschwächt werden.
-  if (
-    peak < 38
-    || chroma < 26
-    || blueLead < 18
-    || cyanLead < 8
-    || b < r * 1.16
-    || g < r * 1.05
-  ) return 0;
-
-  const hue = smoothUnit(18, 48, blueLead)
-    * smoothUnit(8, 34, cyanLead);
-  const saturation = smoothUnit(26, 72, chroma);
-  const brightness = smoothUnit(34, 128, peak);
-
-  return clampUnit(Math.max(
-    hue * saturation,
-    saturation * brightness * 0.9,
-  ));
-}
-
-function expandLocalMask(mask, width, height, radius = 1) {
-  const expanded = new Uint8Array(mask.length);
-
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      let strongest = mask[y * width + x];
-
-      for (let dy = -radius; dy <= radius; dy += 1) {
-        const sy = y + dy;
-        if (sy < 0 || sy >= height) continue;
-
-        for (let dx = -radius; dx <= radius; dx += 1) {
-          const sx = x + dx;
-          if (sx < 0 || sx >= width) continue;
-
-          const distance = Math.max(Math.abs(dx), Math.abs(dy));
-          const weight = distance === 0
-            ? 1
-            : distance === 1
-              ? 0.76
-              : 0.48;
-          const value = Math.round(mask[sy * width + sx] * weight);
-          if (value > strongest) strongest = value;
-        }
+  for (let page = 0; page < pageCount; page += 1) {
+    const top = Math.floor(page * height / pageCount);
+    const bottom = Math.floor((page + 1) * height / pageCount);
+    const pageHeight = bottom - top;
+    const bandTop = bands.top * pageHeight;
+    const bandBottom = pageHeight - bands.bottom * pageHeight;
+    const rowZone = Math.max(1, (bands.zone ?? 0) * pageHeight);
+    const bottomZone = Math.max(1, (bands.zoneBottom ?? bands.zone ?? 0) * pageHeight);
+    for (let y = top; y < bottom; y += 1) {
+      const local = y - top;
+      const hardRow = smoothUnit(bandTop, bandTop + soft, local)
+        * (1 - smoothUnit(bandBottom - soft, bandBottom, local));
+      const zoneRow = bands.zone
+        ? smoothUnit(bandTop, bandTop + rowZone, local)
+          * (1 - smoothUnit(bandBottom - bottomZone, bandBottom, local))
+        : 1;
+      for (let x = 0; x < width; x += 1) {
+        const hard = hardRow * hardColumn[x];
+        const zone = zoneRow * zoneColumn[x];
+        if (hard >= 1 && zone >= 1) continue;
+        const offset = (y * width + x) * 4;
+        const luma = pixels[offset] * 0.2126
+          + pixels[offset + 1] * 0.7152
+          + pixels[offset + 2] * 0.0722;
+        const dim = 1 - smoothUnit(bands.dimLuma ?? 0, (bands.dimLuma ?? 0) + 40, luma);
+        const keep = hard * (1 - dim * (1 - zone));
+        pixels[offset + 3] = Math.round(pixels[offset + 3] * keep);
       }
-
-      expanded[y * width + x] = strongest;
     }
   }
 
-  return expanded;
-}
-
-function blendMaskedPixel(
-  sourcePixels,
-  outputPixels,
-  sourceIndex,
-  targetIndex,
-  mask,
-) {
-  const sourceAlpha = sourcePixels[sourceIndex + 3] / 255;
-  const alpha = clampUnit(sourceAlpha * mask);
-  if (alpha <= 0.001) return;
-
-  const targetAlpha = outputPixels[targetIndex + 3] / 255;
-  const combinedAlpha = alpha + targetAlpha * (1 - alpha);
-  if (combinedAlpha <= 0.0001) return;
-
-  outputPixels[targetIndex] = Math.round(
-    (
-      sourcePixels[sourceIndex] * alpha
-      + outputPixels[targetIndex] * targetAlpha * (1 - alpha)
-    ) / combinedAlpha,
-  );
-  outputPixels[targetIndex + 1] = Math.round(
-    (
-      sourcePixels[sourceIndex + 1] * alpha
-      + outputPixels[targetIndex + 1] * targetAlpha * (1 - alpha)
-    ) / combinedAlpha,
-  );
-  outputPixels[targetIndex + 2] = Math.round(
-    (
-      sourcePixels[sourceIndex + 2] * alpha
-      + outputPixels[targetIndex + 2] * targetAlpha * (1 - alpha)
-    ) / combinedAlpha,
-  );
-  outputPixels[targetIndex + 3] = Math.round(combinedAlpha * 255);
-}
-
-function attachSecondPageBottomProsthesis(
-  sourceContext,
-  outputContext,
-  width,
-  pageHeight,
-  pageTwoTop,
-  cut,
-) {
-  const cutHeight = Math.max(0, cut.end - cut.start);
-  if (cutHeight <= 0) return false;
-
-  const sourcePage = sourceContext.getImageData(
-    0,
-    pageTwoTop,
-    width,
-    pageHeight,
-  );
-  const outputPage = outputContext.getImageData(
-    0,
-    pageTwoTop,
-    width,
-    pageHeight,
-  );
-  const sourcePixels = sourcePage.data;
-  const outputPixels = outputPage.data;
-
-  const edgeInset = Math.max(1, Math.round(pageHeight * 0.001));
-  const searchTop = Math.max(
-    cut.end,
-    Math.floor(pageHeight * 0.62),
-    pageHeight - cutHeight - Math.round(pageHeight * 0.2),
-  );
-  const searchBottom = pageHeight - edgeInset;
-  const xStart = Math.floor(width * 0.08);
-  const xEnd = Math.ceil(width * 0.92);
-
-  let best = null;
-  for (let y = searchTop; y < searchBottom; y += 1) {
-    const run = longestBlueBottomRuleRun(
-      sourcePixels,
-      width,
-      y,
-      xStart,
-      xEnd,
-    );
-    if (!best || run.length > best.length) {
-      best = { ...run, y };
-    }
-  }
-
-  const minimumRun = width * 0.16;
-  if (!best || best.length < minimumRun) {
-    console.warn(
-      'Webprojektion: horizontale blaue Abschlusskante von Seite zwei '
-      + 'nicht sicher erkannt.',
-      { bestRun: best?.length ?? 0, minimumRun },
-    );
-    return false;
-  }
-
-  const bandRadius = Math.max(2, Math.round(pageHeight * 0.0025));
-  const bandTop = Math.max(searchTop, best.y - bandRadius);
-  const bandBottom = Math.min(
-    searchBottom,
-    best.y + bandRadius + 1,
-  );
-  const bandHeight = bandBottom - bandTop;
-  const horizontalMargin = Math.max(3, Math.round(width * 0.006));
-  const sourceX = Math.max(0, best.start - horizontalMargin);
-  const sourceRight = Math.min(width, best.end + horizontalMargin + 1);
-  const stripWidth = sourceRight - sourceX;
-
-  if (bandHeight <= 0 || stripWidth <= 0) return false;
-
-  const baseMask = new Uint8Array(stripWidth * bandHeight);
-
-  for (let localY = 0; localY < bandHeight; localY += 1) {
-    const sourceY = bandTop + localY;
-
-    for (let localX = 0; localX < stripWidth; localX += 1) {
-      const x = sourceX + localX;
-      const index = (sourceY * width + x) * 4;
-      baseMask[localY * stripWidth + localX] = Math.round(
-        secondPageBlueSignal(
-          sourcePixels[index],
-          sourcePixels[index + 1],
-          sourcePixels[index + 2],
-          sourcePixels[index + 3],
-        ) * 255,
-      );
-    }
-  }
-
-  // Keine Dilatation: ausschließlich das tatsächlich blaue Quellpixel
-  // darf versetzt werden. Benachbarte weiße Schrift bleibt bitweise unberührt.
-  const mask = baseMask;
-
-  const shiftedTop = bandTop - cutHeight;
-  const targetTop = pageHeight - edgeInset - bandHeight;
-
-  if (
-    shiftedTop < 0
-    || targetTop < 0
-    || targetTop <= shiftedTop
-  ) {
-    console.warn(
-      'Webprojektion: Geometrie der horizontalen Randprothese '
-      + 'ist nicht plausibel.',
-      { bandTop, shiftedTop, targetTop, bandHeight, cutHeight },
-    );
-    return false;
-  }
-
-  let movedPixels = 0;
-
-  for (let localY = 0; localY < bandHeight; localY += 1) {
-    const sourceY = bandTop + localY;
-    const shiftedY = shiftedTop + localY;
-    const targetY = targetTop + localY;
-
-    for (let localX = 0; localX < stripWidth; localX += 1) {
-      const strength = mask[localY * stripWidth + localX] / 255;
-      if (strength <= 0.12) continue;
-
-      const x = sourceX + localX;
-      const sourceIndex = (sourceY * width + x) * 4;
-      const shiftedIndex = (shiftedY * width + x) * 4;
-      const targetIndex = (targetY * width + x) * 4;
-
-      outputPixels[shiftedIndex + 3] = Math.round(
-        outputPixels[shiftedIndex + 3] * (1 - strength),
-      );
-
-      blendMaskedPixel(
-        sourcePixels,
-        outputPixels,
-        sourceIndex,
-        targetIndex,
-        strength,
-      );
-      movedPixels += 1;
-    }
-  }
-
-  outputContext.putImageData(outputPage, 0, pageTwoTop);
-
-  console.info(
-    'Webprojektion: horizontale Abschlusskante von Seite zwei '
-    + 'textschonend an die Unterkante versetzt.',
-    {
-      source: best.y / pageHeight,
-      target: (targetTop + bandHeight * 0.5) / pageHeight,
-      movedPixels,
-    },
-  );
-
-  return movedPixels > 0;
-}
-
-function findSecondPageCornerBand(
-  pixels,
-  width,
-  pageHeight,
-  xStart,
-  xEnd,
-  searchTop,
-  searchBottom,
-) {
-  const regionWidth = Math.max(1, xEnd - xStart);
-  const minimumHits = Math.max(5, Math.round(regionWidth * 0.018));
-  const groups = [];
-  let group = null;
-  let gap = 0;
-
-  for (let y = searchTop; y < searchBottom; y += 1) {
-    let hits = 0;
-    let energy = 0;
-
-    for (let x = xStart; x < xEnd; x += 1) {
-      const index = (y * width + x) * 4;
-      const signal = secondPageBlueSignal(
-        pixels[index],
-        pixels[index + 1],
-        pixels[index + 2],
-        pixels[index + 3],
-      );
-      if (signal >= 0.08) hits += 1;
-      energy += signal;
-    }
-
-    if (hits >= minimumHits) {
-      if (!group) {
-        group = {
-          start: y,
-          end: y,
-          totalHits: hits,
-          peakHits: hits,
-          energy,
-        };
-      } else {
-        group.end = y;
-        group.totalHits += hits;
-        group.peakHits = Math.max(group.peakHits, hits);
-        group.energy += energy;
-      }
-      gap = 0;
-    } else if (group && gap < 2) {
-      gap += 1;
-    } else if (group) {
-      groups.push(group);
-      group = null;
-      gap = 0;
-    }
-  }
-
-  if (group) groups.push(group);
-
-  return groups
-    .filter((candidate) => candidate.end - candidate.start >= 4)
-    .sort((a, b) => (
-      (b.totalHits + b.peakHits * 4 + b.energy * 0.3)
-      - (a.totalHits + a.peakHits * 4 + a.energy * 0.3)
-    ))[0] ?? null;
-}
-
-function moveSecondPageCorner(
-  sourcePixels,
-  outputPixels,
-  width,
-  pageHeight,
-  cutHeight,
-  side,
-) {
-  // Die Eckornamente liegen unmittelbar am Seitenrand. Der engere
-  // Suchbereich schließt Datum und Fließtext sicher aus.
-  const edgeWidth = Math.max(28, Math.round(width * 0.135));
-  const xStart = side === 'left' ? 0 : width - edgeWidth;
-  const xEnd = side === 'left' ? edgeWidth : width;
-  const edgeInset = Math.max(1, Math.round(pageHeight * 0.001));
-  const searchTop = Math.max(
-    Math.floor(pageHeight * 0.58),
-    pageHeight - cutHeight - Math.round(pageHeight * 0.26),
-  );
-  const searchBottom = pageHeight - edgeInset;
-
-  const detected = findSecondPageCornerBand(
-    sourcePixels,
-    width,
-    pageHeight,
-    xStart,
-    xEnd,
-    searchTop,
-    searchBottom,
-  );
-
-  if (!detected) {
-    console.warn(
-      `Webprojektion: ${side === 'left' ? 'linkes' : 'rechtes'} `
-      + 'Eckornament von Seite zwei nicht sicher erkannt.',
-    );
-    return 0;
-  }
-
-  const padding = Math.max(2, Math.round(pageHeight * 0.0045));
-  const bandTop = Math.max(searchTop, detected.start - padding);
-  const bandBottom = Math.min(
-    searchBottom,
-    detected.end + padding + 1,
-  );
-  const bandHeight = bandBottom - bandTop;
-  const regionWidth = xEnd - xStart;
-  if (bandHeight <= 0 || regionWidth <= 0) return 0;
-
-  const baseMask = new Uint8Array(regionWidth * bandHeight);
-
-  for (let localY = 0; localY < bandHeight; localY += 1) {
-    const sourceY = bandTop + localY;
-
-    for (let localX = 0; localX < regionWidth; localX += 1) {
-      const x = xStart + localX;
-      const index = (sourceY * width + x) * 4;
-      baseMask[localY * regionWidth + localX] = Math.round(
-        secondPageBlueSignal(
-          sourcePixels[index],
-          sourcePixels[index + 1],
-          sourcePixels[index + 2],
-          sourcePixels[index + 3],
-        ) * 255,
-      );
-    }
-  }
-
-  // Auch hier keine räumliche Erweiterung: Nur das tatsächlich als
-  // Blau/Cyan erkannte Ornamentpixel darf seinen Ort wechseln.
-  const mask = baseMask;
-
-  const shiftedTop = bandTop - cutHeight;
-  const targetTop = pageHeight - edgeInset - bandHeight;
-
-  if (
-    shiftedTop < 0
-    || targetTop < 0
-    || targetTop <= shiftedTop
-  ) {
-    console.warn(
-      'Webprojektion: Geometrie des Eckornaments ist nicht plausibel.',
-      { side, bandTop, shiftedTop, targetTop, bandHeight, cutHeight },
-    );
-    return 0;
-  }
-
-  let movedPixels = 0;
-
-  for (let localY = 0; localY < bandHeight; localY += 1) {
-    const sourceY = bandTop + localY;
-    const shiftedY = shiftedTop + localY;
-    const targetY = targetTop + localY;
-
-    for (let localX = 0; localX < regionWidth; localX += 1) {
-      const strength = mask[localY * regionWidth + localX] / 255;
-      if (strength <= 0.12) continue;
-
-      const x = xStart + localX;
-      const sourceIndex = (sourceY * width + x) * 4;
-      const shiftedIndex = (shiftedY * width + x) * 4;
-      const targetIndex = (targetY * width + x) * 4;
-
-      outputPixels[shiftedIndex + 3] = Math.round(
-        outputPixels[shiftedIndex + 3] * (1 - strength),
-      );
-
-      blendMaskedPixel(
-        sourcePixels,
-        outputPixels,
-        sourceIndex,
-        targetIndex,
-        strength,
-      );
-      movedPixels += 1;
-    }
-  }
-
-  console.info(
-    `Webprojektion: ${side === 'left' ? 'linkes' : 'rechtes'} `
-    + 'Eckornament textschonend an die Unterkante versetzt.',
-    { movedPixels },
-  );
-
-  return movedPixels;
-}
-
-function attachSecondPageCornerProstheses(
-  sourceContext,
-  outputContext,
-  width,
-  pageHeight,
-  pageTwoTop,
-  cut,
-) {
-  const cutHeight = Math.max(0, cut.end - cut.start);
-  if (cutHeight <= 0) return false;
-
-  const sourcePage = sourceContext.getImageData(
-    0,
-    pageTwoTop,
-    width,
-    pageHeight,
-  );
-  const outputPage = outputContext.getImageData(
-    0,
-    pageTwoTop,
-    width,
-    pageHeight,
-  );
-
-  const left = moveSecondPageCorner(
-    sourcePage.data,
-    outputPage.data,
-    width,
-    pageHeight,
-    cutHeight,
-    'left',
-  );
-  const right = moveSecondPageCorner(
-    sourcePage.data,
-    outputPage.data,
-    width,
-    pageHeight,
-    cutHeight,
-    'right',
-  );
-
-  if (left + right <= 0) return false;
-
-  outputContext.putImageData(outputPage, 0, pageTwoTop);
-  return true;
+  context.putImageData(image, 0, 0);
 }
 
 
@@ -1081,6 +473,8 @@ function createWebProjectionCanvas(image, size) {
   sourceContext.imageSmoothingEnabled = true;
   sourceContext.imageSmoothingQuality = 'high';
   sourceContext.drawImage(image, 0, 0, size.width, size.height);
+  // Vor dem Verschieben von Seite 2, damit die Rahmenunterkante nicht mitwandert.
+  clearPageFrame(sourceContext, size.width, size.height, CV_PAGE_COUNT, PAGE_FRAME_BANDS.lebenslauf);
 
   const cut = detectLinkBoxCut(sourceContext, size.width, size.height);
   const output = document.createElement('canvas');
@@ -1103,7 +497,6 @@ function createWebProjectionCanvas(image, size) {
     0, 0, size.width, pageHeight,
   );
   makePageTransparent(context, size.width, pageHeight);
-  alignFirstPageBottomRule(context, size.width, pageHeight);
 
   context.drawImage(
     source,
@@ -1120,22 +513,9 @@ function createWebProjectionCanvas(image, size) {
     );
   }
 
-  attachSecondPageBottomProsthesis(
-    sourceContext,
-    context,
-    size.width,
-    pageHeight,
-    pageTwoTop,
-    cut,
-  );
-  attachSecondPageCornerProstheses(
-    sourceContext,
-    context,
-    size.width,
-    pageHeight,
-    pageTwoTop,
-    cut,
-  );
+  // The page frame moved up with the content; the vacated strip stays empty so
+  // the hologram ends with its own frame, like the first page.
+  context.clearRect(0, pageTwoTop + cut.start + lowerHeight, size.width, pageHeight - cut.start - lowerHeight);
 
   makePageTransparent(context, size.width, pageHeight, pageTwoTop);
 
@@ -1231,14 +611,7 @@ export function createResumeProjection({
         vec4 texel = texture2D(uMap, vec2(vUv.x, v), uBias);
         float topFade = smoothstep(0.0, uFade.x, 1.0 - vUv.y);
         float bottomFade = smoothstep(0.0, uFade.y, vUv.y);
-        // Die an die Unterkante versetzte blaue Abschlusslinie soll mit dem
-        // Partikelrahmen sichtbar überlappen, ohne den normalen Inhaltsfade
-        // am unteren Fensterrand aufzuheben.
-        float blueRule = smoothstep(0.035, 0.16, texel.b - texel.r)
-          * smoothstep(-0.015, 0.10, texel.g - texel.r);
-        float edgeRule = blueRule
-          * (1.0 - smoothstep(0.003, 0.022, vUv.y));
-        float fade = topFade * max(bottomFade, edgeRule);
+        float fade = topFade * bottomFade;
         if (uOpacity < 0.004) discard;
 
         vec3 lifted = pow(clamp(texel.rgb, 0.0, 1.0), vec3(0.90));
@@ -1341,6 +714,11 @@ export function createResumeProjection({
             const bottom = Math.floor((page + 1) * size.height / source.pageCount);
             makePageTransparent(context, size.width, bottom - top, top);
           }
+        }
+        const frameBands = PAGE_FRAME_BANDS[documentKey];
+        if (frameBands && !source.webTransform) {
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          clearPageFrame(context, size.width, size.height, source.pageCount, frameBands);
         }
         if (disposed || revision !== loadRevision) return false;
 

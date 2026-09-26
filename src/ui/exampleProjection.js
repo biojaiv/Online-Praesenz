@@ -39,13 +39,20 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     if (!originRect?.width || !originRect?.height) return 'scale(.96)';
     return `translate(${originRect.left-view.left}px, ${originRect.top-view.top}px) scale(${originRect.width/(view.width+2)}, ${originRect.height/(view.height+2)})`;
   }
+  /** The page is laid out at its final size, so it can replace the still image
+   *  while the projection is still expanding; input waits until it is open. */
   function revealContent() {
-    if (state !== 'open' || !iframe?.dataset.ready || !iframe?.dataset.loaded || iframe.dataset.revealed) return;
-    iframe.dataset.revealed = 'true'; iframe.inert = false; iframe.tabIndex = 0;
-    clearTimeout(timer); status.hidden = true;
-    animate(iframe, [{ opacity: 0 }, { opacity: 1 }], 320);
-    if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 320);
-    post('visible');
+    if (!['opening', 'open'].includes(state) || !iframe?.dataset.ready || !iframe?.dataset.loaded) return;
+    if (!iframe.dataset.revealed) {
+      iframe.dataset.revealed = 'true';
+      clearTimeout(timer); status.hidden = true;
+      animate(iframe, [{ opacity: 0 }, { opacity: 1 }], 220);
+      if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 220);
+    }
+    if (state === 'open' && iframe.inert) {
+      iframe.inert = false; iframe.tabIndex = 0;
+      post('visible');
+    }
   }
   const post = type => iframe?.contentWindow?.postMessage({ type: `example:${type}` }, location.origin);
   function translate() {

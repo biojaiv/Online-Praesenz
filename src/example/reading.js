@@ -9,7 +9,7 @@ export function chapterMarkup(c, language, prefix = '') {
       ${i===2 ? `<ol class="reading-dialogue">${c.dhcp.map(line=>`<li><strong>${line[0]} · ${e(line[1])}</strong><p>${e(line[2])}</p></li>`).join('')}</ol>`:''}
       ${i===1 ? `<p>${e(language==='de'?'Bei einem Ausfall des aktiven Uplinks pausiert die Übertragung kurz. Der unabhängige Ersatzpfad übernimmt; ein einzelner ausgefallener Client-Anschluss wäre damit nicht abgesichert.':'If the active uplink fails, transmission pauses briefly. The independent alternate path takes over; this does not protect against a failed client connection.')}</p>`:''}
       ${[3,5,6].includes(i)?`<aside class="reading-project"><p class="eyebrow">${c.projectKicker}</p><p>${c.projectText}</p><a href="/#abschluss" data-portfolio="abschluss">${c.project}</a></aside>`:''}
-      ${i===6?`<h3>${c.ready}</h3><p>00:04:12 · ${c.manual}</p><small>${c.modelNote}</small>`:''}</div>
+      ${i===6?`<h3>${c.ready}</h3><p>00:35:00 · ${c.manual}</p><small>${c.modelNote}</small>`:''}</div>
       <figure>${illustration(c,`${prefix}still-${i}`,i,false)}<figcaption>${c.labels[i]}</figcaption></figure>
     </div>
   </section>`).join('');

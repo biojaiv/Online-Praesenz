@@ -2,9 +2,14 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getLanguage, setLanguage, onLanguageChange } from '../i18n.js';
 import { copy, number, escapeHTML as e } from './content.js';
-import { illustration, packetStops, packetX } from './illustration.js';
+import { illustration, packetPosition, packetRoute, cubeFaces } from './illustration.js';
+import { AXIS, JUNCTION } from './diagramLayout.js';
 import { chapterMarkup } from './reading.js';
 import { createJourney } from './state.js';
+import { createAnnotations } from './annotations.js';
+
+/** Scenario clock: seconds since 08:00 at the start of each chapter, then ready. */
+const CHAPTER_SECONDS=[0,65,68,120,1100,1200,1920,2100];
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -36,7 +41,7 @@ export function startTiefgang() {
           <button class="reading-switch">${reading?c.immersive:c.reading} ↗</button>
         </aside>
         <figure class="stage"><div class="drawing-wrap">${illustration(c)}<div class="mobile-layer-tag source-backup-caption"><span class="tag-number">01</span><span class="tag-text">${c.labels[0]}</span></div></div>
-          <figcaption>${c.figure}<button class="vm-open" data-vm aria-expanded="false">${c.vm} +</button></figcaption>
+          <figcaption><span class="sr-only">${c.figure}</span><button class="vm-open" data-vm aria-expanded="false">${c.vm} +</button></figcaption>
           <section class="interaction-card dhcp-card" aria-labelledby="dhcp-heading" hidden><div class="card-top"><span id="dhcp-heading">DHCP / <b class="dhcp-count">01</b> — 04</span><span class="dhcp-code"></span></div><p class="dhcp-speaker"></p><p class="dhcp-sentence" aria-live="polite"></p><div class="dhcp-actions"><button data-dhcp>${c.dhcpNext} →</button><button class="dhcp-replay" data-replay hidden>↺ <span class="sr-only">${c.dhcpReplay}</span></button></div><small class="dhcp-status"></small></section>
           <section class="interaction-card vm-card" hidden aria-labelledby="vm-heading"><div class="card-top"><h2 id="vm-heading">${c.vmTitle}</h2><button data-vm aria-label="${c.close}">×</button></div><p>${c.vmText}</p><code>${c.vmSpecs}</code><a class="project-link" data-portfolio="abschluss" href="/#abschluss">${c.project}</a></section>
           <section class="completion" hidden><p class="eyebrow">JANA-01 / READY</p><h2>${c.ready}</h2><p>${c.readyText}</p><p class="manual-time">${c.manual}</p><small>${c.modelNote}</small><a class="project-link" href="/#abschluss" data-portfolio="abschluss">${c.project}</a><button data-restart>${c.restart}</button></section>
@@ -56,7 +61,56 @@ export function startTiefgang() {
     const abort=new AbortController(), {signal}=abort;
     let lastChapter=-1, lastLog='', lastState='', parentPaused=false;
     let scrollTrigger=null;
-    const targets=packetStops;
+    const annotations=createAnnotations(root);
+    let shown=null, packetLink=null, travel=0, routeFrame=0, lostTimer=0, pending=null;
+    const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
+    const packet=()=>$('.stage .packet');
+    function placePacket(point) {
+      if(shown) travel+=Math.hypot(point.x-shown.x,point.y-shown.y);
+      shown=point;
+      packet().setAttribute('transform',`translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})`);
+      $('.stage .packet .cube').innerHTML=cubeFaces(Math.PI/4+travel/24).map(f=>`<path class="cube-face ${f.kind}" d="${f.d}"/>`).join('');
+    }
+    function stopRoute() {
+      cancelAnimationFrame(routeFrame); clearTimeout(lostTimer); routeFrame=lostTimer=0;
+      packet()?.classList.remove('is-lost');
+    }
+    function runRoute(points, ease) {
+      const lengths=[0];
+      for(let i=1;i<points.length;i++) lengths.push(lengths[i-1]+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y));
+      const total=lengths.at(-1), duration=Math.min(1500,Math.max(520,total*9)), start=performance.now();
+      const finish=()=>{ routeFrame=0; if(pending) { const next=pending; pending=null; placePacket(next); } };
+      if(total<1) { placePacket(points.at(-1)); finish(); return; }
+      const step=now=>{
+        const t=Math.min(1,(now-start)/duration), distance=ease(t)*total;
+        let i=1; while(i<lengths.length-1&&lengths[i]<distance) i++;
+        const span=lengths[i]-lengths[i-1]||1, f=(distance-lengths[i-1])/span;
+        placePacket({x:points[i-1].x+(points[i].x-points[i-1].x)*f,y:points[i-1].y+(points[i].y-points[i-1].y)*f});
+        if(t<1) routeFrame=requestAnimationFrame(step); else finish();
+      };
+      routeFrame=requestAnimationFrame(step);
+    }
+    const easeInOut=t=>t<.5?4*t*t*t:1-(-2*t+2)**3/2, easeOut=t=>1-(1-t)**3;
+    /** Link changes travel along the cabling; scrolling stays directly coupled.
+     *  A packet caught on the broken uplink is lost and the switch resends it via B. */
+    function movePacket(target, link) {
+      const fromLink=packetLink, changed=fromLink!==null&&link!==fromLink;
+      packetLink=link;
+      if((routeFrame||lostTimer)&&!changed) { pending=target; return; }
+      stopRoute(); pending=null;
+      if(!shown||!changed||reduceMotion.matches) { placePacket(target); return; }
+      if(fromLink==='failing'&&link==='backup'&&shown.x!==AXIS) {
+        packet().classList.add('is-lost');
+        lostTimer=setTimeout(()=>{
+          lostTimer=0; shown=null;
+          placePacket({x:AXIS,y:JUNCTION});
+          packet().classList.remove('is-lost');
+          runRoute(packetRoute(shown,target,'backup','backup'),easeInOut);
+        },320);
+        return;
+      }
+      runRoute(packetRoute(shown,target,fromLink,link),link==='failing'?easeOut:easeInOut);
+    }
     const journey=createJourney(update);
     function update(state) {
       const {chapter,dhcp,link,vm,lease,progress}=state;
@@ -71,7 +125,7 @@ export function startTiefgang() {
         $$('.chapter-nav a').forEach((a,i)=>{a.classList.toggle('is-current',i===chapter); if(i===chapter)a.setAttribute('aria-current','step'); else a.removeAttribute('aria-current');});
         $('.story-project').hidden=![3,5,6].includes(chapter);
         $('.live-count').textContent=`${number(chapter)}/07`;
-        $$('.stage .unboxing').forEach(box=>box.style.opacity=chapter===0?'1':'0');
+        scene.dataset.unpacked=String(chapter>0);
         $$('.stage .tag-number').forEach(label=>label.textContent=number(chapter)); $$('.stage .tag-text').forEach(label=>label.textContent=c.labels[chapter]);
         scene.dataset.final=String(chapter===6);
         $$('[data-slot]').forEach((slot,i)=>slot.classList.toggle('is-slot-active',i===({2:0,3:1,4:0,5:2,6:3})[chapter]));
@@ -104,23 +158,18 @@ export function startTiefgang() {
         $('.log-lines').innerHTML=rows.map(row=>`<li class="${row.kind}">${e(row.text)}</li>`).join('');
         $('.log-announcement').textContent=rows.at(-1)?.text||''; lastLog=logKey;
       }
-      let p=progress;
-      if(chapter===2&&!lease) p=Math.min(p,.32+dhcp*.012);
-      const seconds=ready?252:Math.min(251,Math.round(p*252));
+      const phase=Math.max(0,Math.min(7,progress*6.5)), step=Math.min(6,Math.floor(phase));
+      let seconds=Math.round(CHAPTER_SECONDS[step]+(CHAPTER_SECONDS[step+1]-CHAPTER_SECONDS[step])*(phase-step));
+      if(chapter===2&&!lease) seconds=Math.min(seconds,CHAPTER_SECONDS[2]+dhcp);
+      seconds=ready?2100:Math.min(2099,seconds);
       $('.time').textContent=`00:${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
-      const percent=ready?100:Math.min(99,Math.round(p*100));
+      const percent=ready?100:Math.min(99,Math.round(seconds/21));
       $('progress').value=percent; $('.percentage').textContent=`${percent}%`;
-      $('.depth-needle').style.left=`${p*100}%`;
-      const fractional=Math.max(0,Math.min(6,progress*6.5));
-      const lower=Math.min(5,Math.floor(fractional));
-      let y=targets[lower]+(targets[lower+1]-targets[lower])*Math.min(1,fractional-lower);
-      if(chapter===2&&!lease) y=561+dhcp*7;
-      if(link==='failing') y=419;
-      if(link==='backup'&&chapter===1)y=437;
-      const x=packetX(y);
-      $('.stage .packet').setAttribute('transform',`translate(${x} ${y})`);
+      $('.depth-needle').style.left=`${percent}%`;
+      movePacket(packetPosition({ progress, chapter, lease, link, rerouted: state.rerouted }), link);
       $('.stage .packet').classList.toggle('is-paused',link==='failing');
       $('.stage .packet').style.opacity=ready?'0':'1';
+      annotations.update(state);
 
     }
     function go(chapter) {
@@ -172,7 +221,7 @@ export function startTiefgang() {
       $('.reading-switch').hidden=motion.matches;
       journey.chapter(savedChapter,savedChapter/6);
     } else { scrollTo({top:savedChapter*innerHeight,behavior:'instant'});syncScroll(); }
-    cleanup=()=>{abort.abort();journey.dispose();scrollTrigger?.kill();};
+    cleanup=()=>{stopRoute();abort.abort();annotations.dispose();journey.dispose();scrollTrigger?.kill();};
     post('ready');
   }
   render();

@@ -2,7 +2,7 @@ import { dhcpLogs, scripts } from './content.js';
 
 /** Deterministic story and independent, pausable link-failure state machine. */
 export function createJourney(onChange) {
-  const state = { chapter: 0, progress: 0, dhcp: 0, lease: false, link: 'primary', vm: false, ready: false };
+  const state = { chapter: 0, progress: 0, dhcp: 0, lease: false, link: 'primary', rerouted: false, vm: false, ready: false };
   let timer = 0, started = 0, remaining = 0, paused = false;
   let events = [];
   const emit = () => onChange(state);
@@ -11,7 +11,7 @@ export function createJourney(onChange) {
     if (paused || state.link !== 'failing') return;
     started = performance.now();
     timer = setTimeout(() => {
-      timer = 0; remaining = 0; state.link = 'backup';
+      timer = 0; remaining = 0; state.link = 'backup'; state.rerouted = true;
       events.push({text:'uplink B forwarding · traffic restored', kind:'recovered'}); emit();
     }, remaining);
   }
@@ -22,6 +22,7 @@ export function createJourney(onChange) {
       // Jumping directly to a later chapter assumes earlier provisioning completed.
       if (chapter > 2) { state.lease = true; state.dhcp = 3; }
       if (chapter < 2 && changed) { state.lease = false; state.dhcp = 0; }
+      if (changed) state.rerouted = false;
       if (chapter === 0 && changed) { clear(); state.link = 'primary'; events = []; }
       state.chapter = chapter; state.progress = progress;
       state.ready = chapter === 6 && progress > .97 && state.link !== 'failing';
@@ -53,7 +54,7 @@ export function createJourney(onChange) {
     },
     logs() {
       const rows = scripts.slice(0,state.chapter+1).flatMap((lines,i) => i===2
-        ? dhcpLogs.slice(0,state.chapter>2?4:state.dhcp+1).map((text,n)=>({text:`08:03:${13+n}  ${text}`,kind:''}))
+        ? dhcpLogs.slice(0,state.chapter>2?4:state.dhcp+1).map((text,n)=>({text:`08:01:${String(8+n).padStart(2,'0')}  ${text}`,kind:''}))
         : lines.map(text=>({text,kind:''})));
       // Provisioning results wait while failover is still converging.
       const visible = !state.ready ? rows.filter(row=>!row.text.includes('JANA-01 ready')) : rows;
