@@ -45,8 +45,8 @@ const DOC_MAX_PX = 640;
 const DOC_GUTTER_X = 42;
 const DOC_GUTTER_Y = 42;
 // Kameraabstand beim geoeffneten Lebenslauf als Vielfaches des Zielbilds.
-// The wheel zooms all three holograms. Hold the left button (or Shift)
-// while wheeling to scroll a document; Ctrl/Meta keeps pinch zoom available.
+// The wheel scrolls a document. Hold the left button while wheeling to
+// zoom; Ctrl/Meta keeps pinch zoom available.
 const DOCUMENT_ZOOM_DEFAULT = 1.08;
 const DOCUMENT_ZOOM_MIN = 0.12;
 const DOCUMENT_ZOOM_MAX = 3.2;
@@ -724,10 +724,11 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (!delta) return;
     event.preventDefault();
     if (drag) drag.wheelUsed = true;
-    const scrolling = isDocumentKey(opened)
-      && (documentPointerHeld || (event.buttons & 1) !== 0 || event.shiftKey)
-      && !event.ctrlKey && !event.metaKey;
-    if (!scrolling) {
+    const zooming = documentPointerHeld
+      || (event.buttons & 1) !== 0
+      || event.ctrlKey
+      || event.metaKey;
+    if (zooming) {
       zoomDocument((delta / view.height) * DOCUMENT_WHEEL_SENSITIVITY);
       pulseDollyGuide(delta < 0 ? 'near' : 'far');
     } else {
@@ -910,10 +911,6 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }
 
     const onDocument = isZoomableKey(opened) && hitsDocument();
-    const canHoldDocument = event.button === 0
-      && event.pointerType !== 'touch'
-      && isZoomableKey(opened)
-      && !readerOpen;
 
     drag = {
       id: event.pointerId,
@@ -928,7 +925,9 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       onDocument,
     };
 
-    if (canHoldDocument) beginDocumentPointerHold();
+    if (event.button === 0 && event.pointerType !== 'touch' && isZoomableKey(opened) && !readerOpen) {
+      beginDocumentPointerHold();
+    }
     canvas.setPointerCapture?.(event.pointerId);
   }
 

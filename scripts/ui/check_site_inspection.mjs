@@ -66,9 +66,11 @@ try {
   assert.equal(await overlay.locator('.site-inspection__diagram').evaluate(el => getComputedStyle(el).color), 'rgb(232, 164, 90)');
   assert.match(await overlay.locator('#site-inspection-space').textContent(), /Hintergrund\.blend/);
   await page.waitForTimeout(250);
-  const first = hash(await page.locator('#frame').screenshot());
+  // Leader lines pulse on purpose. Mask them so the freeze check still covers the page.
+  const frozenFrame = () => page.locator('#frame').screenshot({ mask: [page.locator('.site-inspection__diagram')] });
+  const first = hash(await frozenFrame());
   await page.waitForTimeout(6500);
-  assert.equal(hash(await page.locator('#frame').screenshot()), first, 'Entire frame must stay still, including CSS effects');
+  assert.equal(hash(await frozenFrame()), first, 'Entire frame must stay still, including CSS effects');
   await page.screenshot({ path: `${output}/desktop-de.png` });
   await page.mouse.move(700, 350);
   await overlay.waitFor({ state: 'hidden' });

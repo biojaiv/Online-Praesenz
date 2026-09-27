@@ -13,6 +13,7 @@ const ANNOTATIONS = [
 ];
 const ORRERY_REFERENCE_URL = new URL('../../Elemente/Orrery/orrery-source.png', import.meta.url).href;
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const MIN_LEADER = 156;
 // Fine outline symbols echo the reader headings and the navigation's orbital dials.
 const SYMBOLS = {
   space: '<circle cx="12" cy="12" r="7"/><ellipse cx="12" cy="12" rx="11" ry="4" transform="rotate(-35 12 12)"/>',
@@ -37,11 +38,7 @@ export function createSiteInspection(trigger) {
       <div><h2 id="site-inspection-title"></h2><p id="site-inspection-status"></p></div>
     </header>
     <button class="site-inspection__close" type="button"><kbd>ESC</kbd><span></span><i aria-hidden="true">↩</i></button>
-    <svg class="site-inspection__diagram" aria-hidden="true"><defs>
-      <marker id="site-inspection-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
-        <path d="M 1 1 L 9 5 L 1 9" />
-      </marker>
-    </defs></svg>
+    <svg class="site-inspection__diagram" aria-hidden="true"></svg>
     <div class="site-inspection__zoom-cue" aria-hidden="true"><kbd>↑</kbd><span>ZOOM</span><kbd>↓</kbd></div>
     <nav class="site-inspection__tabs"></nav><div class="site-inspection__notes"></div>`;
   document.body.append(overlay);
@@ -75,11 +72,10 @@ export function createSiteInspection(trigger) {
     tabs.append(tab);
     const group = document.createElementNS(SVG_NS, 'g');
     const path = document.createElementNS(SVG_NS, 'path');
-    path.setAttribute('marker-end', 'url(#site-inspection-arrow)');
     const dot = document.createElementNS(SVG_NS, 'circle');
-    dot.setAttribute('r', '3');
+    dot.setAttribute('r', '3.5');
     const orbit = document.createElementNS(SVG_NS, 'circle');
-    orbit.setAttribute('r', '7');
+    orbit.setAttribute('r', '8');
     orbit.classList.add('site-inspection__orbit');
     group.append(path, orbit, dot);
     group.dataset.topic = key;
@@ -281,36 +277,56 @@ export function createSiteInspection(trigger) {
       group.style.display = source ? '' : 'none';
       if (!source) return;
       const rect = card.getBoundingClientRect();
-      const footerTarget = ['access', 'delivery'].includes(key);
-      let end, bend;
-      if (compact) {
-        end = { x: clamp(source.x, rect.left + 28, rect.right - 28),
-          y: source.y > rect.bottom ? rect.bottom + 5 : rect.top - 5 };
-        bend = { x: end.x, y: (source.y + end.y) / 2 };
-      } else if (footerTarget) {
-        // Footer explanations enter from below their cards. Sharing the inner
-        // vertical lane with the camera connection would merge unrelated lines.
-        end = { x: clamp(source.x, rect.left + 28, rect.right - 28), y: rect.bottom + 5 };
-        bend = { x: end.x, y: source.y };
+      const rx = value => Math.round(value);
+      // Left notes open to the right, right notes to the left.
+      const outward = index < 3 ? 1 : -1;
+      const edge = rx(outward > 0 ? rect.right : rect.left);
+      const tx = rx(source.x);
+      const ty = rx(source.y);
+      const beside = outward > 0 ? tx >= edge - 4 : tx <= edge + 4;
+      const y0 = rx(clamp(ty, rect.top + 20, rect.bottom - 20));
+      const dx = Math.abs(tx - edge);
+      const dy = Math.abs(ty - y0);
+      let d;
+      let markerX = tx;
+      let markerY = ty;
+      const midY = rx((rect.top + rect.bottom) / 2);
+      const midX = rx((rect.left + rect.right) / 2);
+      if (index < 3) {
+        const side = rx(rect.right);
+        d = Math.abs(ty - midY) <= 6 ? `M${side},${midY} H${tx}` : `M${side},${midY} H${tx} V${ty}`;
+      } else if (key === 'language') {
+        const top = rx(rect.top);
+        d = Math.abs(tx - midX) <= 4 ? `M${midX},${top} V${ty}` : `M${midX},${top} V${ty} H${tx}`;
+      } else if (key === 'delivery') {
+        const side = rx(rect.left);
+        d = Math.abs(ty - midY) <= 6 ? `M${side},${midY} H${tx}` : `M${side},${midY} H${tx} V${ty}`;
+      } else if (beside && dx >= 8 && dy > 6) {
+        const vert = Math.max(dy, MIN_LEADER - dx);
+        const y1 = rx(y0 + Math.sign(ty - y0) * vert);
+        d = `M${edge},${y0} H${tx} V${y1}`;
+      } else if (beside) {
+        const run = Math.max(dx, MIN_LEADER);
+        const x1 = rx(edge + outward * run);
+        d = `M${edge},${y0} H${x1}`;
+        if (run > dx + 6) { markerX = x1; markerY = y0; }
       } else {
-        end = { x: index < 3 ? rect.right + 5 : rect.left - 5, y: rect.top + 26 };
-        bend = { x: end.x + (index < 3 ? 21 : -21), y: source.y };
+        const yEdge = rx(ty < rect.top ? rect.top : rect.bottom);
+        const near = rx(Math.abs(tx - rect.left) <= Math.abs(tx - rect.right) ? rect.left : rect.right);
+        const run = Math.abs(tx - near);
+        const vert = Math.abs(ty - yEdge);
+        if (vert > 6) {
+          const y1 = rx(yEdge + Math.sign(ty - yEdge) * Math.max(vert, MIN_LEADER - run));
+          d = `M${near},${yEdge} H${tx} V${y1}`;
+        } else {
+          const x1 = rx(near + Math.sign(tx - near || outward) * Math.max(run, MIN_LEADER));
+          d = `M${near},${yEdge} H${x1}`;
+          if (Math.abs(x1 - tx) > 6) { markerX = x1; markerY = yEdge; }
+        }
       }
-      const language = ANNOTATIONS[index].key === 'language';
-      const belowHeader = Math.max(header.bottom + 8, source.y + 8);
-      const gutter = compact ? bounds.right - 8 : bend.x;
-      const footerPath = key === 'access'
-        ? `M${source.x},${source.y - 8} V${foot.top - 8} H${end.x} V${end.y}`
-        : key === 'delivery'
-          ? `M${source.x},${source.y + 8} V${Math.min(foot.bottom - 4, innerHeight - 6)} H${compact ? foot.right - 8 : bend.x} V${end.y} H${end.x}`
-          : null;
-      path.setAttribute('d', footerPath || (language
-        ? `M${source.x},${source.y} V${belowHeader} H${gutter} V${end.y} H${end.x}`
-        : compact
-        ? `M${source.x},${source.y} L${bend.x},${bend.y} L${end.x},${end.y}`
-        : `M${source.x},${source.y} L${bend.x},${bend.y} L${bend.x},${end.y} L${end.x},${end.y}`));
-      dot.setAttribute('cx', source.x); dot.setAttribute('cy', source.y);
-      orbit.setAttribute('cx', source.x); orbit.setAttribute('cy', source.y);
+      path.setAttribute('d', d);
+      dot.setAttribute('cx', markerX); dot.setAttribute('cy', markerY);
+      orbit.setAttribute('cx', markerX); orbit.setAttribute('cy', markerY);
     });
   }
   function queueLayout() { if (!updateFrame) updateFrame = requestAnimationFrame(layout); }

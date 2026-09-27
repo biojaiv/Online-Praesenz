@@ -64,7 +64,7 @@ export function createProjectsBrowser({container,stage}){
  }
  panel.addEventListener('pointerup',finish);panel.addEventListener('pointercancel',finish);
  panel.addEventListener('click',event=>{if(pinched&&event.detail>0){event.preventDefault();event.stopPropagation();pinched=false;}},true);
- panel.addEventListener('wheel',event=>{if(stage&&!suspended&&!mobile.matches){event.preventDefault();const unit=event.deltaMode===1?18:event.deltaMode===2?innerHeight:1;stage.zoomProjectPreview(event.deltaY*unit/innerHeight);}},{passive:false});
+ panel.addEventListener('wheel',event=>{if(!(stage&&!suspended&&!mobile.matches))return;event.preventDefault();if((event.buttons&1)===0&&!event.ctrlKey&&!event.metaKey)return;const unit=event.deltaMode===1?18:event.deltaMode===2?innerHeight:1;stage.zoomProjectPreview(event.deltaY*unit/innerHeight);},{passive:false});
  function resize(){panel.classList.toggle('is-spatial',Boolean(stage)&&!mobile.matches);panel.querySelector('.project-book-sheets')?.scrollTo(0,0);syncVisibility();if(lastWings)position({wings:lastWings});}
  mobile.addEventListener('change',resize);
  const unsubscribe=onLanguageChange(render);

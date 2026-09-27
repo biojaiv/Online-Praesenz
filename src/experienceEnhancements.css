@@ -488,3 +488,53 @@
   opacity: 0 !important;
   visibility: hidden !important;
 }
+
+.camera-dolly-guide.is-visible:not(.is-active):not(.is-demo-running):not(.is-keyboard) .camera-dolly-guide__left-button {
+  animation: guide-button-orange 3.2s ease-in-out infinite;
+}
+.camera-dolly-guide.is-visible:not(.is-active):not(.is-demo-running):not(.is-keyboard) .camera-dolly-guide__arrow {
+  animation: guide-arrows-orange 3.2s ease-in-out infinite;
+}
+@keyframes guide-button-orange {
+  0%, 36% {
+    fill: rgb(232 164 90 / 0.28);
+    stroke: #e8a45a;
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgb(232 164 90 / 0.7));
+  }
+  50%, 86% {
+    fill: rgb(255 255 255 / 0.03);
+    stroke: var(--fiber-white);
+    opacity: 0.5;
+    filter: none;
+  }
+  100% {
+    fill: rgb(232 164 90 / 0.28);
+    stroke: #e8a45a;
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgb(232 164 90 / 0.7));
+  }
+}
+@keyframes guide-arrows-orange {
+  0%, 36% {
+    stroke: currentColor;
+    opacity: 0.4;
+    filter: none;
+  }
+  50%, 86% {
+    stroke: #e8a45a;
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgb(232 164 90 / 0.7));
+  }
+  100% {
+    stroke: currentColor;
+    opacity: 0.4;
+    filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .camera-dolly-guide__left-button,
+  .camera-dolly-guide__arrow {
+    animation: none;
+  }
+}
