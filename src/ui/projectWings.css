@@ -35,3 +35,27 @@
 .project-wing footer{justify-content:center}.project-wing footer a{color:var(--wing);text-decoration:none}
 
 .is-flat .wing-preview img,.project-book-ui:not(.is-spatial) .wing-preview img{opacity:.5}
+
+/* Coordinates match the closed book's CanvasTexture (projectGalleryLayout). */
+.wing-gallery{margin:0;padding:0;list-style:none}
+.wing-gallery .gallery-card{left:48px;top:var(--card-y);width:704px;height:270px;box-sizing:border-box;border:2px solid #354652;border-radius:10px;background:#0a1521;color:#e2edf6;text-decoration:none;display:flex;align-items:center;gap:22px;padding:24px 18px;transition:border-color .18s,box-shadow .18s}
+.wing-gallery .gallery-thumb{width:342px;height:222px;object-fit:contain;flex:none;opacity:1!important}
+.gallery-copy h3{margin:0 0 12px;font:600 41px/1.1 'Barlow Condensed',sans-serif}
+.gallery-copy p{font:29px/1.35 'Barlow Condensed',sans-serif;color:#afc2d1}
+.gallery-card b{position:absolute;right:18px;top:68px;color:#efb46c;font:36px Barlow,sans-serif}
+.project-wing .gallery-hint{position:absolute;top:1275px;left:48px;right:48px;text-align:center;color:#efb46c;font:30px 'Barlow Condensed',sans-serif}
+.is-spatial .project-wing>.wing-gallery{opacity:1}
+.is-spatial .wing-gallery .gallery-card{background:transparent;border-color:transparent}
+.is-spatial .wing-gallery .gallery-card>*{visibility:hidden}
+.wing-gallery .gallery-card:hover,.wing-gallery .gallery-card:focus-visible{border-color:#efb46c;box-shadow:0 0 22px #efb46c24;outline:0}
+.is-flat .wing-gallery .gallery-card{position:relative;top:auto;left:auto;width:100%;height:auto;min-height:125px;padding:12px;gap:15px;margin:16px 0;aspect-ratio:auto}
+.is-flat .wing-gallery .gallery-thumb{width:48%;height:auto;aspect-ratio:1.5}
+.is-flat .gallery-copy h3{font-size:24px}.is-flat .gallery-copy p{font-size:16px}.is-flat .gallery-card b{right:10px;top:8px;font-size:20px}
+.is-flat .project-wing .gallery-hint{position:static;font-size:16px;margin-top:25px}
+@media(max-width:650px){
+ .project-book-ui .wing-gallery .gallery-card{position:relative;top:auto;left:auto;width:100%;height:auto;min-height:122px;padding:12px;gap:12px;margin:16px 0;aspect-ratio:auto}
+ .project-book-ui .wing-gallery .gallery-thumb{width:48%;height:auto;aspect-ratio:1.5}
+ .project-book-ui .gallery-copy h3{font-size:24px}.project-book-ui .gallery-copy p{font-size:16px}.project-book-ui .gallery-card b{right:8px;top:7px;font-size:19px}
+ .project-book-ui .project-wing .gallery-hint{position:static;font-size:16px;margin-top:25px}
+}
+@media(prefers-reduced-motion:reduce){.wing-gallery .gallery-card{transition:none}}

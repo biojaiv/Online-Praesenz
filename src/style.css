@@ -218,6 +218,7 @@ body {
    wandern gegenlaeufig durch den Schriftkoerper, getragen von einer ruhigen
    Grundtinte. Kein Lichtstreifen, sondern ein traeges, organisches Stroemen. */
 .head__name {
+  margin: 0;
   font-family: var(--font-display);
   font-size: clamp(18px, 1.5vw, 26px);
   font-weight: 500;

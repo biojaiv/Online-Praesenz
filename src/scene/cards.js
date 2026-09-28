@@ -8,6 +8,8 @@ import { ihkProjectionSource, getIhkAnchor } from './ihkProjectionSource.js';
 import { t, getLanguage, onLanguageChange } from '../i18n.js';
 import { createExamplePreview } from './examplePreview.js';
 import { deviceQuality } from './renderBudget.js';
+import { createHologramEdgeMaterial } from './materials/hologramEdgeMaterial.js';
+import { createRingJetMaterial } from './materials/ringJetMaterial.js';
 
 /**
  * Die drei interaktiven Bereichssockel.
@@ -154,7 +156,7 @@ function makeAccentRing(accent) {
  * Sockeloberflaeche auf. Der Aufstieg folgt einem Duesenprofil — sehr schnell
  * am Austritt, danach ausrollend und sprudelnd aufgefaechert.
  */
-function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = JET_HEIGHT } = {}) {
+function makeRingJet({ renderer, reduced, quality, originY = BASE_TOP, radius = RING_RADIUS, height = JET_HEIGHT } = {}) {
   const count = 1200;
   const positions = new Float32Array(count * 3);
   const angles = new Float32Array(count);
@@ -192,16 +194,21 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
   geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1));
   geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
   geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1));
+  // The vertex shader moves particles away from their CPU seed positions.
+  // Conservative authored bounds must include that movement for culling.
+  geometry.boundingSphere = new THREE.Sphere(
+    new THREE.Vector3(0, originY + height * .5, 0),
+    Math.hypot(radius + JET_SPREAD + .15, height * .65),
+  );
 
   const uniforms = {
-    uTime: time,
-    uMotion: { value: reducedMotion() ? 0 : 1 },
     uOriginY: { value: originY },
     uRadius: { value: radius },
     uHeight: { value: height },
     uHeightScale: { value: 1 },
     uEndY: { value: originY + DOC_LIFT - 0.04 },
     uDocumentYaw: { value: 0 },
+    uDocumentFront: { value: DOC_FRONT },
     uViewport: { value: new THREE.Vector2(1, 1) },
     uSpread: { value: JET_SPREAD },
     uHover: { value: 0 },
@@ -210,129 +217,35 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
     uPixelRatio: { value: 1 },
   };
 
-  const material = new THREE.ShaderMaterial({
-    uniforms,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: /* glsl */`
-      attribute float aAngle, aSeed, aSpeed, aSize, aPhase;
-      uniform float uTime, uOriginY, uRadius, uHeight, uHeightScale, uSpread, uEndY, uDocumentYaw;
-      uniform float uReveal, uPixelRatio, uHover, uMotion;
-      uniform vec2 uViewport;
-      varying float vT, vSeed, vSpark, vHue;
-      varying vec3 vDocumentEdge;
-      void main() {
-        float clock = uTime * uMotion;
-        float t = fract(aPhase + clock * aSpeed * 1.1);
-        vT = t;
-        vSeed = aSeed;
-        vHue = fract(aSeed + clock * 0.035);
-
-        // Duesenprofil: harter Schub am Austritt, danach bremst das Abgas ab.
-        float rise = 1.0 - pow(1.0 - t, 2.1);
-
-        // Sprudeln: drei ueberlagerte Wirbel unterschiedlicher Frequenz.
-        float churn = sin(clock * 3.1 + aSeed * 61.0 + t * 23.0)
-                    + sin(clock * 1.9 - aSeed * 37.0 + t * 13.0) * 0.55
-                    + sin(clock * 5.3 + aSeed * 97.0 + t * 41.0) * 0.3;
-
-        // Der Strahl tritt eng am weissen Ring aus und faechert nach oben
-        // kegelfoermig auf, wie eine sich entspannende Abgasfahne.
-        float swirl = aAngle + t * (1.2 + (aSeed - 0.5) * 1.4) + sin(clock * 1.4 + aSeed * 7.0) * .08;
-        float r = uRadius * (1.0 - 0.05 * t)
-                + (aSeed - 0.5) * 0.055
-                + churn * 0.018 * (0.25 + t * 1.6)
-                + t * t * uSpread;
-
-        vec3 p;
-        p.x = cos(swirl) * r;
-        p.z = sin(swirl) * r;
-        float availableHeight = max(0.0, uEndY - uOriginY - 0.015);
-        p.y = uOriginY + clamp(rise * min(uHeight * uHeightScale, availableHeight)
-          + churn * 0.025, 0.0, availableHeight);
-
-        // Clip the whole sprite at the projected document edge. A height
-        // limit alone lets foreground particles overlap it in perspective.
-        vec3 edgeDirection = vec3(cos(uDocumentYaw), 0.0, -sin(uDocumentYaw));
-        vec3 edgeCentre = vec3(0.0, uEndY, ${DOC_FRONT.toFixed(2)});
-        vec4 a = projectionMatrix * modelViewMatrix * vec4(edgeCentre - edgeDirection, 1.0);
-        vec4 b = projectionMatrix * modelViewMatrix * vec4(edgeCentre + edgeDirection, 1.0);
-        vec4 source = projectionMatrix * modelViewMatrix * vec4(0.0, uOriginY, 0.0, 1.0);
-        vec2 edgeA = (a.xy / a.w * 0.5 + 0.5) * uViewport;
-        vec2 edgeB = (b.xy / b.w * 0.5 + 0.5) * uViewport;
-        vec2 sourcePixel = (source.xy / source.w * 0.5 + 0.5) * uViewport;
-        vec2 direction = edgeB - edgeA;
-        vec2 normal = vec2(-direction.y, direction.x) / max(length(direction), 0.001);
-        normal *= dot(sourcePixel - edgeA, normal) < 0.0 ? -1.0 : 1.0;
-        vDocumentEdge = vec3(normal, -dot(normal, edgeA));
-
-        // Stetiges Verwehen statt harter Kante: die Fahne loest sich oben auf.
-        vSpark = smoothstep(0.0, 0.04, t) * pow(1.0 - t, 0.7);
-
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        // Perspektivisch korrekte Punktgroesse: der Strahl wird beim
-        // Heranfahren groesser, statt in einer festen Groesse zu kleben.
-        gl_PointSize = aSize * (0.45 + t * 1.75) * (1.0 + uHover * 0.3)
-          * uPixelRatio * (24.5 / max(9.0, -mv.z)) * uReveal;
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: /* glsl */`
-      uniform float uHover, uCompact, uReveal, uPixelRatio;
-      varying float vT, vSeed, vSpark, vHue;
-      varying vec3 vDocumentEdge;
-      void main() {
-        float edgeDistance = dot(vDocumentEdge.xy, gl_FragCoord.xy) + vDocumentEdge.z;
-        if (edgeDistance <= 0.5) discard;
-        // Senkrecht gestauchte Punktform: aus dem runden Sprite wird ein
-        // Bewegungsstrich, wie bei einem sehr schnellen Abgasstrahl.
-        vec2 point = gl_PointCoord - 0.5;
-        point.y *= mix(0.46, 0.15, vT);
-        float d = length(point);
-        if (d > 0.5) discard;
-        float core = 1.0 - smoothstep(0.0, 0.5, d);
-
-        vec3 blue = vec3(.12, .48, 1.0);
-        vec3 amber = vec3(1.0, .40, .06);
-        vec3 teal = vec3(.04, 1.0, .65);
-        vec3 violet = vec3(.72, .22, 1.0);
-        float band = vHue * 4.0;
-        float blend = smoothstep(.65, 1.0, fract(band));
-        vec3 color = band < 1.0 ? mix(blue, teal, blend)
-          : band < 2.0 ? mix(teal, amber, blend)
-          : band < 3.0 ? mix(amber, violet, blend) : mix(violet, blue, blend);
-
-        float alpha = core * vSpark * (0.60 + uHover * 0.18)
-          * uReveal * mix(1.0, 0.64, uCompact)
-          * smoothstep(0.5, max(1.5, 2.5 * uPixelRatio), edgeDistance);
-        if (alpha < 0.005) discard;
-        gl_FragColor = vec4(color, alpha);
-      }
-    `,
-  });
+  const effect = createRingJetMaterial(uniforms, { renderer, reduced, quality });
 
   const group = new THREE.Group();
   group.userData.kind = 'ring-jet';
-  group.add(new THREE.Points(geometry, material));
+  const points = new THREE.Points(geometry, effect.material);
+  group.add(points); effect.bind(points);
 
   let revealTarget = 1;
   return {
     group,
-    uniforms,
+    uniforms, effect,
+    setMirror: mesh => effect.setMirror(mesh),
     setOrigin(y) {
       uniforms.uOriginY.value = y;
       uniforms.uEndY.value = y + DOC_LIFT - 0.04;
+      geometry.boundingSphere.center.y = y + height * .5;
+      effect.refreshGeometry();
     },
     setReveal(value, immediate = false) {
       revealTarget = value;
       if (immediate) uniforms.uReveal.value = value;
     },
     setPixelRatio(value) { uniforms.uPixelRatio.value = value; },
-    update(delta) {
+    update(delta, visible = true) {
+      effect.update(delta, visible);
       const response = 1 - Math.pow(0.01, Math.min(delta, 0.1));
       uniforms.uReveal.value += (revealTarget - uniforms.uReveal.value) * response;
     },
+    dispose() { effect.dispose(); },
   };
 }
 
@@ -342,7 +255,7 @@ function makeRingJet(time, { originY = BASE_TOP, radius = RING_RADIUS, height = 
  * geschlossene geometrische Umrandung, kein Sockelbegleitlicht — nur
  * der Strahl, der am Rand entlangwandert.
  */
-function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
+function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0 } = {}) {
   const count = 410;
   const offsets = new Float32Array(count);
   const speeds = new Float32Array(count);
@@ -368,78 +281,13 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
   geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 24);
 
-  const uniforms = {
-    uTime: time,
-    uOpacity: { value: 0 },
-    uReduced: { value: reduced ? 1 : 0 },
-    uHalfWidth: { value: DOC_MAX_WIDTH * 0.5 },
-    uHalfHeight: { value: 1.6 },
-  };
-  const material = new THREE.ShaderMaterial({
-    uniforms,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: /* glsl */`
-      attribute float aOffset, aSpeed, aSize, aSeed;
-      uniform float uTime, uReduced, uHalfWidth, uHalfHeight;
-      varying float vSeed, vSpark;
-      void main() {
-        float motion = uReduced > 0.5 ? 0.0 : 1.0;
-        // Betont traeges Fliessen: der Rahmen wandert, ohne zu hetzen.
-        float t = fract(aOffset + uTime * aSpeed * 0.018 * motion);
-
-        float w = uHalfWidth;
-        float h = uHalfHeight;
-        // Umfang: unten(2w), rechts(2h), oben(2w), links(2h) = 4*(w+h).
-        float total = 4.0 * (w + h);
-        float dist = t * total;
-        vec3 p;
-        if (dist < 2.0 * w) {
-          p = vec3(-w + dist, -h, 0.0);
-        } else if (dist < 2.0 * w + 2.0 * h) {
-          p = vec3(w, -h + (dist - 2.0 * w), 0.0);
-        } else if (dist < 4.0 * w + 2.0 * h) {
-          p = vec3(w - (dist - 2.0 * w - 2.0 * h), h, 0.0);
-        } else {
-          p = vec3(-w, h - (dist - 4.0 * w - 2.0 * h), 0.0);
-        }
-
-        // Feines Flimmern, ohne die Bahn zu verlassen.
-        p += vec3(
-          sin(uTime * 0.9 + aSeed * 30.0) * 0.012,
-          cos(uTime * 0.7 + aSeed * 25.0) * 0.012,
-          0.0
-        );
-
-        // Helle Schwaden wandern um den Rahmen, statt zu einem Ende hin
-        // auszubrennen: jede Kante bleibt gleich stark besetzt.
-        float wave = 0.5 + 0.5 * sin(t * 87.9646 - uTime * 0.6 * motion);
-        vSpark = pow(wave, 2.0);
-
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = aSize * (1.0 + 0.5 * vSpark)
-          * (24.0 / max(9.0, -mv.z));
-        gl_Position = projectionMatrix * mv;
-        vSeed = aSeed;
-      }
-    `,
-    fragmentShader: /* glsl */`
-      uniform float uOpacity, uTime;
-      varying float vSeed, vSpark;
-      void main() {
-        vec2 point = gl_PointCoord - 0.5;
-        float core = smoothstep(0.5, 0.04, length(point));
-        vec3 color = vec3(0.47, 0.75, 1.0);
-        float alpha = core * uOpacity * (0.30 + 0.34 * vSpark);
-        if (alpha < 0.008) discard;
-        gl_FragColor = vec4(color, alpha);
-      }
-    `,
-  });
+  const effect = createHologramEdgeMaterial({ renderer, reduced, quality });
+  const { uniforms } = effect;
+  effect.setWindow(DOC_MAX_WIDTH, 3.2);
   const group = new THREE.Group();
   group.userData.kind = 'resume-frame';
-  group.add(new THREE.Points(geometry, material));
+  const points = new THREE.Points(geometry, effect.material);
+  group.add(points); effect.bind(points);
   group.visible = false;
 
   const idle = THREE.MathUtils.clamp(idleOpacity, 0, 1);
@@ -457,7 +305,7 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
 
   return {
     group,
-    uniforms,
+    uniforms, effect,
     setOrigin(y) {
       originY = y;
       group.position.y = originY + DOC_LIFT + uniforms.uHalfHeight.value;
@@ -468,8 +316,7 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
       // unteren bunten Kante erscheinen. Da DOC_LIFT bereits knapp innerhalb
       // der oberen Jetzone liegt, sitzt diese Unterkante zugleich unmittelbar
       // am Uebergang zwischen Duesenstrahl und Hologramm.
-      uniforms.uHalfWidth.value = width * 0.5;
-      uniforms.uHalfHeight.value = height * 0.5;
+      effect.setWindow(width, height);
       group.position.set(
         0,
         originY + DOC_LIFT + height * 0.5,
@@ -478,6 +325,7 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
       if (idle > 0 && !hidden) group.visible = true;
     },
     setOpen(value, immediate = false) {
+      if (value && !open) effect.activate();
       open = Boolean(value);
       applyTarget(immediate);
     },
@@ -487,14 +335,16 @@ function makeResumeFrame(time, { reduced = false, idleOpacity = 0 } = {}) {
       applyTarget(false);
     },
     setCompact(value) {
-      uniforms.uReduced.value = reduced || value ? 1 : 0;
+      effect.setCompact(value);
     },
-    update(delta) {
+    update(delta, visible = true) {
       if (!group.visible) return;
+      effect.update(delta, visible);
       const response = reduced ? 1 : 1 - Math.pow(0.01, Math.min(delta, 0.1));
       uniforms.uOpacity.value += (opacityTarget - uniforms.uOpacity.value) * response;
       if (opacityTarget === 0 && uniforms.uOpacity.value < 0.02) group.visible = false;
     },
+    dispose() { effect.dispose(); },
   };
 }
 
@@ -556,13 +406,24 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     opacity: 0,
     toneMapped: false,
   });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(5.25, 1.65), material);
+  // A cylindrical strip follows the pedestal's front ring. Its alpha texture
+  // carries only letters: no rectangular plate and no extra shader/pass.
+  const radius = BASE_DIAMETER * .5 + .16;
+  const geometry = new THREE.PlaneGeometry(5.9, 1.55, 48, 1);
+  const positions = geometry.attributes.position;
+  for (let index = 0; index < positions.count; index++) {
+    const angle = positions.getX(index) / radius;
+    positions.setXYZ(index, Math.sin(angle) * radius, positions.getY(index), Math.cos(angle) * radius);
+  }
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geometry, material);
   mesh.name = 'card-label';
   mesh.userData.key = def.key;
   mesh.renderOrder = 3;
-  // Leicht zum Betrachter geneigt, vorn an der Sockelkante.
-  mesh.rotation.x = -0.14;
-  mesh.material.depthTest = false;
+  mesh.userData.labelRadius = radius;
+  mesh.material.depthTest = true;
 
   const group = new THREE.Group();
   group.userData.kind = 'card-label';
@@ -575,7 +436,7 @@ function makeCardLabel(def, maxAnisotropy = 1) {
   const blue = lightColor('fiber'), amber = lightColor('amber');
   return {
     group,
-    setOrigin(y) { group.position.set(0, y + 0.5, BASE_DIAMETER * 0.5 + .65); },
+    setOrigin(y) { group.position.set(0, y + .12, 0); },
     setReveal(value, immediate = false) {
       revealTarget = value;
       if (immediate) reveal = value;
@@ -709,7 +570,9 @@ function updateCeiling(card, rebuild = false) {
     card.ceiling.add(card.accentRing.clone());
     // One central light illuminates both mirrored bodies; avoid doubling lights.
     // Shared particle buffers and uniforms keep both jets in phase.
-    card.ceiling.add(card.ringJet.group.clone(true));
+    const upperJet = card.ringJet.group.clone(true);
+    card.ceiling.add(upperJet);
+    card.ringJet.setMirror(upperJet.children[0]);
     card.ceiling.scale.y = -1;
     card.holder.add(card.ceiling);
   }
@@ -952,7 +815,7 @@ export const CARD_DEFS = [
 
 export function createCards({ renderer, reduced = false } = {}) {
   const group = new THREE.Group();
-  const time = { value: 0 };
+  let shaderQuality = deviceQuality();
   // One shared uniform drives the lower models and the separate upper caps
   // in phase, using the existing animation loop.
   const ringPulse = { value: 1 };
@@ -982,12 +845,12 @@ export function createCards({ renderer, reduced = false } = {}) {
     let card = null;
     // Jeder Sockel traegt denselben Partikelstrahl. Er tritt ausschliesslich
     // aus dem weissen Ring der Oberflaeche aus.
-    const ringJet = makeRingJet(time, { originY: BASE_TOP + 0.04 });
+    const ringJet = makeRingJet({ renderer, reduced, quality: shaderQuality, originY: BASE_TOP + 0.04 });
     // The middle pedestal carries the interactive website preview.
     const examplePreview = def.key === 'projekte' ? createExamplePreview({ reduced }) : null;
     const label = makeCardLabel(def, maxAnisotropy);
     label.setOrigin(BASE_TOP);
-    const resumeFrame = makeResumeFrame(time, { reduced, idleOpacity: 0.60 });
+    const resumeFrame = isResume ? makeResumeFrame({ renderer, reduced, quality: shaderQuality, idleOpacity: 0.60 }) : null;
     const resumeProjection = isResume
       ? createResumeProjection({
           renderer,
@@ -1007,7 +870,6 @@ export function createCards({ renderer, reduced = false } = {}) {
         })
       : null;
     resumeFrame?.setOrigin(BASE_TOP);
-    if (!isResume) resumeFrame.setWindow(DOC_MAX_WIDTH * RESUME_WORLD_SCALE, DOC_MAX_WIDTH * RESUME_WORLD_SCALE / (1258 / 1920));
     examplePreview?.setOrigin(BASE_TOP);
 
     const accentRing = makeAccentRing(def.accent);
@@ -1113,9 +975,30 @@ export function createCards({ renderer, reduced = false } = {}) {
       modelRevealReleased = true;
     },
 
+    setShaderQuality(profile) {
+      shaderQuality = typeof profile === 'number' ? profile : ({ low: 0, balanced: 1, full: 2 }[profile] ?? 0);
+      for (const card of cards) {
+        card.ringJet?.effect.setQuality(shaderQuality);
+        card.resumeFrame?.effect.setQuality(shaderQuality);
+      }
+    },
+    setShaderMotionReduced(value) {
+      for (const card of cards) {
+        card.ringJet?.effect.setReducedMotion(value);
+        card.resumeFrame?.effect.setReducedMotion(value);
+      }
+    },
+    setShaderEffects(value) {
+      for (const card of cards) {
+        card.ringJet?.effect.setEnhanced(value);
+        card.resumeFrame?.effect.setEnhanced(value);
+      }
+    },
+
     setPixelRatio(pr) {
       for (const card of cards) {
         card.ringJet?.setPixelRatio(pr);
+        if (card.resumeFrame) card.resumeFrame.uniforms.uPixelRatio.value = pr;
         if (card.ringJet) renderer.getDrawingBufferSize(card.ringJet.uniforms.uViewport.value);
       }
     },
@@ -1209,7 +1092,11 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     /** Genau eine Karte im Fokus, oder keine. */
     setHover(key) {
-      for (const card of cards) card.target = card.key === key ? 1 : 0;
+      for (const card of cards) {
+        card.target = card.key === key ? 1 : 0;
+        card.ringJet?.effect.setHovered(card.target > 0);
+        card.resumeFrame?.effect.setHovered(card.target > 0);
+      }
     },
 
     pulseMenuHover(key) {
@@ -1281,6 +1168,7 @@ export function createCards({ renderer, reduced = false } = {}) {
 
           card.ringJet.uniforms.uHeightScale.value =
             compact ? 1.14 : 1;
+          card.ringJet.effect.refreshGeometry();
         }
       }
     },
@@ -1292,11 +1180,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     faceLabels(camera) {
       for (const card of cards) {
         card.holder.updateWorldMatrix(true, false);
-        _center.set(0, card.surfaceY + .5, 0).applyMatrix4(card.holder.matrixWorld);
-        _size.copy(camera.position).sub(_center); _size.y = 0; _size.normalize();
-        const scale = card.holder.scale.x;
-        _center.addScaledVector(_size, (BASE_DIAMETER * .5 + .1) * scale);
-        card.label.group.position.copy(card.holder.worldToLocal(_center));
+        card.label.group.position.set(0, card.surfaceY + .12, 0);
         const localCamera = card.holder.worldToLocal(_size.copy(camera.position));
         const dx = localCamera.x - card.label.group.position.x, dz = localCamera.z - card.label.group.position.z;
         card.label.group.rotation.y = Math.atan2(dx, dz);
@@ -1331,7 +1215,9 @@ export function createCards({ renderer, reduced = false } = {}) {
         // Nachbarsockel verschwinden nicht schlagartig, sondern laufen
         // waehrend der Kamerafahrt aus dem Bild.
         card.holder.visible = mobileSelection === null || (key ? card.key === key : card.layoutIndex === mobileSelection);
-        card.active = (temporaryActive || key) === card.key;
+        const nextActive = (temporaryActive || key) === card.key;
+        if (nextActive && !card.active) card.ringJet?.effect.activate();
+        card.active = nextActive;
         if (key === 'projekte' && card.key === key) {
           // Settle before focusCard measures the bounds for the camera flight.
           card.holder.position.y = card.layoutY;
@@ -1362,7 +1248,6 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     update(elapsed, delta) {
       lastElapsed = elapsed;
-      time.value = elapsed;
       ringPulse.value = reduced ? 1.6 : 1.6 + 0.85 * Math.sin(elapsed * Math.PI * 2 / 6.3);
       const k = 1 - Math.pow(0.0012, Math.min(delta, 0.1));
       for (const card of cards) {
@@ -1398,7 +1283,7 @@ export function createCards({ renderer, reduced = false } = {}) {
         if (fallbackRing) fallbackRing.material.opacity = Math.min(1, 0.42 * ringPulse.value);
         if (card.ringJet) {
           card.ringJet.uniforms.uHover.value = card.hover;
-          card.ringJet.update(delta);
+          card.ringJet.update(delta, card.holder.visible && card.ringJet.group.visible);
         }
         card.examplePreview?.update(
           elapsed,
@@ -1413,7 +1298,10 @@ export function createCards({ renderer, reduced = false } = {}) {
         card.holder.userData.active = card.active;
         card.holder.userData.hover = card.hover;
 
-        card.resumeFrame?.update(delta);
+        if (card.resumeFrame) {
+          card.resumeFrame.uniforms.uHover.value = card.hover;
+          card.resumeFrame.update(delta, card.holder.visible);
+        }
         card.resumeProjection?.update(delta);
 
         // Gentle rotation is retained; vertical breathing is shared by all three.
@@ -1498,6 +1386,8 @@ export function createCards({ renderer, reduced = false } = {}) {
       baseModels.dispose();
       for (const card of cards) {
         card.disposed = true;
+        card.ringJet?.dispose();
+        card.resumeFrame?.dispose();
         card.resumeProjection?.dispose();
         card.examplePreview?.dispose();
         card.label?.dispose();

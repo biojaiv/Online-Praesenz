@@ -1,7 +1,8 @@
 /** Shared gallery/projector entries. `systems` preserves old Tiefgang links. */
 export const PROJECTS = Object.freeze([
- { id:'systems', category:'webseiten', title:'example.previewTitle', note:'example.previewNote', preview:(language,mobile=false)=>`/example/preview-${mobile?'mobile':'desktop'}-${language}.jpg`, entry:()=>'/beispiel/', parameter:'embedded', separate:false },
- { id:'recovery', category:'systemintegration', title:'recovery.title', note:'recovery.note', preview:language=>`/recovery/preview-${language}.jpg`, entry:()=>'/systemintegration/', parameter:'embedded', separate:false },
+ { id:'systems', category:'webseiten', title:'example.previewTitle', note:'example.previewNote', preview:(language,mobile=false)=>`/example/preview-${mobile?'mobile':'desktop'}-${language}.webp`, entry:()=>'/beispiel/', parameter:'embedded', separate:false },
+ { id:'passung', category:'webseiten', title:'passung.title', note:'passung.note', preview:(language,mobile=false)=>`/passung/preview-${mobile?'mobile':'desktop'}-${language}.webp`, entry:()=>'/beispiele/passung/', parameter:'embedded', separate:false },
+ { id:'recovery', category:'systemintegration', title:'recovery.title', note:'recovery.note', preview:language=>`/recovery/preview-${language}.webp`, entry:()=>'/systemintegration/', parameter:'embedded', separate:false },
 ]);
 export const getProject = id => PROJECTS.find(project=>project.id===id)||PROJECTS[0];
 export const projectsIn = category => PROJECTS.filter(project=>project.category===category);

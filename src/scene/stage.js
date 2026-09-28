@@ -104,6 +104,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   scene.add(background.group);
 
   const cards = createCards({ renderer, reduced });
+  cards.setShaderQuality(renderBudget.profile.name);
+  const shaderMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+  const onShaderMotionChange = () => cards.setShaderMotionReduced(shaderMotionQuery.matches);
+  shaderMotionQuery.addEventListener('change', onShaderMotionChange);
   cards.setPixelRatio(renderer.getPixelRatio());
   scene.add(cards.group);
 
@@ -1110,6 +1114,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     // Hold the last space frame behind a settled HTML project; the return flight resumes it.
     if (now - lastFrameAt < FRAME_BUDGET) return;
     if (qualitySettled && lastFrameAt && renderBudget.sample(now - lastFrameAt)) {
+      cards.setShaderQuality(renderBudget.profile.name);
       if (bloom) bloom.mipmapBlurPass.levels = renderBudget.profile.bloomLevels;
       currentPixelRatio = renderBudget.ratio(view.width, view.height);
       renderer.setPixelRatio(currentPixelRatio);
@@ -1431,6 +1436,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       dollyGuide.remove();
       timer.dispose();
       cards.dispose();
+      shaderMotionQuery.removeEventListener('change', onShaderMotionChange);
       background.dispose();
       composer?.dispose();
       renderer.dispose();

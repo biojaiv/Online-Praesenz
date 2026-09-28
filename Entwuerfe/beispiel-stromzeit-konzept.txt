@@ -1,0 +1,19 @@
+STROMZEIT — interaktive Stadtsimulation
+
+JPG-Konzept, erstellt am 27. September 2026 mit dem integrierten Imagegen-Werkzeug.
+Keine Umsetzung oder Einbindung in die bestehende Website.
+
+Eine zentrale Stadtbühne verändert sich beim Scrollen durch sechs Tagesabschnitte:
+Aufwachen, Hochfahren, Mittagsspitze, Wetterwechsel, Netzausfall und Nachtbetrieb.
+Erzeugung, Verbrauch und Speicher reagieren gemeinsam. Energiepakete folgen
+sichtbaren Leitungen. Wetterumschaltung verändert die Erzeugung; der Netzausfall
+lässt den Speicher übernehmen. Anklickbare Gebäude und Speicher öffnen Details.
+Die Zahlen im Bild sind beispielhafte Simulationswerte.
+
+Eigenständige Gestaltung: helles Mint, Kobaltblau, Korallrot, große Typografie
+und ein plastisches Stadtmodell mit sichtbarem Untergrund.
+
+Bei einer Umsetzung bleibt die Bühne im Mittelpunkt. Mobile Darstellung und
+reduzierte Bewegung erhalten dieselben Funktionen mit angepasster Darstellung.
+Vor der Umsetzung müssten das Simulationsmodell und die grafischen Anschlüsse
+fachlich präzisiert werden; das JPG zeigt die gestalterische Richtung.

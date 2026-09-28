@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/example/build_static.mjs && node scripts/knallblau/build_pages.mjs && vite build",
+    "build": "node scripts/prepare_media.mjs && node scripts/example/build_static.mjs && node scripts/knallblau/build_pages.mjs && vite build",
     "preview": "vite preview",
     "test:ihk": "node scripts/ihk/check_browser.mjs",
     "test:hologram": "node scripts/ihk/check_hologram_film.mjs",
@@ -20,6 +20,7 @@
     "test:refinements": "node scripts/ui/check_refinements.mjs",
     "test:waves": "node scripts/ui/check_waves.mjs",
     "test:render-budget": "node scripts/ui/check_render_budget.mjs",
+    "test:glsl": "node scripts/ui/check_glsl.mjs",
     "test:cv:transparency": "node scripts/cv/check_transparency.mjs",
     "test:project-frame": "node scripts/ui/check_project_frame.mjs",
     "test:inspection": "node scripts/ui/check_site_inspection.mjs",
@@ -33,7 +34,14 @@
     "test:project-wings": "node scripts/ui/check_project_wings.mjs",
     "build:cv-hologram": "node scripts/cv/build_legacy_projection.mjs --hologram-only",
     "test:hologram-alignment": "node scripts/ui/check_hologram_alignment.mjs",
-    "test:fullscreen": "node scripts/ui/check_fullscreen.mjs"
+    "test:fullscreen": "node scripts/ui/check_fullscreen.mjs",
+    "test:efficiency": "node scripts/ui/check_efficiency.mjs",
+    "build:creative-previews": "node scripts/creative/build_previews.mjs",
+    "test:creative": "node scripts/creative/check_browser.mjs",
+    "build:passung": "node scripts/creative/build_passung.mjs",
+    "test:passung": "node scripts/creative/check_passung.mjs",
+    "build:passung-previews": "node scripts/creative/build_passung_previews.mjs",
+    "build:creative-models": "node scripts/creative/build_models.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",

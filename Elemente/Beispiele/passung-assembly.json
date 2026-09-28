@@ -1,0 +1,60 @@
+{
+  "source": "PASSUNG.blend",
+  "parts": [
+    {
+      "name": "housing",
+      "explodeX": 0.0,
+      "withdrawX": 0,
+      "meshes": 3
+    },
+    {
+      "name": "rear_cover",
+      "explodeX": -0.18,
+      "withdrawX": 0,
+      "meshes": 3
+    },
+    {
+      "name": "front_bearing",
+      "explodeX": 0.5714285714285715,
+      "withdrawX": 0,
+      "meshes": 3
+    },
+    {
+      "name": "outboard_bearing",
+      "explodeX": 2.7985714285714285,
+      "withdrawX": 0,
+      "meshes": 3
+    },
+    {
+      "name": "shaft",
+      "explodeX": 0.18,
+      "withdrawX": 0,
+      "meshes": 3
+    },
+    {
+      "name": "circlip",
+      "explodeX": 2.15,
+      "withdrawX": 0,
+      "meshes": 1
+    },
+    {
+      "name": "spacer",
+      "explodeX": 2.5914285714285716,
+      "withdrawX": 0,
+      "meshes": 2
+    },
+    {
+      "name": "front_cover",
+      "explodeX": 3.9285714285714284,
+      "withdrawX": 0,
+      "meshes": 2
+    },
+    {
+      "name": "fasteners",
+      "explodeX": 3.9285714285714284,
+      "withdrawX": 0.85,
+      "meshes": 2
+    }
+  ],
+  "polygons": 73360
+}

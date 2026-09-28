@@ -1,0 +1,19 @@
+{
+  "metrics": {
+    "samples": 80,
+    "p50": 300.10000002384186,
+    "p95": 875.9000000357628,
+    "maxCalls": 175,
+    "minCalls": 86,
+    "points": 10970,
+    "quality": "low",
+    "dpr": 0.75,
+    "memory": {
+      "geometries": 124,
+      "textures": 19
+    },
+    "programs": 14,
+    "renderer": "WebKit WebGL"
+  },
+  "errors": []
+}

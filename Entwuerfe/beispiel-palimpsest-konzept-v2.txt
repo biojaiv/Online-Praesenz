@@ -1,0 +1,24 @@
+PALIMPSEST — Konzeptfassung 2
+
+Mit dem integrierten Imagegen-Werkzeug bearbeitet.
+Quelle: beispiel-palimpsest-konzept.jpg
+Ergebnis: beispiel-palimpsest-konzept-v2.jpg
+
+Änderungen:
+- Die rote Route innerhalb der Stadt ist die Zeitlinie, mit direkt zugeordneten Jahreszahlen.
+- Separate rechte Zeitleiste und unterer Bedien-/Fortschrittsbereich entfernt.
+- Überschrift neu angeordnet: Die Geschichte einer Stadt; vollständig aufrecht, ohne Schlusspunkt.
+
+Bearbeitungsprompt:
+
+Use case: precise-object-edit.
+Edit this existing PALIMPSEST webpage concept according to these exact changes. Keep the beautiful folded-paper city model, its four historical eras, its material textures, its buildings, its lighting, the off-white / black / vermilion palette, and the top navigation as close to the original as possible. This is an edit, not a redesign.
+
+1. THE RED ROUTE INSIDE THE CITY BECOMES THE TIMELINE ITSELF. Preserve and emphasize the existing red winding street/path which passes through the central squares and stairs connecting all four paper terraces. Make it one clearly continuous restrained vermilion line draped onto the actual paper/model surfaces, not a floating overlay. Add four small readable year markers DIRECTLY attached to that route, on the relevant terrace: 2026 on the modern city, 1924 on the brick industrial city, 1640 beside the older town square, 0240 beside the archaeological foundations. Use tiny red circular nodes and tasteful compact year labels on clear paper patches; slightly emphasize 1924. These labels must not cover buildings. Move the corresponding year labels from the left terrace faces to these route nodes, to avoid duplicated years. The route runs all the way from the contemporary neighborhood into the ruins and visually conveys travelling through time.
+2. REMOVE THE SEPARATE TIMELINE ON THE RIGHT COMPLETELY: its vertical black line, all its dots, its four date labels, the red selected 1924 rectangle and the nearby caption '02 / DIE STADT ARBEITET'. Restore plain off-white background where they were. Keep the small artifact/ticket story card at the lower right.
+3. REMOVE THE ENTIRE BOTTOM UI AREA BELOW THE MODEL: remove the black separator rule, the 'Schichten auseinanderziehen' icon and slider and 60%, the 'Modell / Stadtplan' toggle, the 'Damals / Heute vergleichen' button, the horizontal red progress line, footer captions and bottom scroll instruction. The bottom of the page should simply be quiet off-white breathing space below the intact folded city model and its shadows. Do NOT remove the lowest archaeological terrace, foundations or mosaic.
+4. REPLACE AND REPOSITION THE LARGE LEFT HEADLINE. Remove 'Jede Stadt hat ein Darunter.' and replace it with the exact text 'Die Geschichte einer Stadt'. Set it as a balanced TWO-LINE black editorial serif heading, 'Die Geschichte' on line one and 'einer Stadt' on line two, in the free upper-left area closer to the top navigation. Make it somewhat more compact than the old tall three-line headline, leaving air beside the model. Every word must be upright roman, including 'Stadt': NO italics anywhere in this new headline. NO full stop or other punctuation at the end. Keep the heading clear of the city and top navigation. Preserve the little eyebrow 'EINE STADT. VIER ZEITEN. VIELE GESCHICHTEN.' in a neat position above it.
+5. Keep the small supporting text 'Scrolle durch die Zeit. Entdecke, was geblieben ist.' beneath the repositioned heading. Remove the large standalone red downward arrow and its 'ZEIT FREILEGEN' label on the far left, so the in-city route is the one unambiguous time-navigation graphic.
+
+Everything else stays faithful: same city geometry and perspective, same folds and street connections, same paper scale, same artifact card, same top brand 'PALIMPSEST', same screenshot crop/aspect ratio. Highly legible German words, carefully integrated date labels. No extra toolbar, no new sections, no replacement timeline outside the city.
+

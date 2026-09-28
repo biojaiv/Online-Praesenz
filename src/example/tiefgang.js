@@ -28,8 +28,6 @@ export function startTiefgang() {
     document.documentElement.lang=language;
     document.documentElement.classList.toggle('scroll-mode',!reading);
     document.documentElement.classList.toggle('reading-mode',reading);
-    document.title=`Tiefgang — ${c.tagline} · Vladimir Leicht`;
-    document.querySelector('meta[name="description"]').content=c.tagline;
     root.innerHTML=`<div class="experience">
       <header class="masthead"><a class="wordmark" href="#chapter-1" data-jump="0">TIEFGANG<span aria-hidden="true">■</span></a>
         <p>${c.tagline}</p><div class="head-actions"><button id="example-language" aria-label="${language==='de'?'Switch to English':'Auf Deutsch wechseln'}">${language==='de'?'EN':'DE'}</button></div>

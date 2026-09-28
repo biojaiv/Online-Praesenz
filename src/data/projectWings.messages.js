@@ -1,5 +1,8 @@
 export const projectWingsMessages = {
  de: {
+  'gallery.subtitle':'Zwei Ideen. Zwei Erlebnisse.', 'gallery.hint':'Vorschau anklicken und entdecken',
+  'gallery.systems':'Ein Arbeitsplatz entsteht', 'gallery.passung':'Vom Entwurf zum Werkstück',
+  'passung.title':'PASSUNG', 'passung.note':'Präzisionstechnik interaktiv erleben',
   'projects.integration':'Systemintegration','projects.active':'AKTIV','projects.works':'Arbeiten','projects.work':'Arbeit',
   'projects.design':'Gestaltung · Aufbau · Barrierefreiheit','projects.infrastructure':'Netz · Server · Wiederanlauf',
   'projects.tischlerei':'Tischlerei · Branchen-Demo','projects.praxis':'Praxis · Branchen-Demo','projects.kanzlei':'Kanzlei · Branchen-Demo','projects.demo':'Fiktives Beispiel · kein realer Betrieb',
@@ -12,6 +15,9 @@ export const projectWingsMessages = {
   'recovery.transcript':'Film als Text · 13 Schritte','recovery.why':'Warum','recovery.how':'Umsetzung / Mittel','recovery.existing':'BESTAND','recovery.goal':'ZIEL','recovery.plan':'GEPLANT','recovery.silent':'02:20 · ohne Ton · Texte im Film auf Deutsch','recovery.back':'Zurück zu den Projekten',
  },
  en: {
+  'gallery.subtitle':'Two ideas. Two experiences.', 'gallery.hint':'Choose a preview and explore',
+  'gallery.systems':'A workplace comes to life', 'gallery.passung':'From drawing to finished part',
+  'passung.title':'PASSUNG', 'passung.note':'Explore precision engineering',
   'projects.integration':'Systems integration','projects.active':'ACTIVE','projects.works':'works','projects.work':'work',
   'projects.design':'Design · Structure · Accessibility','projects.infrastructure':'Networks · Servers · Recovery',
   'projects.tischlerei':'Joinery · Industry demo','projects.praxis':'Medical practice · Industry demo','projects.kanzlei':'Law office · Industry demo','projects.demo':'Fictional example · not a real business',

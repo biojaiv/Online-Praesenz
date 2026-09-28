@@ -1,0 +1,13 @@
+STROMZEIT, Version 2. Bearbeitet mit dem integrierten Imagegen-Werkzeug.
+Änderungen: Punkt hinter STROMZEIT entfernt; Sonne hinter der Stadt ergänzt.
+Quelle: beispiel-stromzeit-konzept.jpg
+Ergebnis: beispiel-stromzeit-konzept-v2.jpg
+
+Bearbeitungsprompt:
+
+Use case: precise-object-edit.
+Edit the provided STROMZEIT website concept image. Make exactly TWO changes:
+1. Remove the blue full stop immediately after the enormous headline STROMZEIT at the top right. The headline must read exactly "STROMZEIT" without any punctuation. Preserve the position, size, letter shapes and spacing of all letters. Fill only the removed dot area with the surrounding pale mint background.
+2. Add one tasteful visible sun in the BACKGROUND BEHIND the miniature city, slightly to the right of the central high-rise cluster. It should appear above and partly behind the distant rooftops, like a sun illuminating this sunny midday city. Use a clean round warm apricot / pale golden sun disk with gentle material shading and a very restrained soft halo, harmonizing with the existing coral controls and mint background. Make it a clearly recognizable sun, about the visual size of the existing circular NETZAUSFALL button. Place it behind the buildings in the open background, not on the foreground cutaway city island. Buildings should naturally occlude the lower part if necessary. Do not obscure the headline, subtitle, SOLAR/SPEICHER labels, navigation or wind turbines. No face, no cartoon expression, no large rays, no new clouds or extra objects.
+Everything else is invariant: exact original crop and composition, all buildings and streets, every label and all German copy, white/cobalt city materials, underground energy cables, model geometry, button positions, metric values, chapter timeline, font sizes and spacing. Preserve the full webpage design as closely as possible. This is a precise edit of the original image, not a redesign.
+

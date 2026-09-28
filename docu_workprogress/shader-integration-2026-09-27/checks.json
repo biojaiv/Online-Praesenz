@@ -1,0 +1,262 @@
+{
+  "setup": {
+    "roles": [
+      {
+        "role": "ring-jet",
+        "clock": 0,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      }
+    ],
+    "programs": 14
+  },
+  "states": {
+    "first": [
+      {
+        "role": "ring-jet",
+        "clock": 0.1,
+        "motion": 1,
+        "quality": 2,
+        "activation": 0.16129032258064518,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.1,
+        "motion": 1,
+        "quality": 2,
+        "activation": 0.16129032258064518,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.1,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.1,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.1,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      }
+    ],
+    "finished": [
+      {
+        "role": "ring-jet",
+        "clock": 0.8999999999999999,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.8999999999999999,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.8999999999999999,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.8999999999999999,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.8999999999999999,
+        "motion": 1,
+        "quality": 2,
+        "activation": -1,
+        "version": 0
+      }
+    ],
+    "low": [
+      {
+        "role": "ring-jet",
+        "clock": 0.8999999999999999,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.8999999999999999,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.8999999999999999,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.8999999999999999,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.8999999999999999,
+        "motion": 0,
+        "quality": 0,
+        "activation": -1,
+        "version": 0
+      }
+    ],
+    "balanced": [
+      {
+        "role": "ring-jet",
+        "clock": 0.9999999999999999,
+        "motion": 1,
+        "quality": 1,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.9999999999999999,
+        "motion": 1,
+        "quality": 1,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.9999999999999999,
+        "motion": 1,
+        "quality": 1,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "ring-jet",
+        "clock": 0.9999999999999999,
+        "motion": 1,
+        "quality": 1,
+        "activation": -1,
+        "version": 0
+      },
+      {
+        "role": "hologram-edge",
+        "clock": 0.9999999999999999,
+        "motion": 1,
+        "quality": 1,
+        "activation": -1,
+        "version": 0
+      }
+    ],
+    "independent": true,
+    "mirrored": true
+  },
+  "pixels": {
+    "inner": 0,
+    "outer": 411906,
+    "wrapMean": 0.0000078125,
+    "grazing": 12648,
+    "innerChanges": []
+  },
+  "resources": {
+    "before": {
+      "calls": 151,
+      "points": 10970,
+      "geometries": 124,
+      "textures": 19,
+      "programs": 14
+    },
+    "off": {
+      "calls": 151,
+      "points": 10970,
+      "geometries": 124,
+      "textures": 19,
+      "programs": 14
+    },
+    "on": {
+      "calls": 151,
+      "points": 10970,
+      "geometries": 124,
+      "textures": 19,
+      "programs": 14
+    },
+    "after": {
+      "calls": 151,
+      "points": 10970,
+      "geometries": 124,
+      "textures": 19,
+      "programs": 14
+    }
+  },
+  "fallback": {
+    "count": 8,
+    "positions": true,
+    "restored": true,
+    "documents": true
+  }
+}

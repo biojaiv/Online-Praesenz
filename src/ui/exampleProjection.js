@@ -108,14 +108,14 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     }
     const current = ++ticket;
     originFocus = source;
-    const sourcePreview = source?.closest?.('.project-wing')?.querySelector('.wing-preview') || source;
+    const sourcePreview = source?.closest?.('[data-project-card]')?.querySelector('img') || source?.closest?.('.project-wing')?.querySelector('.wing-preview') || source;
     originRect = sourcePreview?.getBoundingClientRect?.();
     light.getAnimations().forEach(animation => animation.cancel());
     scrim.getAnimations().forEach(animation => animation.cancel());
     controls.getAnimations().forEach(animation => animation.cancel());
     preview = document.createElement('img');
     preview.className = 'example-projection__preview'; preview.alt = '';
-    preview.src = sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
+    preview.src = sourcePreview?.currentSrc || sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
     playSound('focus');
     stage.cards.setTemporaryActive('projekte');
     stage.cards.setProjectHologramHidden(true);

@@ -1,6 +1,7 @@
 import { ihkMessages } from './data/ihk.messages.js';
 import { projectWingsMessages } from './data/projectWings.messages.js';
 import { exampleMessages } from './data/example.messages.js';
+import { updatePageMetadata } from './ui/pageMetadata.js';
 
 const STORAGE_KEY = 'vl-language';
 const SESSION_STORAGE_KEY = 'vl-language-session';
@@ -212,6 +213,8 @@ function normaliseLanguage(value) {
 }
 
 function storedLanguage() {
+  const requested = new URLSearchParams(location.search).get('lang');
+  if (SUPPORTED_LANGUAGES.has(requested)) return requested;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return normaliseLanguage(stored);
@@ -248,10 +251,7 @@ export function t(key, replacements = {}) {
 export function applyStaticTranslations() {
   const language = getLanguage();
   document.documentElement.lang = language;
-  document.title = t('meta.title');
-
-  const description = document.querySelector('meta[name="description"]');
-  if (description) description.setAttribute('content', t('meta.description'));
+  updatePageMetadata(language);
 
   for (const element of document.querySelectorAll('[data-i18n]')) {
     element.textContent = t(element.dataset.i18n);
@@ -272,6 +272,11 @@ export function setLanguage(value) {
   const previous = getLanguage();
   const language = normaliseLanguage(value);
   currentLanguage = language;
+
+  if (new URLSearchParams(location.search).has('lang')) {
+    const url = new URL(location.href); url.searchParams.set('lang', language);
+    history.replaceState(history.state, '', url);
+  }
 
   try {
     localStorage.setItem(STORAGE_KEY, language);

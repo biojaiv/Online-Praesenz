@@ -6,11 +6,11 @@ let transcript=null,restore=null;
 const post=(type,data={})=>{if(embedded)parent.postMessage({type:`example:${type}`,...data},location.origin);};
 function render(){
  const lang=getLanguage(),time=video.currentTime||0,wasPlaying=!video.paused;
- document.documentElement.lang=lang;document.title=`Recovery Lab · ${t('projects.integration')}`;
+ document.documentElement.lang=lang;
  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
  document.querySelector('.eyebrow').textContent=`VL // ${t('projects.integration').toUpperCase()}`;
  button.hidden=false;button.textContent=lang==='de'?'EN':'DE';button.setAttribute('aria-label',lang==='de'?'Switch to English':'Auf Deutsch wechseln');
- if(video.getAttribute('src')!==`/recovery/recovery-${lang}.mp4`){video.pause();restore={time,wasPlaying};video.src=`/recovery/recovery-${lang}.mp4`;video.poster=`/recovery/preview-${lang}.jpg`;video.load();}
+ if(video.getAttribute('src')!==`/recovery/recovery-${lang}.mp4`){video.pause();restore={time,wasPlaying};video.src=`/recovery/recovery-${lang}.mp4`;video.poster=`/recovery/preview-${lang}.webp`;video.load();}
  video.setAttribute('aria-label',t('recovery.title')+' · '+t('recovery.note'));
  if(transcript){const list=document.querySelector('#transcript ol');list.replaceChildren();
   for(const step of transcript[lang]){const li=document.createElement('li');const title=document.createElement('h2');title.textContent=step.t;

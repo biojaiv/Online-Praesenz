@@ -11,11 +11,12 @@
  * an den Anfang gesetzt wird.
  */
 
+const losslessAudio = document.createElement('audio').canPlayType('audio/flac');
 const SOURCES = {
-  build: new URL('../../sounds/combeep1.wav', import.meta.url).href,
-  warp: new URL('../../sounds/pbewht00.wav', import.meta.url).href,
-  focus: new URL('../../sounds/tdrtra00.wav', import.meta.url).href,
-  release: new URL('../../sounds/tdrtra01.wav', import.meta.url).href,
+  build: losslessAudio ? new URL('../../sounds/combeep1.flac', import.meta.url).href : new URL('../../sounds/combeep1.wav', import.meta.url).href,
+  warp: losslessAudio ? new URL('../../sounds/pbewht00.flac', import.meta.url).href : new URL('../../sounds/pbewht00.wav', import.meta.url).href,
+  focus: losslessAudio ? new URL('../../sounds/tdrtra00.flac', import.meta.url).href : new URL('../../sounds/tdrtra00.wav', import.meta.url).href,
+  release: losslessAudio ? new URL('../../sounds/tdrtra01.flac', import.meta.url).href : new URL('../../sounds/tdrtra01.wav', import.meta.url).href,
 };
 
 // Bewusst zurueckhaltend: nochmals rund vierzig Prozent leiser.
@@ -40,9 +41,9 @@ function base(name) {
   return audio;
 }
 
-/** Alle Dateien im Hintergrund holen, damit der erste Ruf nicht wartet. */
+/** Load only after audio is unlocked; blocked autoplay must not compete with the scene. */
 export function primeSounds() {
-  for (const name of Object.keys(SOURCES)) base(name).load();
+  if (unlocked) for (const name of Object.keys(SOURCES)) base(name).load();
 }
 
 /**
@@ -88,6 +89,7 @@ export function waitForSoundUnlock() {
 
 export function playSound(name) {
   if (!(name in SOURCES)) return;
+  if (!unlocked) { pending = name; return; }
   const audio = base(name);
   audio.pause();
   audio.currentTime = 0;

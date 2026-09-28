@@ -1,0 +1,22 @@
+{
+  "metrics": {
+    "samples": 108,
+    "p50": 235.89999997615814,
+    "p95": 638.7999999523163,
+    "maxCalls": 175,
+    "minCalls": 86,
+    "points": 10970,
+    "quality": "low",
+    "dpr": 0.75,
+    "memory": {
+      "geometries": 124,
+      "textures": 19
+    },
+    "programs": 14,
+    "renderer": "WebKit WebGL",
+    "gpuTimerAvailable": true
+  },
+  "errors": [],
+  "browser": "153.0.8010.12",
+  "note": "Software WebGL; wall-clock intervals, not GPU duration or physical-device FPS."
+}

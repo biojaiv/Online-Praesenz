@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+ <meta name="theme-color" content="#eef1f4">
+ <title>PASSUNG — From an idea to a finished part</title>
+ <meta name="description" content="A precision engineering website concept. Explore a Blender-modelled drive assembly, from the first drawing to the finished component.">
+ <link rel="icon" type="image/svg+xml" href="/passung/mark.svg">
+ <link rel="stylesheet" href="/src/passung/style.css">
+ <script type="module" src="/src/passung/main.js"></script>
+</head>
+<body class="passung">
+ <a class="skip-link" href="#chapters" data-copy="skip">Skip to manufacturing</a>
+ <main class="scroll-story" id="experience">
+  <div class="workbench">
+   <header class="site-header">
+    <a class="wordmark" href="#experience" aria-label="PASSUNG">
+     <svg class="brand-mark" viewBox="0 0 48 44" aria-hidden="true"><path d="M2 15 23 3v12L12 21l11 6v13L2 28Z" fill="#0638e5"/><path d="m25 4 21 12v13L25 41V28l11-6-11-6Z" fill="#1947f5"/><path d="m2 15 10 6 11-6V3Z" fill="#3777ff"/><path d="m25 28 11-6 10 7-21 12Z" fill="#0733b6"/></svg>
+     <span>PASSUNG<small data-copy="descriptor">PRECISION ENGINEERING</small></span>
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+     <button type="button" data-dialog="skills" data-copy="skills">Expertise</button>
+     <a href="#chapter-1" data-jump="1" data-copy="manufacturing">Manufacturing</a>
+     <button type="button" data-dialog="team" data-copy="people">People</button>
+    </nav>
+    <div class="header-actions"><button class="primary-button" data-inquiry><span data-copy="inquiry">Discuss a project</span><svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M4 4h8v8"/></svg></button><button class="language-button" data-language aria-label="Auf Deutsch wechseln">DE</button></div>
+   </header>
+   <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+     <p class="eyebrow" data-copy="eyebrow">FROM AN IDEA TO A FINISHED PART</p>
+     <h1 id="hero-title" data-copy="headline">What you imagine<br>sets us<br><em>in motion</em></h1>
+     <p class="intro" data-copy="intro">We turn demanding ideas into precision components.<br>From our first conversation to production.</p>
+     <a class="text-link explore-link" href="#chapter-1" data-jump="1"><span data-copy="explore">Explore manufacturing</span><svg class="link-arrow arrow-down" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M4 12h8V4"/></svg></a>
+     <div class="step-context" aria-live="polite" aria-atomic="true"><p class="step-title">It starts with your idea.</p><p class="step-description">Together we clarify the function, material and requirements of your component.</p></div>
+    </div>
+    <div class="machine-stage">
+     <img class="machine-poster" src="/passung/machine-still.webp" width="1200" height="900" alt="Precision drive assembly" fetchpriority="high">
+     <canvas id="machine" tabindex="-1" aria-label="Scroll to explore the precision drive assembly" aria-describedby="machine-rotation-help"></canvas>
+     <p id="machine-rotation-help" class="rotation-help" data-copy="rotateHelp">The component turns slowly clockwise. Hover to pause, or drag horizontally to turn it manually. Left and right arrow keys rotate; Home resets the view. Scroll vertically to assemble the component; Rotation continues when changing chapters. Hover over a component to see its name.</p>
+     <div class="rotation-controls" hidden><span aria-hidden="true">↔</span><span data-copy="rotateHint">Drag to rotate</span><span class="rotation-hover-hint" data-copy="hoverHint">Hover to pause</span><button type="button" data-reset-view disabled aria-label="Reset view" title="Reset view"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7a6 6 0 1 1 0 6M4 3v4h4"/></svg></button></div>
+     <p class="model-status" role="status" data-copy="loading">Preparing the component …</p>
+     <div class="drawing-label" aria-hidden="true"><span data-copy="drawing">01 / From the drawing</span><svg viewBox="0 0 170 45"><path d="M0 3h123l33 32"/><circle cx="156" cy="35" r="2.2"/></svg></div>
+     <div class="component-label" aria-hidden="true"><span data-copy="component">02 / To the component</span><svg viewBox="0 0 170 45"><path d="M170 3H60L20 37"/><circle cx="20" cy="37" r="2.2"/></svg></div>
+     <button class="part-hotspot" data-dialog="detail" aria-label="Explore the housing and bearing seat"><svg class="hotspot-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span class="hotspot-caption" aria-hidden="true" data-copy="detailHint">Explore the details</span></button>
+    </div>
+    <button class="motion-toggle" type="button" aria-pressed="false"><span aria-hidden="true">◌</span><span data-motion-copy>Reduce assembly motion</span></button>
+   </section>
+   <nav class="chapter-rail" id="chapters" aria-label="Manufacturing chapters">
+    <div class="chapter-buttons">
+     <a href="#chapter-0" data-jump="0" aria-current="step"><span>01</span><span data-chapter-label="0">Idea</span></a>
+     <a href="#chapter-1" data-jump="1" aria-current="false"><span>02</span><span data-chapter-label="1">Manufacturing</span></a>
+     <a href="#chapter-2" data-jump="2" aria-current="false"><span>03</span><span data-chapter-label="2">Quality</span></a>
+     <a href="#chapter-3" data-jump="3" aria-current="false"><span>04</span><span data-chapter-label="3">In use</span></a>
+    </div>
+    <span class="scroll-hint"><span data-copy="scroll">Scroll to think further</span><svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12m-4-4 4 4 4-4"/></svg></span>
+    <div class="chapter-progress" aria-hidden="true"></div>
+   </nav>
+   <footer class="people-footer">
+    <div class="people-strip">
+     <figure class="workshop-frame"><img src="/passung/workshop.webp" width="1440" height="480" alt="Illustration: hands inspecting a machined component with a vernier caliper." class="workshop-photo"><figcaption class="workshop-caption" data-copy="photoCaption">The difference is in the detail.</figcaption></figure>
+     <div class="people-copy"><p class="people-kicker" data-copy="peopleKicker">THINKING AHEAD TOGETHER</p><h2 data-copy="teamTitle">Technology needs<br>people</h2><p data-copy="teamText">Experience that thinks ahead. From the start.</p></div>
+     <button class="text-link team-link" data-dialog="team"><span data-copy="teamLink">Meet the people behind it</span><svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M4 4h8v8"/></svg></button>
+    </div>
+    <div class="footer-base"><span data-copy="footerClaim">Precisely made. Thought through together.</span><nav aria-label="More information"><button data-inquiry data-copy="contact">Contact</button><button data-dialog="concept" data-copy="concept">About this concept</button><a href="/#projekte/webseiten" data-back data-copy="back">Portfolio</a></nav></div>
+   </footer>
+  </div>
+ </main>
+ <section class="reading-chapters" aria-label="From the idea to a finished part">
+  <h2>From the idea to a finished part · Vom Gedanken zum Werkstück</h2>
+  <article id="chapter-0"><h3>01 · Idea / Idee</h3><p>Together we clarify function, material and requirements. Gemeinsam klären wir Funktion, Werkstoff und Anforderungen.</p></article>
+  <article id="chapter-1"><h3>02 · Manufacturing / Fertigung</h3><p>Turning and milling give each detail its shape. Drehen und Fräsen geben jedem Detail seine Form.</p></article>
+  <article id="chapter-2"><h3>03 · Quality / Qualität</h3><p>Key dimensions and fits are checked against agreed requirements. Entscheidende Maße und Passungen werden nach vereinbarten Anforderungen geprüft.</p></article>
+  <article id="chapter-3"><h3>04 · In use / Im Einsatz</h3><p>The individual components become a complete assembly. Aus einzelnen Komponenten entsteht eine Baugruppe.</p></article>
+  <p>PASSUNG is a fictional portfolio concept by Vladimir Leicht. PASSUNG ist eine fiktive Beispielseite von Vladimir Leicht.</p>
+ </section>
+ <dialog class="info-dialog" aria-labelledby="info-title"><button class="close-dialog" aria-label="Close" autofocus>×</button><p class="eyebrow info-label"></p><h2 id="info-title"></h2><p class="dialog-intro"></p><div class="info-items"></div><button class="dialog-done text-link"><span data-copy="close">Close</span><svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M4 4h8v8"/></svg></button></dialog>
+ <dialog class="inquiry-dialog" aria-labelledby="inquiry-title">
+  <button class="close-dialog" aria-label="Close">×</button><p class="eyebrow" data-copy="formLabel">LET’S START A CONVERSATION</p><h2 id="inquiry-title" data-copy="formTitle">What do you have in mind?</h2><p class="dialog-intro" data-copy="formIntro">An initial idea is enough. Tell us briefly what you are planning.</p>
+  <form id="inquiry-form"><label for="project-idea" data-copy="projectLabel">Your component or idea</label><textarea id="project-idea" rows="3" maxlength="2000" required></textarea><div class="form-row"><div><label for="project-quantity" data-copy="quantityLabel">Scope</label><select id="project-quantity"></select></div><div><label for="project-material" data-copy="materialLabel">Material</label><select id="project-material"></select></div></div><button class="primary-button" type="submit"><span data-copy="prepare">Prepare an enquiry</span><svg class="link-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M4 4h8v8"/></svg></button></form>
+  <div class="draft-output" hidden><label for="draft-text" data-copy="draftTitle">Your enquiry draft</label><textarea id="draft-text" rows="8" readonly></textarea><div class="draft-actions"><button class="primary-button" id="copy-draft" data-copy="copyDraft">Copy draft</button><button class="text-link" id="download-draft" data-copy="download">Download as text</button></div><button class="edit-draft" data-copy="edit">Edit draft</button><p class="draft-status" role="status"></p></div>
+  <p class="form-note" data-copy="formNote">This is a demonstration. Your information stays in this browser and is not sent.</p>
+ </dialog>
+ <noscript><style>.scroll-story{height:auto!important}.workbench{position:relative!important;height:auto!important;min-height:100svh}.model-status,.motion-toggle,.part-hotspot,.drawing-label,.component-label,[data-dialog],[data-inquiry],[data-language]{display:none!important}.machine-poster{opacity:1!important}.reading-chapters{display:block!important}</style></noscript>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Only Vite assets contain content hashes and may be cached permanently.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Public documents keep stable URLs; revalidate so corrections are not stale.
+/cv/*
+  Cache-Control: public, max-age=0, must-revalidate
+/ihk/*
+  Cache-Control: public, max-age=0, must-revalidate
+/example/*
+  Cache-Control: public, max-age=0, must-revalidate
+/recovery/*
+  Cache-Control: public, max-age=0, must-revalidate
+/social/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/creative/*
+  Cache-Control: public, max-age=0, must-revalidate

@@ -1,0 +1,42 @@
+{
+  "public/example/preview-desktop-de.jpg": {
+    "digest": "cfe6d701da49bea4c1d771bd16bdf5c8bb6ac5c4c3a31e78c658d1b3b17998ad",
+    "output": "public/example/preview-desktop-de.webp"
+  },
+  "public/example/preview-mobile-de.jpg": {
+    "digest": "1da4397c10f995228d65775207d2cd9cf7238a9cbd4e8e9214ec9d7e6984facc",
+    "output": "public/example/preview-mobile-de.webp"
+  },
+  "public/recovery/preview-de.jpg": {
+    "digest": "63f26145cf84f6e6353fefcc6ac8e109f38ba2568e0197ca751e72900e857ea6",
+    "output": "public/recovery/preview-de.webp"
+  },
+  "public/example/preview-desktop-en.jpg": {
+    "digest": "8a7dada65b804796993c28231a3fc558c3f4e5d039e0d534b0b0d8614ae3b3f5",
+    "output": "public/example/preview-desktop-en.webp"
+  },
+  "public/example/preview-mobile-en.jpg": {
+    "digest": "18c1e6fb1a249216024c1cc90771276a3f04c1ae3b52132f562c890484c8ea70",
+    "output": "public/example/preview-mobile-en.webp"
+  },
+  "public/recovery/preview-en.jpg": {
+    "digest": "81d3fea4706b96d4e0cbabd3e52a7131bea05b0484a032fbb5adfb780207bd88",
+    "output": "public/recovery/preview-en.webp"
+  },
+  "sounds/combeep1.wav": {
+    "digest": "c2d71d9174fbb0689e4d50f5c86b22319cc7e0e41ce001e905763d896b163bfe",
+    "output": "sounds/combeep1.flac"
+  },
+  "sounds/pbewht00.wav": {
+    "digest": "ee24e6e71806e7d373b6027aad01666be9d406053daa2550983a3a65fa2cd6d1",
+    "output": "sounds/pbewht00.flac"
+  },
+  "sounds/tdrtra00.wav": {
+    "digest": "09cd3e3686a2f54f277e5e56f8f6d61e7b3f9962e0589e4889a00104cade9a5a",
+    "output": "sounds/tdrtra00.flac"
+  },
+  "sounds/tdrtra01.wav": {
+    "digest": "a4b6e1aeb66d9900f18451389a88c5bb8b1ccf8eae67c8600f8aecd910507fff",
+    "output": "sounds/tdrtra01.flac"
+  }
+}

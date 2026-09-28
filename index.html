@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vladimir Leicht — Information Technology Specialist - Systems Integration</title>
   <meta name="description" content="Portfolio of Vladimir Leicht, Information Technology Specialist - Systems Integration. Final project, private IT projects and CV." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/fonts.css" />
+  <link rel="preload" as="font" href="/src/assets/fonts/barlow-condensed-500-latin.woff2" type="font/woff2" crossorigin />
+  <link rel="preload" as="font" href="/src/assets/fonts/barlow-400-latin.woff2" type="font/woff2" crossorigin />
   <style>.pre-intro .head{opacity:0;visibility:hidden}</style>
   <script>
     (() => {
@@ -33,7 +33,7 @@
           <rect class="sigil__mid" x="7.5" y="7.5" width="19" height="19" />
           <rect class="sigil__core" x="13.6" y="13.6" width="6.8" height="6.8" />
         </svg>
-        <span class="head__name">Vladimir Leicht</span>
+        <h1 class="head__name">Vladimir Leicht</h1>
         <span class="head__role" data-i18n="brand.role">Information Technology Specialist - Systems Integration</span>
       </a>
 
@@ -103,7 +103,14 @@
     </header>
 
     <main class="stage" id="stage">
-      <canvas id="scene" tabindex="0" aria-label="Interactive 3D portfolio"></canvas>
+      <canvas id="scene" tabindex="0" aria-label="Interactive 3D portfolio">
+        <p>Vladimir Leicht — Information Technology Specialist, Systems Integration.</p>
+        <p>Final project: migration of endpoint management infrastructure. Windows Server, UEM and automated deployment.</p>
+        <p>Explore <a href="/beispiel/">Tiefgang, an interactive systems integration demonstration</a>,
+          <a href="/beispiele/passung/">PASSUNG, interactive precision engineering</a>,
+          and the <a href="/systemintegration/">Recovery Lab project film</a>.</p>
+        <p><a href="/cv/CV_EN.pdf">CV in English</a> · <a href="/cv/CV_DE.pdf" lang="de">Lebenslauf auf Deutsch</a></p>
+      </canvas>
 
       <div class="boot" id="boot">
         <div class="boot__ring"></div>
@@ -120,7 +127,11 @@
 
   <noscript>
     <div class="noscript">
-      This site uses WebGL. Please enable JavaScript.
+      <h2>Vladimir Leicht · Systems Integration</h2>
+      <p>The interactive 3D portfolio needs JavaScript and WebGL. You can also access these documents and projects directly:</p>
+      <p><a href="/cv/CV_EN.pdf">CV (English)</a> · <a href="/cv/CV_DE.pdf" lang="de">Lebenslauf (Deutsch)</a> ·
+      <a href="/ihk/IHK_Project_Report_EN.pdf">Final project</a> · <a href="/beispiel/">Tiefgang</a> · <a href="/beispiele/passung/">PASSUNG</a> ·
+      <a href="/systemintegration/">Recovery Lab</a></p>
     </div>
   </noscript>
 
