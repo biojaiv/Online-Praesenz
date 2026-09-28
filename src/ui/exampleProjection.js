@@ -28,6 +28,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   const border = createHologramBorder(light);
   let state = 'closed', originFocus = null, iframe = null, events = null, timer = 0, ticket = 0;
   let project = getProject('systems'), separate = null, preview = null, originRect = null;
+  let resolveOpeningContent = null;
   const animations = new Set();
   function animate(element, keyframes, duration, easing = 'cubic-bezier(.22, 1, .36, 1)') {
     const animation = element.animate(keyframes, { duration: motion.matches ? 0 : duration, easing, fill: 'forwards' });
@@ -43,14 +44,18 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
    *  while the projection is still expanding; input waits until it is open. */
   function revealContent() {
     if (!['opening', 'open'].includes(state) || !iframe?.dataset.ready || !iframe?.dataset.loaded) return;
-    // PASSUNG's still has to finish expanding before the live 3D scene takes over.
-    if (project.id === 'passung' && state === 'opening') return;
+    // PASSUNG opens the rendered page at its final layout size. A cropped
+    // gallery screenshot has a different model scale on shorter viewports.
+    if (project.id === 'passung' && state === 'opening') {
+      resolveOpeningContent?.();
+      resolveOpeningContent = null;
+      return;
+    }
     if (!iframe.dataset.revealed) {
       iframe.dataset.revealed = 'true';
       clearTimeout(timer); status.hidden = true;
       if (project.id === 'passung') {
         iframe.style.opacity = '1';
-        if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 520, 'ease-in-out');
       } else {
         animate(iframe, [{ opacity: 0 }, { opacity: 1 }], 220);
         if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 220);
@@ -75,10 +80,13 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     if (state === 'closed' || state === 'closing') return;
     const current = ++ticket;
     const transform = getComputedStyle(light).transform;
+    const lightOpacity = getComputedStyle(light).opacity;
     const darkness = getComputedStyle(scrim).opacity;
     const controlOpacity = getComputedStyle(controls).opacity;
     animations.forEach(animation => animation.cancel()); animations.clear();
     state = 'closing'; dialog.dataset.state = state;
+    resolveOpeningContent?.(); resolveOpeningContent = null;
+    delete dialog.dataset.awaitingContent;
     post('pause'); iframe && (iframe.inert = true);
     clearTimeout(timer); status.hidden = true;
     events?.abort(); events = null;
@@ -87,7 +95,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     setBrowserSuspended(false);
     frame?.classList.remove('is-example-projected');
     await Promise.all([
-      animate(light, [{ transform, opacity: 1 }, { transform: originTransform(), opacity: 0 }], 500),
+      animate(light, [{ transform, opacity: lightOpacity }, { transform: originTransform(), opacity: 0 }], 500),
       animate(scrim, [{ opacity: darkness }, { opacity: 0 }], 500),
       animate(controls, [{ opacity: controlOpacity }, { opacity: 0 }], 180),
     ]);
@@ -114,23 +122,31 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       dialog.querySelector('.example-projection__controls').append(separate);
     }
     const current = ++ticket;
+    const liveOpening = project.id === 'passung';
+    const contentReady = liveOpening ? new Promise(resolve => { resolveOpeningContent = resolve; }) : Promise.resolve();
     originFocus = source;
     const sourcePreview = source?.closest?.('[data-project-card]')?.querySelector('img') || source?.closest?.('.project-wing')?.querySelector('.wing-preview') || source;
     originRect = sourcePreview?.getBoundingClientRect?.();
     light.getAnimations().forEach(animation => animation.cancel());
     scrim.getAnimations().forEach(animation => animation.cancel());
     controls.getAnimations().forEach(animation => animation.cancel());
-    preview = document.createElement('img');
-    preview.className = 'example-projection__preview'; preview.alt = '';
-    preview.src = sourcePreview?.currentSrc || sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
+    if (!liveOpening) {
+      preview = document.createElement('img');
+      preview.className = 'example-projection__preview'; preview.alt = '';
+      preview.src = sourcePreview?.currentSrc || sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
+    }
     playSound('focus');
     stage.cards.setTemporaryActive('projekte');
-    stage.cards.setProjectHologramHidden(true);
-    setBrowserSuspended(true);
+    if (!liveOpening) {
+      stage.cards.setProjectHologramHidden(true);
+      setBrowserSuspended(true);
+    }
     state = 'opening'; dialog.dataset.state = state;
+    if (liveOpening) dialog.dataset.awaitingContent = 'true';
     status.hidden = false;
     translate();
     dialog.showModal(); back.focus({ preventScroll: true });
+    if (liveOpening) animate(controls, [{ opacity: 0 }, { opacity: 1 }], 180);
     events = new AbortController();
     window.addEventListener('message', event => {
       if (event.origin !== location.origin || event.source !== iframe?.contentWindow) return;
@@ -158,15 +174,22 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       loadedFrame.dataset.loaded = 'true';
       revealContent();
     }, { signal: events.signal });
-    screen.replaceChildren(iframe, preview);
+    screen.replaceChildren(iframe, ...(preview ? [preview] : []));
     timer = window.setTimeout(() => { status.textContent = t('example.error'); }, 12000);
-    await stage.exampleFlight.open();
+    await Promise.all([stage.exampleFlight.open(), contentReady]);
     if (current !== ticket) return;
+    if (liveOpening) {
+      clearTimeout(timer); status.hidden = true;
+      delete dialog.dataset.awaitingContent;
+      iframe.style.opacity = '1'; iframe.dataset.revealed = 'true';
+      stage.cards.setProjectHologramHidden(true);
+      setBrowserSuspended(true);
+    }
     border.start();
     stage.setProjectionIdle(true);
     const expanding = animate(light, [{ transform: originTransform(), opacity: .9 }, { transform: 'none', opacity: 1 }], 760);
     animate(scrim, [{ opacity: 0 }, { opacity: 1 }], 760);
-    animate(controls, [{ opacity: 0 }, { opacity: 1 }], 760);
+    animate(controls, [{ opacity: getComputedStyle(controls).opacity }, { opacity: 1 }], 760);
     await expanding;
     if (current !== ticket) return;
     state = 'open'; dialog.dataset.state = state;
@@ -198,6 +221,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     get isOpen() { return state !== 'closed'; },
     dispose() {
       ++ticket; events?.abort(); clearTimeout(timer);
+      resolveOpeningContent?.(); resolveOpeningContent = null;
       animations.forEach(animation => animation.cancel()); animations.clear();
       document.removeEventListener('click', activate);
       document.removeEventListener('visibilitychange', visibility);

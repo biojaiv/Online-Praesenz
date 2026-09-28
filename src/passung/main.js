@@ -148,7 +148,7 @@ if(canvas.dataset.modelReady!=='true'){
  motionButton.hidden=true;document.querySelector('.part-hotspot').hidden=true;
 }
 art?.resize();art?.renderStill();
-// Reveal only after the first rendered frame; the Blender still covers loading.
+// The loading image uses this same first frame and the same fit rectangle.
 if(canvas.dataset.modelReady==='true'){
  document.documentElement.classList.add('machine-ready');
  if(!still){

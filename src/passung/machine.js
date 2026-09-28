@@ -85,8 +85,9 @@ export function createMachine(art,{still=false,onFrame=()=>{}}={}){
   last=null;syncMotion();art.invalidate();
  }
  const targetPoint=new THREE.Vector3(1.0,2.12,0);
- const orbitOffset=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
- const annotationPoints=[],framingBounds=[],viewMatrix=new THREE.Matrix4(),boundPoint=new THREE.Vector3();
+ const orbit=new THREE.Vector3(8.5,3.68,16),orbitOffset=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
+ const sinElevation=orbit.y/orbit.length(),cosElevation=Math.sqrt(1-sinElevation*sinElevation);
+ const annotationPoints=[],frameEnvelope={radius:0,bottom:Infinity,top:-Infinity};
  function cacheBounds(object,meshesOnly){
   const box=new THREE.Box3(),inverse=new THREE.Matrix4().copy(object.matrixWorld).invert();
   object.traverse(child=>{
@@ -95,53 +96,38 @@ export function createMachine(art,{still=false,onFrame=()=>{}}={}){
    box.union(child.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse,child.matrixWorld)));
   });
   if(box.isEmpty())return;
-  const corners=[];
-  for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])corners.push(new THREE.Vector3(x,y,z));
-  framingBounds.push({object,corners});
+  // Both endpoints contain the complete, monotonic assembly movement,
+  // including the screws. A radial envelope also covers every orbit angle.
+  const positions=object.userData.part?
+   [object.userData.assembledX,object.userData.assembledX+object.userData.explodeX+(object.userData.withdrawX||0)]:[object.position.x];
+  const axis=new THREE.Vector3().setFromMatrixColumn(object.parent.matrixWorld,0),point=new THREE.Vector3();
+  for(const position of positions)for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]){
+   point.set(x,y,z).applyMatrix4(object.matrixWorld).addScaledVector(axis,position-object.position.x).sub(targetPoint);
+   const radius=Math.hypot(point.x,point.z),height=point.y*cosElevation;
+   frameEnvelope.radius=Math.max(frameEnvelope.radius,radius);
+   frameEnvelope.bottom=Math.min(frameEnvelope.bottom,height-radius*sinElevation);
+   frameEnvelope.top=Math.max(frameEnvelope.top,height+radius*sinElevation);
+  }
  }
- let halfWidth=0,halfHeight=0,frameInset=0,canvasHeight=600;
- function frameAssembly(blueprint,withdrawal){
-  if(!halfWidth)return;
+ function frameAssembly(){
   // Orbit around the vertical axis. The assembly, clipping plane and ground
   // stay in one coordinate system, including the blue construction drawing.
-  orbitOffset.set(8.5,3.68,16).applyAxisAngle(up,angle);
+  orbitOffset.copy(orbit).applyAxisAngle(up,angle);
   camera.position.copy(targetPoint).add(orbitOffset);camera.lookAt(targetPoint);camera.updateMatrixWorld();
-  // Reserve room for the two annotation rows only near full separation.
-  const annotationReveal=still?0:ease(clamp((expansionAt(current)-.94)/.055,0,1));
-  const annotationScale=lerp(1,Math.max(1.16,canvasHeight/Math.max(120,canvasHeight-100)),annotationReveal);
-  const width=(halfWidth+.50*withdrawal)*annotationScale;
-  const centre=.62*withdrawal-frameInset*blueprint;
-  const height=halfHeight*width/halfWidth;
-  let left=-width+centre,right=width+centre,top=height,bottom=-height;
-  if(Math.abs(angle)>.00001){
-   // Eight cached corners per group keep the rotated screws and CAD in view;
-   // no vertex traversal or new geometry is needed during a drag.
-   for(const {object,corners} of framingBounds){
-    if(object===cad?.group&&blueprint<=.005)continue;
-    viewMatrix.multiplyMatrices(camera.matrixWorldInverse,object.matrixWorld);
-    for(const corner of corners){
-     boundPoint.copy(corner).applyMatrix4(viewMatrix);
-     left=Math.min(left,boundPoint.x-.18);right=Math.max(right,boundPoint.x+.18);
-     bottom=Math.min(bottom,boundPoint.y-.18);top=Math.max(top,boundPoint.y+.18);
-    }
-   }
-   const aspect=halfWidth/halfHeight,cx=(left+right)/2,cy=(top+bottom)/2;
-   const w=Math.max(right-left,(top-bottom)*aspect)/2,h=w/aspect;
-   left=cx-w;right=cx+w;top=cy+h;bottom=cy-h;
-  }
-  if(camera.left!==left||camera.right!==right||camera.top!==top||camera.bottom!==bottom){
-   camera.left=left;camera.right=right;camera.top=top;camera.bottom=bottom;
-   camera.updateProjectionMatrix();
-  }
  }
  art.setFraming((width,height,cam)=>{
-  canvasHeight=height;
-  const aspect=width/height;
-  const h=Math.max(2.76,4.10/aspect);
-  // Give the longer drawing a gutter, then return that space to the moving parts.
-  halfWidth=h*aspect;halfHeight=h;
-  frameInset=matchMedia('(max-width:760px)').matches ? .36 : matchMedia('(max-width:1100px)').matches ? .24 : 0;
-  frameAssembly(clamp(1-current,0,1),screwWithdrawal(expansionAt(current)));
+  // Fit once on resize, never on chapter changes or rotation. Keep the same
+  // annotation gutters in the preview, CAD, exploded and assembled views.
+  const radius=frameEnvelope.radius||4.1;
+  const top=Number.isFinite(frameEnvelope.top)?frameEnvelope.top:2.76;
+  const bottom=Number.isFinite(frameEnvelope.bottom)?frameEnvelope.bottom:-2.76;
+  // The loading image fits this same inner rectangle (see .machine-poster).
+  const topInset=44,bottomInset=76;
+  const scale=Math.max((radius*2+.36)/Math.max(1,width-24),(top-bottom+.24)/Math.max(1,height-topInset-bottomInset));
+  const halfWidth=width*scale/2,halfHeight=height*scale/2;
+  const centre=(top+bottom)/2+(topInset-bottomInset)*scale/2;
+  cam.left=-halfWidth;cam.right=halfWidth;cam.top=centre+halfHeight;cam.bottom=centre-halfHeight;
+  frameAssembly();
   cam.near=.1;cam.far=90;
  });
 
@@ -160,7 +146,7 @@ export function createMachine(art,{still=false,onFrame=()=>{}}={}){
   const cut=lerp(BLUEPRINT_SECTION_X,-2.95,ease(Math.min(current,1)));
   solidClip.constant=-cut;wireClip.constant=cut;section.position.x=cut;
   const blueprint=clamp(1-current,0,1);
-  frameAssembly(blueprint,withdrawal);
+  frameAssembly();
   wireMaterial.opacity=.58*blueprint;
   wires.forEach(wire=>wire.visible=blueprint>.005&&(!Number.isFinite(wire.userData.minX)||wire.userData.minX+wire.parent.position.x<cut));
   cad?.setState(cut,blueprint);
@@ -232,6 +218,8 @@ export function createMachine(art,{still=false,onFrame=()=>{}}={}){
    const guideGeometry=new THREE.BufferGeometry();guideGeometry.setAttribute('position',new THREE.Float32BufferAttribute(guides,3));
    const guide=new THREE.LineSegments(guideGeometry,wireMaterial);root.add(guide);wires.push(guide);
   }
+  // Place the moving CAD contour before measuring its world-space envelope.
+  cad?.setState(BLUEPRINT_SECTION_X,1);
   root.updateMatrixWorld(true);
   parts.forEach(part=>{
    cacheBounds(part,true);
@@ -281,6 +269,6 @@ export function createMachine(art,{still=false,onFrame=()=>{}}={}){
  }
  function dispose(){disposed=true;environment.dispose();floor.dispose();}
  addEventListener('pagehide',dispose,{once:true});
- if(import.meta.env.DEV)window.__passungMachine={get parts(){return parts;},get current(){return current;},get target(){return target;},get angle(){return angle;},get ready(){return ready;},expansionAt,pickPart,setRotationPaused};
+ if(import.meta.env.DEV)window.__passungMachine={get parts(){return parts;},get current(){return current;},get target(){return target;},get angle(){return angle;},get ready(){return ready;},get posterFrame(){return {width:frameEnvelope.radius*2+.36,height:frameEnvelope.top-frameEnvelope.bottom+.24,centre:(frameEnvelope.top+frameEnvelope.bottom)/2};},expansionAt,pickPart,setRotationPaused};
  return {ready:loaded,setProgress,setQuiet,setAngle,setRotationPaused,pickPart,annotationAnchors,get expansion(){return expansionAt(current);},hotspot,get angle(){return angle;},get loaded(){return ready;}};
 }
