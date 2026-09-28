@@ -29,8 +29,8 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   let state = 'closed', originFocus = null, iframe = null, events = null, timer = 0, ticket = 0;
   let project = getProject('systems'), separate = null, preview = null, originRect = null;
   const animations = new Set();
-  function animate(element, keyframes, duration) {
-    const animation = element.animate(keyframes, { duration: motion.matches ? 0 : duration, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'forwards' });
+  function animate(element, keyframes, duration, easing = 'cubic-bezier(.22, 1, .36, 1)') {
+    const animation = element.animate(keyframes, { duration: motion.matches ? 0 : duration, easing, fill: 'forwards' });
     animations.add(animation);
     return animation.finished.catch(() => {}).finally(() => animations.delete(animation));
   }
@@ -43,11 +43,18 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
    *  while the projection is still expanding; input waits until it is open. */
   function revealContent() {
     if (!['opening', 'open'].includes(state) || !iframe?.dataset.ready || !iframe?.dataset.loaded) return;
+    // PASSUNG's still has to finish expanding before the live 3D scene takes over.
+    if (project.id === 'passung' && state === 'opening') return;
     if (!iframe.dataset.revealed) {
       iframe.dataset.revealed = 'true';
       clearTimeout(timer); status.hidden = true;
-      animate(iframe, [{ opacity: 0 }, { opacity: 1 }], 220);
-      if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 220);
+      if (project.id === 'passung') {
+        iframe.style.opacity = '1';
+        if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 520, 'ease-in-out');
+      } else {
+        animate(iframe, [{ opacity: 0 }, { opacity: 1 }], 220);
+        if (preview) animate(preview, [{ opacity: 1 }, { opacity: 0 }], 220);
+      }
     }
     if (state === 'open' && iframe.inert) {
       iframe.inert = false; iframe.tabIndex = 0;
