@@ -1,6 +1,6 @@
 import { t, getLanguage, onLanguageChange } from '../i18n.js';
 import { projectsIn, getProjectUrl } from '../data/projects.js';
-import { GALLERY, galleryY } from '../data/projectGalleryLayout.js';
+import { GALLERY, galleryY, PREVIEW_TONE_MATRIX } from '../data/projectGalleryLayout.js';
 import './projectWings.css';
 
 // Project a real HTML rectangle onto the four corners of its Three.js sheet.
@@ -12,14 +12,17 @@ export function sheetTransform([a,b,c,d],width=800,height=1428){
  const h=Math.abs(den)>1e-8?(dx1*sy-sx*dy1)/den:0;
  return `matrix3d(${(b.x-a.x+g*b.x)/width},${(b.y-a.y+g*b.y)/width},0,${g/width},${(d.x-a.x+h*d.x)/height},${(d.y-a.y+h*d.y)/height},0,${h/height},0,0,1,0,${a.x},${a.y},0,1)`;
 }
-export function createProjectsBrowser({container,stage}){
+export function createProjectsBrowser({container,stage,onNavigate}){
  const panel=document.createElement('section');panel.className='projects-browser project-book-ui';panel.hidden=true;
  panel.setAttribute('aria-label',t('example.label'));container.append(panel);
  const mobile=matchMedia('(max-width:650px)');
  let route='home',suspended=false,timer=0,lastWings=null,pinched=false,savedScroll=0;
  const touches=new Map();let pinchDistance=0;
  const open=()=>route.startsWith('projekte');
- function syncVisibility(){stage?.cards.showProjectPreview(!open()||!mobile.matches);}
+ function syncVisibility(){
+  stage?.cards.showProjectPreview(!open()||!mobile.matches);
+  panel.querySelectorAll('.wing-focus').forEach(button=>{button.disabled=!stage||mobile.matches;});
+ }
  function position({wings,zoom=1}){
   lastWings=wings;
   if(mobile.matches){panel.style.setProperty('--sheet-zoom',Math.max(.7,Math.min(1.7,zoom)).toFixed(3));return;}
@@ -34,12 +37,12 @@ export function createProjectsBrowser({container,stage}){
   rememberScroll();
   const focused=panel.contains(document.activeElement)?document.activeElement.dataset.focus:null;
   panel.classList.toggle('is-flat',!stage);panel.classList.toggle('is-spatial',Boolean(stage)&&!mobile.matches);panel.setAttribute('aria-label',t('example.label'));
-  panel.innerHTML='<div class="project-book-sheets">'+['webseiten','systemintegration'].map((category,i)=>{
+  panel.innerHTML=`<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="project-preview-tone" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="${PREVIEW_TONE_MATRIX}"/></filter></defs></svg><div class="project-book-sheets">`+['webseiten','systemintegration'].map((category,i)=>{
    const projects=projectsIn(category),project=projects[0];
    const link=p=>getProjectUrl(p,getLanguage());
    return `<article class="project-wing" data-wing="${category}" aria-label="${t(i?'projects.integration':'projects.websites')}">
     <header><span>VL // 02 · ${i?'B':'A'}</span></header>
-    <h2 class="wing-heading">${t(i?'projects.integration':'projects.websites')}</h2>
+    <h2 class="wing-heading"><button type="button" class="wing-focus" data-focus="wing-${category}" aria-label="${t('projects.focusWing',{title:t(i?'projects.integration':'projects.websites')})}" ${!stage||mobile.matches?'disabled':''}>${t(i?'projects.integration':'projects.websites')}</button></h2>
     <p class="wing-subtitle">${t(i?'projects.infrastructure':'gallery.subtitle')}</p>
     ${i?'':`<ul class="wing-gallery">${projects.map((p,index)=>`<li style="--card-y:${galleryY(index,projects.length)}px"><a class="gallery-card wing-preview" data-project-card href="${link(p)}" data-project-id="${p.id}" data-example-open data-focus="project-${p.id}" aria-label="${t(p.title)} · ${t('projects.open')}"><img class="gallery-thumb" src="${p.preview(getLanguage())}" width="${GALLERY.thumbWidth}" height="${GALLERY.thumbHeight}" alt=""/><div class="gallery-copy"><h3>${p.id==='systems'?'TIEFGANG':t(p.title)}</h3><p>${t('gallery.'+p.id)}</p></div><b aria-hidden="true">↗</b></a></li>`).join('')}</ul><p class="gallery-hint">${t('gallery.hint')}</p>`}
     ${i?`
@@ -71,6 +74,11 @@ export function createProjectsBrowser({container,stage}){
  }
  panel.addEventListener('pointerup',finish);panel.addEventListener('pointercancel',finish);
  panel.addEventListener('click',event=>{if(pinched&&event.detail>0){event.preventDefault();event.stopPropagation();pinched=false;}},true);
+ panel.addEventListener('click',event=>{
+  if(event.defaultPrevented||suspended||!stage||mobile.matches||event.target.closest('a'))return;
+  const wing=event.target.closest('[data-wing]');
+  if(wing)onNavigate?.(`projekte/${wing.dataset.wing}/nahansicht`);
+ });
  panel.addEventListener('wheel',event=>{if(!(stage&&!suspended&&!mobile.matches))return;event.preventDefault();if((event.buttons&1)===0&&!event.ctrlKey&&!event.metaKey)return;const unit=event.deltaMode===1?18:event.deltaMode===2?innerHeight:1;stage.zoomProjectPreview(event.deltaY*unit/innerHeight);},{passive:false});
  function resize(){savedScroll=0;panel.classList.toggle('is-spatial',Boolean(stage)&&!mobile.matches);panel.querySelector('.project-book-sheets')?.scrollTo(0,0);syncVisibility();if(lastWings)position({wings:lastWings});}
  mobile.addEventListener('change',resize);

@@ -193,6 +193,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let hovered = null;
   let menuHover = null;
   let opened = null;
+  let focusedProjectWing = null;
   let listener = null;
   let drag = null;
   let readerOpen = false;
@@ -553,6 +554,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       code: `toHome(${Number(duration).toFixed(2)})`,
     });
     opened = null;
+    focusedProjectWing = null;
     syncMobileHome();
     cards.setOpened(null);
     background.setDocumentOpen?.(false);
@@ -598,7 +600,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     applyBloom();
 
     if (isDocument || key === 'projekte') syncDocumentAspect();
-    const document3d = isDocument ? cards.documentBounds(bounds) : key === 'projekte' ? cards.projectBounds(bounds) : cards.worldBounds(key, bounds);
+    const closeWing = key === 'projekte' && focusedProjectWing && !view.mobile;
+    const document3d = isDocument ? cards.documentBounds(bounds) : key === 'projekte' ? cards.projectBounds(bounds, closeWing ? focusedProjectWing : null) : cards.worldBounds(key, bounds);
     if (document3d.isEmpty()) return;
 
     const tan = halfFovTan();
@@ -627,13 +630,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     } else if (key === 'projekte') {
       // Use the same viewport height and headroom as the adjacent documents.
       docFitDistance = Math.max(focusSize.y * 1.18 * (view.height / docRect.height) / (2 * tan), focusSize.x * 1.16 / (2 * tan * view.aspect));
+      if (closeWing) docFitDistance = Math.max(focusSize.y / (.9 * 2 * tan), focusSize.x / (.9 * 2 * tan * view.aspect));
       docBoundsMaxZ = document3d.max.z;
       docHalfWidth = focusSize.x * .5;
       docZoomTarget = docZoom;
       scrollLiftTarget = 0;
       distance = docFitDistance * docZoom;
       visibleHeight = 2 * distance * tan;
-      focusCenter.y -= focusSize.y * 0.13;
+      if (!closeWing) focusCenter.y -= focusSize.y * 0.13;
     } else {
       distance = Math.max(
         (focusSize.y * 1.2) / (2 * tan),
@@ -965,7 +969,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     if (moved || wheelUsed) return;
     // Resolve the actual click, even if it arrives before the next hover frame.
     updatePointerFromEvent(event);
-    const selected = pick();
+    const selected = pick(true);
     if (selected) listener?.('select', selected);
     else if (opened && !onDocument) listener?.('select', 'home');
   }
@@ -995,15 +999,22 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     return raycaster.intersectObjects(meshes.filter(mesh => mesh?.userData.key === opened && mesh.visible && mesh.parent.visible), false).length > 0;
   }
 
-  function pick() {
+  function pick(includeWing = false) {
     if (ndc.x < -1.5 || opened) return null;
     raycaster.setFromCamera(ndc, camera);
     const hits = raycaster.intersectObjects([...cards.pickables, ...cards.group.getObjectsByProperty('name', 'card-label'), ...cards.documentPickables.filter((mesh) => mesh.visible)].filter(mesh => mesh.parent?.visible && mesh.parent?.parent?.visible !== false), false);
+    if (includeWing && hits[0]?.object.userData.key === 'projekte' && hits[0].object.userData.section) return `projekte/${hits[0].object.userData.section}/nahansicht`;
     return hits.length ? (hits[0].object.userData.key || hits[0].object.parent.parent.userData.key) : null;
   }
 
   function setRoute(target) {
-    const [root, section] = String(target || '').split('/');
+    const [root, section, mode] = String(target || '').split('/');
+    const nextWing = root === 'projekte' && mode === 'nahansicht' && ['webseiten', 'systemintegration'].includes(section) ? section : null;
+    if (nextWing !== focusedProjectWing) {
+      focusedProjectWing = nextWing;
+      docZoom = docZoomTarget = nextWing ? 1 : DOCUMENT_ZOOM_DEFAULT;
+      if (root === 'projekte') focusCard(root, .8);
+    }
     if (!isDocumentKey(root)) return;
     cards.setDocumentSection(section || 'uebersicht');
     updateDocumentLift();

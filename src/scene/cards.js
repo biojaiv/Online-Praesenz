@@ -1174,8 +1174,8 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     /** Welt-Bounding-Box des Sockels, fuer das Kamera-Framing. */
-    projectBounds(out = new THREE.Box3()) {
-      return cards.find(c => c.key === 'projekte').examplePreview.bounds(out);
+    projectBounds(out = new THREE.Box3(), section = null) {
+      return cards.find(c => c.key === 'projekte').examplePreview.bounds(out, section);
     },
     faceLabels(camera) {
       for (const card of cards) {

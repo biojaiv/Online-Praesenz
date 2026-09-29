@@ -332,3 +332,19 @@
 .scroll-controls{translate:28px 0}.scroll-controls .scroll-hint{animation:scroll-hint-blink 2.8s ease-in-out infinite}
 @keyframes scroll-hint-blink{0%,22%{color:var(--muted)}40%,60%{color:#e8a45a}78%,100%{color:var(--muted)}}
 .scroll-controls[data-scroll=up] [data-prev],.scroll-controls[data-scroll=down] [data-next]{color:#e8a45a}
+
+/* Refinement: depth marker above the scale, framed completion card, quieter end state. */
+.depth-needle{top:-4px;height:13px}
+.depth-needle:after{top:0;bottom:auto;box-shadow:0 0 0 3px var(--paper)}
+.scroll-controls:has([data-next]:disabled) .scroll-hint{visibility:hidden}
+.reading-switch{white-space:nowrap;max-width:none}
+.chapter-nav b{cursor:help}
+.stage .completion{border:1px solid var(--ink);box-shadow:0 18px 50px #3a301812}
+.stage .completion:before{content:'';position:absolute;top:-1px;left:50%;width:56px;height:2px;background:var(--bright);translate:-50% 0}
+.stage .completion .eyebrow{letter-spacing:.14em;color:var(--muted)}
+.stage .completion .project-link{display:inline-block}
+.stage .completion button{display:block;margin:4px auto 0;padding:6px 10px;min-height:30px;background:none;color:inherit;cursor:pointer}
+.stage .completion button:is(:hover,:focus-visible){color:var(--amber)}
+@media(min-width:761px){
+ .stage .completion{inset:auto;left:50%;top:50%;width:min(440px,94%);padding:30px 28px 22px;translate:-50% -50%}
+}

@@ -1,5 +1,6 @@
 export const projectWingsMessages = {
  de: {
+  'projects.closeup':'Nahansicht', 'projects.focusWing':'{title} in Nahansicht ansehen',
   'gallery.subtitle':'Zwei Ideen. Zwei Erlebnisse.', 'gallery.hint':'Vorschau anklicken und entdecken',
   'gallery.systems':'Ein Arbeitsplatz entsteht', 'gallery.passung':'Vom Entwurf zum Werkstück',
   'passung.title':'PASSUNG', 'passung.note':'Präzisionstechnik interaktiv erleben',
@@ -15,6 +16,7 @@ export const projectWingsMessages = {
   'recovery.transcript':'Film als Text · 13 Schritte','recovery.why':'Warum','recovery.how':'Umsetzung / Mittel','recovery.existing':'BESTAND','recovery.goal':'ZIEL','recovery.plan':'GEPLANT','recovery.silent':'02:20 · ohne Ton · Texte im Film auf Deutsch','recovery.back':'Zurück zu den Projekten',
  },
  en: {
+  'projects.closeup':'Close-up', 'projects.focusWing':'View {title} up close',
   'gallery.subtitle':'Two ideas. Two experiences.', 'gallery.hint':'Choose a preview and explore',
   'gallery.systems':'A workplace comes to life', 'gallery.passung':'From drawing to finished part',
   'passung.title':'PASSUNG', 'passung.note':'Explore precision engineering',

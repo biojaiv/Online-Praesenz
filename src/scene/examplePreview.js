@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { t, getLanguage, onLanguageChange } from '../i18n.js';
 import { projectsIn } from '../data/projects.js';
-import { GALLERY, galleryY } from '../data/projectGalleryLayout.js';
+import { GALLERY, galleryY, PREVIEW_TONE } from '../data/projectGalleryLayout.js';
 import { HOLOGRAM_HEIGHT, HOLOGRAM_LIFT, HOLOGRAM_FRONT } from './projectionLayout.js';
 import { LIGHT_PALETTE } from './palette.js';
 
@@ -14,6 +14,18 @@ export function createExamplePreview({ reduced = false } = {}) {
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=1428;
   const ctx=canvas.getContext('2d'),texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide});
+  const previewRects=i?[[48,280,704,470]]:projectsIn(category).map((_,index)=>[GALLERY.x+GALLERY.thumbX,galleryY(index,projectsIn(category).length)+GALLERY.thumbY,GALLERY.thumbWidth,GALLERY.thumbHeight]);
+  const previewMask=previewRects.map(([x,y,w,h])=>`(vMapUv.x > ${(x/800).toFixed(8)} && vMapUv.x < ${((x+w)/800).toFixed(8)} && vMapUv.y > ${(1-(y+h)/1428).toFixed(8)} && vMapUv.y < ${(1-y/1428).toFixed(8)})`).join(' || ');
+  material.customProgramCacheKey=()=>`project-preview-tone-${category}-${previewMask}`;
+  material.onBeforeCompile=shader=>{
+   shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>', `
+    #include <map_fragment>
+    if (${previewMask}) {
+     float luminance = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722));
+     diffuseColor.rgb = vec3(${PREVIEW_TONE.join(',')}) * luminance;
+    }
+   `);
+  };
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),material);
   mesh.name=i?'example-preview-systemintegration':'example-preview';mesh.userData.key='projekte';mesh.userData.section=category;
   const pivot=new THREE.Group();pivot.position.x=i?.065:-.065;mesh.position.x=(i?1:-1)*width/2;pivot.add(mesh);group.add(pivot);meshes.push(mesh);
@@ -49,7 +61,7 @@ export function createExamplePreview({ reduced = false } = {}) {
     texture.needsUpdate=true;return;
    }
    ctx.fillStyle='#030a12';ctx.fillRect(48,280,704,470);
-   if(picture.complete&&picture.naturalWidth){const scale=Math.min(704/picture.naturalWidth,470/picture.naturalHeight);const w=picture.naturalWidth*scale,h=picture.naturalHeight*scale;ctx.globalAlpha=.5;ctx.drawImage(picture,48+(704-w)/2,280+(470-h)/2,w,h);ctx.globalAlpha=1;}
+   if(picture.complete&&picture.naturalWidth){const scale=Math.min(704/picture.naturalWidth,470/picture.naturalHeight);const w=picture.naturalWidth*scale,h=picture.naturalHeight*scale;ctx.drawImage(picture,48+(704-w)/2,280+(470-h)/2,w,h);}
    ctx.fillStyle=accent;ctx.font='500 28px "Barlow Condensed",sans-serif';ctx.fillText(i?'DEBIAN · KVM · NFTABLES':'SVG · GSAP · JAVASCRIPT',400,820,704);
    ctx.fillStyle='#d4e8f8';ctx.font='500 39px "Barlow Condensed",sans-serif';ctx.fillText(t(projectsIn(category)[0].title),400,910,704);
    ctx.textAlign='left';ctx.fillStyle='#afc2d1';ctx.font='31px Barlow,sans-serif';
@@ -67,7 +79,18 @@ export function createExamplePreview({ reduced = false } = {}) {
  return {group,mesh:meshes[0],meshes,
   setOrigin(y){group.position.set(0,y+HOLOGRAM_LIFT+height/2,HOLOGRAM_FRONT);},
   setOpen(value){open=value;if(reduced){amount=value?1:0;pose();}},
-  bounds(out){group.updateWorldMatrix(true,false);return out.set(new THREE.Vector3(-width-.1,-height/2,-width),new THREE.Vector3(width+.1,height/2,.2)).applyMatrix4(group.matrixWorld);},
+  bounds(out,section){
+   group.updateWorldMatrix(true,false);
+   const index=meshes.findIndex(mesh=>mesh.userData.section===section);
+   if(index!==-1){
+    // Frame the final open pose, even while the wings are still unfolding.
+    const direction=index?1:-1;
+    const pose=new THREE.Matrix4().makeRotationY(direction*.14);
+    pose.setPosition(direction*.065,0,0);
+    return out.set(new THREE.Vector3(index?0:-width,-height/2,0),new THREE.Vector3(index?width:0,height/2,0)).applyMatrix4(pose).applyMatrix4(group.matrixWorld);
+   }
+   return out.set(new THREE.Vector3(-width-.1,-height/2,-width),new THREE.Vector3(width+.1,height/2,.2)).applyMatrix4(group.matrixWorld);
+  },
   setReveal(value,immediate=false){target=value;if(immediate){reveal=value;pose();}},
   update(_time,delta){const k=1-Math.exp(-Math.min(delta,.1)*5);amount+=((open?1:0)-amount)*k;reveal+=(target-reveal)*k;pose();},
   dispose(){disposed=true;unsubscribe();wings.forEach(w=>{w.pictures.forEach(image=>{image.onload=null;});w.texture.dispose();w.material.dispose();w.mesh.geometry.dispose();});}

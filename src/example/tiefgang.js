@@ -34,7 +34,7 @@ export function startTiefgang() {
       </header>
       <div class="workspace">
         <aside class="story"><p class="eyebrow" id="chapter-kicker"></p><h1><span class="story-time"></span><span class="story-title"></span></h1><p class="story-text"></p>
-          <nav class="chapter-nav" aria-label="${c.chapters}">${c.chaptersData.map((row,i)=>`<a href="#chapter-${i+1}" data-jump="${i}"><span>${number(i)}</span><i aria-hidden="true"></i><span>${e(row[0])}</span>${i===3||i===5?'<b aria-hidden="true">↗</b>':''}</a>`).join('')}</nav>
+          <nav class="chapter-nav" aria-label="${c.chapters}">${c.chaptersData.map((row,i)=>`<a href="#chapter-${i+1}" data-jump="${i}"><span>${number(i)}</span><i aria-hidden="true"></i><span>${e(row[0])}</span>${i===3||i===5?`<b aria-hidden="true" title="${e(c.projectRef)}">↗</b>`:''}</a>`).join('')}</nav>
           <a class="project-link story-project" href="/#abschluss" data-portfolio="abschluss" hidden>${c.project}</a>
           <button class="reading-switch">${reading?c.immersive:c.reading} ↗</button>
         </aside>

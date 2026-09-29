@@ -148,3 +148,14 @@ textarea:focus,select:focus{border-color:#739beb;box-shadow:0 0 0 3px #0b4cff0a}
 .part-callout span{display:block;text-wrap:balance;overflow-wrap:anywhere}
 .machine-stage[data-annotated=true] :is(.part-hotspot,.drawing-label,.component-label){visibility:hidden}
 @media(max-width:760px){.part-callout{font-size:9px;padding:2px}.part-callout b{font-size:8px}.parts-annotations path{stroke-width:.6}}
+
+/* Chapter narrative: numbered step on larger screens, one-line title beside the rail on phones. */
+.step-context::before{content:attr(data-index);display:block;margin:0 0 7px;font:10px/1 var(--technical-font);font-variant-numeric:tabular-nums;letter-spacing:.06em;color:#3f68b0}
+.step-context .step-title{font-size:15px;font-weight:600;line-height:1.25;letter-spacing:-.005em;color:#0f2c4f;margin-bottom:6px}
+.step-context .step-description{font-size:13px;line-height:1.45;color:#43586e}
+.rail-step{display:none}
+@media(max-height:780px) and (min-width:761px){.step-context::before{margin-bottom:5px}.step-context .step-title{font-size:14px;margin-bottom:4px}.step-context .step-description{font-size:12px}}
+@media(max-width:760px){
+ .rail-step{display:block;position:absolute;left:0;bottom:4px;max-width:calc(100% - 135px);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 9px/1.3 Barlow,sans-serif;color:#183c67}
+ .rail-step::before{content:'';display:inline-block;width:10px;height:1px;margin:0 6px 2px 0;vertical-align:middle;background:var(--blue)}
+}

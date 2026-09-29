@@ -40,6 +40,7 @@ const ROUTE_LABEL_KEYS = Object.freeze({
   webseiten: 'projects.websites',
   privat: 'projects.integration',
   systemintegration: 'projects.integration',
+  nahansicht: 'projects.closeup',
   automation: 'route.automation',
   lebenslauf: 'route.cv',
   arbeitsleben: 'route.career',

@@ -153,7 +153,7 @@ export function createRouter({ onEnter, onMenuHover }) {
       && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return;
     // Auch die Fluchttaste faehrt aus dem Sockel heraus und klingt so.
     if (current !== 'home') playSound('release');
-    go('home');
+    go(current.endsWith('/nahansicht') ? current.replace('/nahansicht', '') : 'home');
   });
 
   go(location.hash, false);

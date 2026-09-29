@@ -13,8 +13,10 @@
 .project-wing .wing-description{font-size:31px;color:#afc2d1}.wing-planned{color:var(--wing);text-align:center}.wing-facts{padding-left:24px;font-size:31px}.wing-tools{margin-top:24px!important;text-align:center;color:var(--wing)}
 .project-wing footer{position:absolute;bottom:48px;left:48px;right:48px;display:flex;justify-content:space-between;color:var(--wing);font:500 27px "Barlow Condensed",sans-serif}
 .project-wing a:focus-visible{outline:3px solid var(--wing);outline-offset:5px}
-/* Desktop uses the actual unchanged scene texture. HTML only supplies links. */
-.is-spatial .project-wing{background:transparent}
+/* Desktop uses the scene texture; HTML supplies project links and wing focus. */
+.is-spatial .project-wing{background:transparent;cursor:default}
+.wing-focus{font:inherit;color:inherit;border:0;padding:0;background:none;cursor:inherit}
+.wing-focus:focus-visible{outline:3px solid var(--wing);outline-offset:5px}
 .is-spatial .project-wing>*{opacity:0}
 .is-spatial .project-wing:focus-within{outline:2px solid var(--wing);outline-offset:3px}
 .is-flat .project-book-sheets{display:flex;gap:20px;justify-content:center;overflow:auto;padding:20px;pointer-events:auto}
@@ -34,7 +36,7 @@
 
 .project-wing footer{justify-content:center}.project-wing footer a{color:var(--wing);text-decoration:none}
 
-.is-flat .wing-preview img,.project-book-ui:not(.is-spatial) .wing-preview img{opacity:.5}
+.is-flat .wing-preview img,.project-book-ui:not(.is-spatial) .wing-preview img{filter:url(#project-preview-tone)}
 
 /* Coordinates match the closed book's CanvasTexture (projectGalleryLayout). */
 .wing-gallery{margin:0;padding:0;list-style:none}

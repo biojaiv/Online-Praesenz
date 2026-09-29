@@ -12,7 +12,7 @@ const motionPreference=matchMedia('(prefers-reduced-motion:reduce)');
 const state={language:'en',progress:0,chapter:0,userQuiet:false,dialog:null};
 const info=document.querySelector('.info-dialog'),inquiry=document.querySelector('.inquiry-dialog');
 const motionButton=document.querySelector('.motion-toggle');
-const chapterRail=document.querySelector('.chapter-rail'),stepContext=document.querySelector('.step-context');
+const chapterRail=document.querySelector('.chapter-rail'),stepContext=document.querySelector('.step-context'),railStep=document.querySelector('.rail-step');
 let chapterReveal=null;
 const machine=art?createMachine(art,{still,onFrame:positionHotspot}):null;
 let rotation=null,annotations=null;
@@ -37,6 +37,8 @@ function updateChapter(){
  document.querySelector('.step-title').textContent=t.steps[index][0];
  document.querySelector('.step-description').textContent=t.steps[index][1];
  stepContext.dataset.first=String(index===0);
+ stepContext.dataset.index=`0${index+1} / 04`;
+ railStep.textContent=t.steps[index][0];
  chapterRail.style.setProperty('--progress',String(state.progress/3));
  document.documentElement.dataset.chapter=String(index);
  if(changed){
