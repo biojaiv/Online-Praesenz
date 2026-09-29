@@ -14,7 +14,7 @@ import { ihkProjectionSource } from './ihkProjectionSource.js';
 import { createIhkHologramFilm } from '../ui/ihkHologramFilm.js';
 import { LIGHT_PALETTE } from './palette.js';
 import { createExampleFlight } from './exampleFlight.js';
-import { createRenderBudget } from './renderBudget.js';
+import { createRenderBudget, deviceQuality } from './renderBudget.js';
 
 const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
 const isZoomableKey = key => isDocumentKey(key) || key === 'projekte';
@@ -76,7 +76,9 @@ function wrapAngle(value) {
 
 export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const renderBudget = createRenderBudget();
+  const initialQuality = deviceQuality();
+  const nativeDesktop = initialQuality > 0 && !matchMedia('(pointer: coarse)').matches;
+  const renderBudget = createRenderBudget(initialQuality, { nativeDesktop });
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -135,9 +137,16 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let bloomBaseTarget = 1.62;
 
   try {
+    // Thin emissive pedestal rings need geometry coverage before bloom.
+    // SMAA alone cannot recover a ring that already missed a pixel sample.
+    // Query the actual HDR target format; not every driver supports 4x MSAA.
+    const supportedSamples = nativeDesktop && renderer.capabilities.isWebGL2
+      ? gl.getInternalformatParameter(gl.RENDERBUFFER, supportsHalfFloat ? gl.RGBA16F : gl.RGBA8, gl.SAMPLES)
+      : [];
+    const multisampling = Math.max(0, ...supportedSamples.filter(samples => samples <= 4));
     composer = new EffectComposer(renderer, {
       frameBufferType: supportsHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType,
-      multisampling: 0,
+      multisampling,
     });
     composer.addPass(new RenderPass(scene, camera));
 
@@ -159,7 +168,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       bloom,
       new VignetteEffect({ offset: 0.28, darkness: 0.72 }),
       noise,
-      ...(renderBudget.profile.name === 'full' ? [new SMAAEffect()] : []),
+      ...(nativeDesktop || renderBudget.profile.name === 'full' ? [new SMAAEffect()] : []),
     ));
   } catch (err) {
     console.warn('Nachbearbeitung nicht verfügbar, verwende direktes Rendering:', err);
@@ -195,6 +204,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let opened = null;
   let informationView = null, informationPresentation = null, informationPaused = false;
   let informationTweens = [];
+  let informationCamera = null;
+  const informationExit = { active: false, progress: 0, tween: null, resolve: null };
   let informationRefreshFrame = 0;
   const informationMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let focusedProjectWing = null;
@@ -1011,6 +1022,28 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     return hits.length ? (hits[0].object.userData.key || hits[0].object.parent.parent.userData.key) : null;
   }
 
+  const informationPointer = new THREE.Vector2();
+  const informationBounds = new THREE.Box3();
+  const informationCeilingBounds = new THREE.Box3();
+  function pickInformationSection(clientX, clientY) {
+    if (informationView !== 'start' || informationExit.active || inspectionFrozen) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height || clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
+    informationPointer.set((clientX - rect.left) / rect.width * 2 - 1, 1 - (clientY - rect.top) / rect.height * 2);
+    raycaster.setFromCamera(informationPointer, camera);
+    // Cover each complete assembly, including the upper pedestal. Bounds avoid
+    // raycasting thousands of decorative particles on every pointer movement.
+    for (const holder of cards.group.children) {
+      if (!holder.visible) continue;
+      const key = holder.name.replace(/^card-/, '');
+      cards.worldBounds(key, informationBounds);
+      const ceiling = holder.getObjectByName('pedestal-ceiling')?.children[0];
+      if (ceiling) informationBounds.union(informationCeilingBounds.setFromObject(ceiling));
+      if (raycaster.ray.intersectsBox(informationBounds)) return key;
+    }
+    return null;
+  }
+
   function setRoute(target) {
     const [root, section, mode] = String(target || '').split('/');
     const nextWing = root === 'projekte' && mode === 'nahansicht' && ['webseiten', 'systemintegration'].includes(section) ? section : null;
@@ -1103,6 +1136,16 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }, 1100);
   }
 
+  function applyRenderQuality() {
+    cards.setShaderQuality(renderBudget.profile.name);
+    if (bloom) bloom.mipmapBlurPass.levels = renderBudget.profile.bloomLevels;
+    currentPixelRatio = Math.min(renderBudget.ratio(view.width, view.height), qualitySettled ? Infinity : 1);
+    renderer.setPixelRatio(currentPixelRatio);
+    renderer.setSize(Math.floor(view.width), Math.floor(view.height), false);
+    composer?.setSize(Math.floor(view.width), Math.floor(view.height));
+    cards.setPixelRatio(currentPixelRatio); background.setPixelRatio(currentPixelRatio);
+  }
+
   // ResizeObserver feuert waehrend CSS-Uebergaengen mehrfach je Bild.
   // Ein rAF-Sammelpunkt haelt Kamera und Composer davon unbeeindruckt.
   const ro = new ResizeObserver(() => {
@@ -1130,14 +1173,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     raf = requestAnimationFrame(frame);
     // Hold the last space frame behind a settled HTML project; the return flight resumes it.
     if (now - lastFrameAt < FRAME_BUDGET) return;
-    if (qualitySettled && lastFrameAt && renderBudget.sample(now - lastFrameAt)) {
-      cards.setShaderQuality(renderBudget.profile.name);
-      if (bloom) bloom.mipmapBlurPass.levels = renderBudget.profile.bloomLevels;
-      currentPixelRatio = renderBudget.ratio(view.width, view.height);
-      renderer.setPixelRatio(currentPixelRatio);
-      renderer.setSize(Math.floor(view.width), Math.floor(view.height), false);
-      composer?.setSize(Math.floor(view.width), Math.floor(view.height));
-      cards.setPixelRatio(currentPixelRatio); background.setPixelRatio(currentPixelRatio);
+    if (qualitySettled && lastFrameAt && !informationView && renderBudget.sample(now - lastFrameAt)) {
+      applyRenderQuality();
     }
     lastFrameAt = now;
     timer.update(now);
@@ -1257,48 +1294,104 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   // dimensions. Private document/orbit state stays untouched for modal return.
   function composeInformationCamera() {
     const narrow = view.width < 760;
+    const profile = informationPresentation === 'kurzprofil';
     const tan = halfFovTan();
-    const distance = Math.max(narrow ? 30 : 34, (narrow ? 18 : 27) / (2 * tan * view.aspect * (narrow ? .88 : .48)));
+    const widthShare = narrow ? .88 : profile ? .92 : .48;
+    const distance = Math.max(narrow ? 30 : profile ? 24 : 34, (narrow ? 18 : 27) / (2 * tan * view.aspect * widthShare));
+    const exitProgress = informationPresentation === 'start' && informationExit.active ? informationExit.progress : 0;
     camera.clearViewOffset();
     if (informationPresentation === 'start' && !narrow) {
-      camera.setViewOffset(view.width, view.height, -view.width * .245, 0, view.width, view.height);
+      camera.setViewOffset(view.width, view.height, -view.width * .245 * (1 - exitProgress), 0, view.width, view.height);
+    } else if (profile && view.width <= 1000) {
+      // Keep a glimpse of the scene in the mobile space above the profile sheet.
+      camera.setViewOffset(view.width, view.height, 0, view.height * .35, view.width, view.height);
     }
-    camera.position.set(0, informationPresentation === 'kontakt' ? 3 : 0, distance);
-    camera.lookAt(0, -1.5, 0);
+    camera.position.set(.8 * Math.sin(Math.PI * exitProgress), informationPresentation === 'kontakt' ? 3 : 0, THREE.MathUtils.lerp(distance, HOME.cam.z, exitProgress));
+    camera.lookAt(0, THREE.MathUtils.lerp(-1.5, HOME.look.y, exitProgress), THREE.MathUtils.lerp(0, HOME.look.z, exitProgress));
     camera.updateMatrixWorld();
     cards.setMobileSelection(null);
     mobileDots.hidden = true;
   }
 
+  function cancelInformationExit() {
+    informationExit.tween?.kill(); informationExit.tween = null;
+    informationExit.resolve?.(false); informationExit.resolve = null;
+    informationExit.active = false; informationExit.progress = 0;
+  }
+  function animateInformationExit(duration = 1100) {
+    cancelInformationExit();
+    if (informationView !== 'start' || informationMotion.matches || !running || projectionIdle || inspectionFrozen || document.hidden) return Promise.resolve(true);
+    informationExit.active = true;
+    return new Promise(resolve => {
+      informationExit.resolve = resolve;
+      informationExit.tween = gsap.to(informationExit, {
+        progress: 1, duration: duration / 1000, ease: 'sine.inOut',
+        onComplete() {
+          informationExit.tween = null; informationExit.resolve = null;
+          // Keep the final pose until the router commits #home.
+          composeInformationCamera();
+          resolve(true);
+        },
+      });
+    });
+  }
+
   function setInformationView(next) {
+    const completedExit = !next && informationExit.active && informationExit.progress >= 1;
+    // Asset refreshes may revisit the same presentation during the journey.
+    if (next !== informationView) cancelInformationExit();
     const wasInformation = Boolean(informationView);
     if (next && !wasInformation) {
+      informationCamera = { position: camera.position.clone(), quaternion: camera.quaternion.clone() };
       informationTweens = gsap.getTweensOf([camPos, look]).filter(tween => !tween.paused());
       informationTweens.forEach(tween => tween.pause());
       onWindowBlur();
     }
     informationView = next || null;
-    if (next !== 'kurzprofil') informationPresentation = next || null;
+    informationPresentation = next || null;
     informationPaused = false;
     if (!next) {
+      if (wasInformation) {
+        renderBudget.restart();
+        applyRenderQuality();
+      }
       camera.clearViewOffset();
+      // Restore the actual camera too: another pause owner may prevent the
+      // next render from copying the preserved private camera state back.
+      if (completedExit) {
+        // The explicit journey ends at HOME, including offsets retained from
+        // a previously explored document or orbit. Prevent a first-frame jump.
+        drift.set(0, 0); pointer.set(0, 0);
+        scrollLift = 0; scrollLiftTarget = 0;
+        orbit.yaw = 0; orbit.pitch = 0;
+        orbit.yawVelocity = 0; orbit.pitchVelocity = 0;
+        camPos.copy(HOME.cam); look.copy(HOME.look);
+        camera.position.copy(HOME.cam); camera.lookAt(HOME.look);
+        camera.updateMatrixWorld(); informationCamera = null;
+      } else if (informationCamera) {
+        camera.position.copy(informationCamera.position);
+        camera.quaternion.copy(informationCamera.quaternion);
+        camera.updateMatrixWorld();
+        informationCamera = null;
+      }
       syncMobileHome();
       informationTweens.forEach(tween => tween.resume()); informationTweens = [];
     }
-    // A profile keeps the exact last frame, including when opened mid-flight.
-    const freeze = next === 'kurzprofil' || next === 'projekt/abschluss' || next === 'kontakt'
-      || (next === 'start' && informationMotion.matches);
+    // Keep private document/camera state while the profile presents a distant,
+    // slowly moving scene. Reduced motion and other pause owners still win.
+    const freeze = next === 'projekt/abschluss' || next === 'kontakt'
+      || (['start', 'kurzprofil'].includes(next) && informationMotion.matches);
     if (freeze) cards.finishModelReveal();
     cancelAnimationFrame(raf); raf = 0;
-    timer.setTimescale(projectionIdle || inspectionFrozen ? 0 : 1); timer.reset();
+    timer.setTimescale(projectionIdle || inspectionFrozen ? 0 : informationView === 'kurzprofil' ? .45 : 1); timer.reset();
     lastFrameAt = 0;
-    if (next !== 'kurzprofil' && running && !projectionIdle && !inspectionFrozen && !document.hidden) frame();
+    if (running && !projectionIdle && !inspectionFrozen && !document.hidden) frame();
     informationPaused = freeze;
     if (freeze) { cancelAnimationFrame(raf); raf = 0; timer.setTimescale(0); }
     canvas.dispatchEvent(new Event('renderpausechange'));
   }
   function refreshInformation() {
-    if (informationPresentation && informationView !== 'kurzprofil') setInformationView(informationView);
+    if (informationPresentation) setInformationView(informationView);
   }
   function scheduleInformationRefresh() {
     cancelAnimationFrame(informationRefreshFrame);
@@ -1308,7 +1401,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   informationMotion.addEventListener('change', refreshInformation);
 
   return {
-    setInformationView, refreshInformation,
+    setInformationView, refreshInformation, animateInformationExit, cancelInformationExit, pickInformationSection,
     scene, camera, renderer, composer, cards, background,
     ready: cards.ready,
     releaseModelReveal: () => cards.releaseModelReveal(),
@@ -1331,7 +1424,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     setProjectionIdle(value) {
       projectionIdle = Boolean(value);
       cancelAnimationFrame(raf); raf = 0;
-      timer.setTimescale(projectionIdle || inspectionFrozen || informationPaused ? 0 : 1); timer.reset();
+      timer.setTimescale(projectionIdle || inspectionFrozen || informationPaused ? 0 : informationView === 'kurzprofil' ? .45 : 1); timer.reset();
       lastFrameAt = 0; renderBudget.reset();
       if (running && !projectionIdle && !inspectionFrozen && !informationPaused && !document.hidden) frame();
       canvas.dispatchEvent(new Event('renderpausechange'));
@@ -1339,7 +1432,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     setInspectionFrozen(value) {
       inspectionFrozen = Boolean(value);
       cancelAnimationFrame(raf); raf = 0;
-      timer.setTimescale(inspectionFrozen || projectionIdle || informationPaused ? 0 : 1);
+      timer.setTimescale(inspectionFrozen || projectionIdle || informationPaused ? 0 : informationView === 'kurzprofil' ? .45 : 1);
       if (inspectionFrozen) {
         // A resize may have cleared the drawing buffer just before the hover.
         // Redraw the current state once, without advancing any animation.
@@ -1485,6 +1578,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     stop() { running = false; cancelAnimationFrame(raf); raf = 0; canvas.dispatchEvent(new Event('renderpausechange')); },
     dispose() {
       this.stop();
+      cancelInformationExit();
       informationMotion.removeEventListener('change', refreshInformation);
       cancelAnimationFrame(informationRefreshFrame);
       exampleFlight.dispose();

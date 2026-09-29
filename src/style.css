@@ -61,30 +61,25 @@ html, body {
 body {
   display: grid;
   place-items: center;
-  padding: var(--s-5);
 }
 
 /* ---------- Der Rahmen ---------- */
 
 .frame {
   position: relative;
-  width: min(1680px, 100%);
-  height: min(100%, calc(100vw / 1.9));
+  width: 100%;
+  height: 100%;
   min-height: 520px;
   display: grid;
   grid-template-rows: auto 1fr auto;
   background: radial-gradient(ellipse at 50% 45%, #0b1420 0%, #05090f 55%, #03060a 100%);
-  border: 1px solid var(--line);
   overflow: hidden;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.8),
-    0 40px 120px -40px rgba(0, 0, 0, 0.9),
-    inset 0 0 160px -40px rgba(30, 90, 140, 0.25);
 }
 
 /* Ecken-Marker, dezent ritualistisch */
 .frame__edge {
   position: absolute;
+  display: none;
   width: var(--s-5);
   height: var(--s-5);
   border: 1px solid var(--line-hot);
@@ -1683,8 +1678,6 @@ body {
 }
 
 @media (max-width: 860px) {
-  body { padding: var(--s-3); }
-  .frame { height: 100%; }
   .head { flex-direction: column; gap: var(--s-4); }
   .nav { width: 100%; justify-content: space-between; gap: var(--s-4); }
   .nav__group { text-align: left; }

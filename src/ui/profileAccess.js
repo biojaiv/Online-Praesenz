@@ -9,9 +9,6 @@ export function createProfileAccess() {
   document.querySelector('.head__brand').append(brief);
   const links = document.createElement('div');
   links.className = 'foot__contact';
-  const email = document.createElement('a');
-  email.href = `mailto:${profileResources().email}`;
-  email.textContent = profileResources().email;
   const pdf = document.createElement('a');
   const availability = document.createElement('span');
   const method = document.createElement('div');
@@ -25,7 +22,7 @@ export function createProfileAccess() {
   const shortcuts = document.createElement('nav');
   shortcuts.className = 'info-shortcuts';
   shortcuts.innerHTML = '<a href="#kurzprofil" data-info-open="kurzprofil" data-info-focus="legacy-profile"></a><a href="#kontakt" data-info-open="kontakt" data-info-focus="legacy-contact"></a>';
-  links.append(availability, email, pdf, shortcuts, method);
+  links.append(availability, pdf, shortcuts, method);
   document.querySelector('.foot').append(links);
   const inspection = createSiteInspection(methodButton);
   function render() {

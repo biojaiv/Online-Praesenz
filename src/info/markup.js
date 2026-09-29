@@ -1,4 +1,5 @@
 import { getInformationContent } from './content.js';
+import { translateForLanguage } from '../i18n.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
@@ -6,6 +7,7 @@ export function renderInformationMarkup(language, resources) {
   const c = getInformationContent(language);
   const lang = language === 'de' ? 'de' : 'en';
   const r = resources;
+  const identityWords = text => text.split(' ').map(word => `<span class="info-identity__word">${esc(word)}</span>`).join(' ');
   const fallbackHref = target => {
     if (target === 'lebenslauf') return r.cvUrl;
     if (target === 'abschluss' && r.reportUrl) return r.reportUrl;
@@ -27,17 +29,18 @@ export function renderInformationMarkup(language, resources) {
       <div class="info-topline"><span class="info-wordmark">VL <span aria-hidden="true">/</span> PORTFOLIO</span>${languages('start')}</div>
       <div class="info-start__copy">
         <p class="info-eyebrow">${esc(c.discipline)}</p>
-        <h1 class="info-name" id="info-start-title" tabindex="-1" data-info-entry>${esc(r.name)}</h1>
-        <p class="info-role">${esc(c.role)}</p>
+        <div class="info-identity">
+          <svg class="info-identity__sigil" viewBox="0 0 34 34" aria-hidden="true" focusable="false"><rect class="sigil__outer" x=".5" y=".5" width="33" height="33"/><rect class="sigil__mid" x="7.5" y="7.5" width="19" height="19"/><rect class="sigil__core" x="13.6" y="13.6" width="6.8" height="6.8"/></svg>
+          <h1 class="info-name" id="info-start-title" tabindex="-1" data-info-entry aria-label="${esc(r.name)}">${r.name.split(' ').map((word, wi) => `<span class="info-name__word" aria-hidden="true">${[...word].map((letter, i) => `<span class="info-name__glyph" style="--glyph-delay:${(wi ? r.name.indexOf(word) : 0) * 45 + i * 45}ms">${esc(letter)}</span>`).join('')}</span>`).join(' ')}</h1>
+          <p class="info-role">${identityWords(translateForLanguage(lang, 'brand.role'))}</p>
+          <p class="info-identity__summary">${identityWords(translateForLanguage(lang, 'profile.summary'))}</p>
+        </div>
         <p class="info-introduction">${esc(c.introduction)}</p>
         <p class="info-status">${availability}</p>
         <div class="info-actions">${route('kurzprofil', c.profile, 'start-profile', 'info-button info-button--primary')}${route('home', arrow(c.explore), 'start-explore', 'info-button')}</div>
         <div class="info-secondary">${cv(`${c.cvPdf} ↓`, 'start-cv')}${route('kontakt', arrow(c.contact), 'start-contact')}</div>
         <p class="info-scene-status" data-info-scene-status role="status">${esc(c.sceneUnavailable)}</p>
       </div>
-      <nav class="info-pedestals" aria-label="${esc(c.explore)}">
-        ${[['01', 'projekt/abschluss', c.finalProject], ['02', 'projekte', c.projects], ['03', 'lebenslauf', c.cv]].map(([n, target, title]) => `<a class="info-pedestal info-pedestal--${n}" href="${esc(fallbackHref(target))}" data-info-route="${target}" data-info-focus="pedestal-${n}"><span>${n}</span>${esc(title)}<span class="info-pedestal__arrow" aria-hidden="true">↗</span></a>`).join('')}
-      </nav>
       <footer class="info-footer info-start__footer"><span>01 — 03</span>${inspect('start')}</footer>
     </section>
 
@@ -45,7 +48,7 @@ export function renderInformationMarkup(language, resources) {
       <div class="info-profile__sheet">
         <div class="info-profile__top"><p class="info-eyebrow">${esc(c.profileKicker)} <span class="info-time">30 ${lang === 'de' ? 'SEK' : 'SEC'}</span></p><div class="info-profile__tools">${languages('profile')}<button class="info-close" type="button" data-info-close data-info-focus="profile-close" aria-label="${esc(c.close)}"><span aria-hidden="true">×</span> <span>${esc(c.close)}</span></button></div></div>
         <header class="info-profile__identity"><div class="info-monogram" aria-hidden="true">VL</div><div><h2 id="info-profile-title" tabindex="-1" data-info-entry>${esc(r.name)}</h2><p class="info-role">${esc(c.role)}</p><p class="info-meta">${esc(r.location)} · ${esc(c.remote)} · ${esc(c.available)}</p></div></header>
-        <div class="info-profile__fields">${c.profileFields.map(([heading, text], i) => `<section class="info-profile__field"><h3><span aria-hidden="true">0${i + 1}</span>${esc(heading)}</h3><p>${esc(text)}</p></section>`).join('')}</div>
+        <div class="info-profile__fields">${c.profileFields.map(([heading, text], i) => `<section class="info-profile__field"><h3><span aria-hidden="true">0${i + 1}</span>${esc(heading)}</h3><p>${esc(text)}</p><p class="info-profile__note">[ ${c.profileNotes[i].map(esc).join(' • ')} ]</p></section>`).join('')}</div>
         <div class="info-actions info-profile__actions">${route('projekt/abschluss', arrow(c.viewProject), 'profile-project', 'info-button info-button--primary')}${route('lebenslauf', c.openCv, 'profile-cv', 'info-button')}${route('kontakt', c.getInTouch, 'profile-contact', 'info-button')}</div>
       </div>
     </section>

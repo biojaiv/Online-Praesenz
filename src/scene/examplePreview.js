@@ -13,7 +13,8 @@ export function createExamplePreview({ reduced = false } = {}) {
  for(const [i,category] of ['webseiten','systemintegration'].entries()){
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=1428;
   const ctx=canvas.getContext('2d'),texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-  const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide});
+  // Each wing is a flat plane: one double-sided pass covers both viewing sides.
+  const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
   const previewRects=i?[[48,280,704,470]]:projectsIn(category).map((_,index)=>[GALLERY.x+GALLERY.thumbX,galleryY(index,projectsIn(category).length)+GALLERY.thumbY,GALLERY.thumbWidth,GALLERY.thumbHeight]);
   const previewMask=previewRects.map(([x,y,w,h])=>`(vMapUv.x > ${(x/800).toFixed(8)} && vMapUv.x < ${((x+w)/800).toFixed(8)} && vMapUv.y > ${(1-(y+h)/1428).toFixed(8)} && vMapUv.y < ${(1-y/1428).toFixed(8)})`).join(' || ');
   material.customProgramCacheKey=()=>`project-preview-tone-${category}-${previewMask}`;

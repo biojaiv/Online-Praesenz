@@ -26,7 +26,8 @@ try {
   assert.equal(await page.locator('.frame.is-intro').count(), 0, 'Seen intro does not repeat');
   assert.equal(await page.locator('.example-trigger').count(), 0);
   assert.equal(await page.locator('.head-calibration-marker').isVisible(), true);
-  assert.equal(await page.locator('.foot__contact a[href^="mailto:"]').getAttribute('href'), 'mailto:vleicht@keemail.me');
+  assert.equal(await page.locator('.foot__contact a[href^="mailto:"]').count(), 0);
+  assert.equal(await page.locator('.foot__contact a[href="#kontakt"]').count(), 1);
   const heights = await page.evaluate(() => {
     const { cards } = window.__stage;
     const example = cards.group.getObjectByName('example-preview');

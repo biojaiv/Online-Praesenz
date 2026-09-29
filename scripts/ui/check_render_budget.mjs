@@ -24,4 +24,19 @@ assert.equal(budget.profile.name, 'balanced');
 for (let i = 0; i < 100; i++) budget.sample(70);
 assert.equal(budget.profile.name, 'low');
 assert(budget.ratio(1920, 1080, 2) > 0);
+budget.restart();
+assert.equal(budget.profile.name, 'full', 'A fresh 3D visit restores the device profile');
+for (const level of [1, 2]) {
+  const desktop = createRenderBudget(level, { nativeDesktop: true });
+  for (let i = 0; i < 200; i++) desktop.sample(70);
+  assert.equal(desktop.profile.name, 'low');
+  for (const [width, height] of [[1600, 900], [1920, 1080], [2560, 1440]]) {
+    assert.equal(desktop.ratio(width, height, 1), 1, 'Desktop pedestals retain native detail after adaptation');
+  }
+  assert.equal(desktop.ratio(1920, 1080, .5), .5, 'Respect sub-native device scale');
+  const hugeRatio = desktop.ratio(7680, 4320, 2);
+  assert(7680 * 4320 * hugeRatio ** 2 <= desktop.profile.pixels + 1, 'Large screens remain bounded');
+  desktop.restart();
+  assert.equal(desktop.profile.name, level === 2 ? 'full' : 'balanced');
+}
 console.log('PASS render budgets: hardware hints, pixel limits, high-DPI displays and sustained-load adaptation');

@@ -1,6 +1,7 @@
 import { getLanguage, setLanguage, onLanguageChange } from '../i18n.js';
 import { profileResources } from '../data/profileResources.js';
 import { createInformationViews } from './views.js';
+import { playSound } from '../ui/audio.js';
 
 export const INFORMATION_ROUTES = new Set(['start', 'kurzprofil', 'projekt/abschluss', 'kontakt']);
 export const isInformationRoute = route => INFORMATION_ROUTES.has(route);
@@ -12,6 +13,8 @@ export function createInformationController({ root, getStage, onNavigate, onBack
   const origins = new Map();
   let active = null, lastRoute = 'start', frameWasInert = false, initial = true;
   let focusFrame = 0;
+  let exploreRun = null, exploreCommitted = false;
+  const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const translatedDisclosures = new WeakSet();
   const section = () => [...root.querySelectorAll('[data-info-page]')].find(node => node.dataset.infoPage === active);
   function focusLater(callback) { cancelAnimationFrame(focusFrame); focusFrame = requestAnimationFrame(callback); }
@@ -28,7 +31,36 @@ export function createInformationController({ root, getStage, onNavigate, onBack
     const origin = origins.get(active);
     onBack(origin?.route || 'start');
   }
+  function cancelExplore() {
+    if (!exploreRun) return;
+    exploreRun = null;
+    views.cancelExploreExit();
+    getStage()?.cancelInformationExit();
+  }
+  function commitExplore() { exploreCommitted = true; onNavigate('home'); }
+  async function explore() {
+    if (exploreRun) return;
+    clearSceneHover();
+    playSound('focus');
+    if (motion.matches) { commitExplore(); return; }
+    const ticket = {};
+    exploreRun = ticket;
+    const identityArrived = await views.animateExploreExit();
+    if (exploreRun !== ticket) return;
+    const cameraArrived = identityArrived && await (getStage()?.animateInformationExit(1250) ?? Promise.resolve(true));
+    if (exploreRun !== ticket) return;
+    exploreRun = null;
+    if (identityArrived && cameraArrived) commitExplore();
+    else { views.cancelExploreExit(); getStage()?.cancelInformationExit(); }
+  }
+  function motionChange() {
+    if (motion.matches && exploreRun) { cancelExplore(); commitExplore(); }
+  }
   function enter(route, meta = {}) {
+    clearSceneHover();
+    cancelExplore();
+    const explored = exploreCommitted && route === 'home';
+    exploreCommitted = false;
     const previous = active;
     const next = isInformationRoute(route) ? route : null;
     const returning = Boolean(meta.history);
@@ -62,12 +94,28 @@ export function createInformationController({ root, getStage, onNavigate, onBack
     if (next) syncTerms(history.state);
     lastRoute = route;
     initial = false;
-    return { handled: Boolean(next), resumed: Boolean(previous && !next && returning) };
+    return { handled: Boolean(next), explored, resumed: Boolean(previous && !next && returning) };
+  }
+  function sceneSection(event) {
+    if (active !== 'start' || exploreRun || document.documentElement.classList.contains('is-site-inspecting')
+      || event.target.closest('.info-start__copy,.info-topline,.info-start__footer')) return null;
+    return getStage()?.pickInformationSection(event.clientX, event.clientY);
+  }
+  function clearSceneHover() { delete root.dataset.infoSceneHover; }
+  function pointermove(event) {
+    if (sceneSection(event)) root.dataset.infoSceneHover = 'true';
+    else clearSceneHover();
   }
   function click(event) {
+    if (event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (sceneSection(event)) { event.preventDefault(); explore(); return; }
     const target = event.target.closest('[data-info-route],[data-info-close],[data-info-inspect],[data-info-language]');
     if (!target || !root.contains(target) || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    if (target.hasAttribute('data-info-route')) { event.preventDefault(); onNavigate(target.dataset.infoRoute); }
+    if (target.hasAttribute('data-info-route')) {
+      event.preventDefault();
+      if (active === 'start' && target.dataset.infoFocus === 'start-explore') explore();
+      else onNavigate(target.dataset.infoRoute);
+    }
     else if (target.hasAttribute('data-info-close')) { event.preventDefault(); returnToPrevious(); }
     else if (target.hasAttribute('data-info-language')) { event.preventDefault(); setLanguage(target.dataset.infoLanguage); }
     else if (target.hasAttribute('data-info-inspect')) { event.preventDefault(); onInspect(target); }
@@ -76,6 +124,7 @@ export function createInformationController({ root, getStage, onNavigate, onBack
     if (!active || document.documentElement.classList.contains('is-site-inspecting')) return;
     if (event.key === 'Escape') {
       event.preventDefault(); event.stopImmediatePropagation();
+      if (exploreRun) { cancelExplore(); root.querySelector('[data-info-focus="start-explore"]')?.focus(); return; }
       if (history.state?.infoTermView === active && history.state.infoTerm) onBack(active);
       else if (!views.closeDisclosure()) returnToPrevious();
     } else if (event.key === 'Tab' && active === 'kurzprofil') {
@@ -96,12 +145,18 @@ export function createInformationController({ root, getStage, onNavigate, onBack
       history.pushState({ ...history.state, portfolio: true, previous: history.state?.previous || active, infoTerm: key, infoTermView: active }, '', location.href);
     } else if (!detail.open && history.state?.infoTerm === key) onBack(active);
   }
-  function visibility() { if (document.hidden) views.pauseMedia(); }
+  function visibility() { if (document.hidden) { cancelExplore(); views.pauseMedia(); } }
+  function resize() { cancelExplore(); }
+  motion.addEventListener('change', motionChange);
   root.addEventListener('click', click);
+  root.addEventListener('pointermove', pointermove, { passive: true });
+  root.addEventListener('pointerleave', clearSceneHover);
   root.addEventListener('toggle', toggle, true);
   window.addEventListener('keydown', keydown, true);
+  window.addEventListener('resize', resize);
   document.addEventListener('visibilitychange', visibility);
   const unsubscribe = onLanguageChange(() => {
+    cancelExplore();
     views.translate();
     // Restoring open details after translation must not add navigation steps.
     root.querySelectorAll('details[open]').forEach(detail => translatedDisclosures.add(detail));
@@ -112,8 +167,10 @@ export function createInformationController({ root, getStage, onNavigate, onBack
     enter,
     get active() { return active; },
     onHistory(state, route) { if (route !== lastRoute) return false; syncTerms(state); return true; },
-    dispose() { unsubscribe(); cancelAnimationFrame(focusFrame); views.dispose(); root.removeEventListener('click', click);
+    dispose() { cancelExplore(); motion.removeEventListener('change', motionChange); unsubscribe(); cancelAnimationFrame(focusFrame); views.dispose(); root.removeEventListener('click', click);
+      root.removeEventListener('pointermove', pointermove); root.removeEventListener('pointerleave', clearSceneHover); clearSceneHover();
       root.removeEventListener('toggle', toggle, true); window.removeEventListener('keydown', keydown, true);
+      window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', visibility); frame.inert = frameWasInert; },
   };
 }

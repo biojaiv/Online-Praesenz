@@ -16,6 +16,12 @@ export const informationContent = {
       ['Arbeitsweise', 'Abhängigkeiten verstehen, Fehler systematisch eingrenzen, Änderungen nachvollziehbar dokumentieren und sich verlässlich abstimmen.'],
       ['Aktuell', 'Einarbeitung in Ansible. Docker-Erfahrung aus der Ausbildung, vertraut mit Python und Interesse an dessen Einsatz zur Automatisierung.'],
     ],
+    profileNotes: [
+      ['VMware vSphere', 'Windows Server', 'Active Directory'],
+      ['baramundi', 'Windows 11', 'Microsoft SQL Server', 'Debian Linux', 'Docker', 'Figma', 'KI / AI', 'C#', 'Python'],
+      ['Netzwerk', 'WinPE', 'Treiber', 'Dokumentation'],
+      ['Ansible (Einarbeitung)', 'Docker (Ausbildung)', 'Python'],
+    ],
     viewProject: 'Abschlussprojekt ansehen', openCv: 'Lebenslauf öffnen', getInTouch: 'Kontakt aufnehmen',
     projectTitle: 'baramundi-Pilotumgebung', projectLocation: 'Landratsamt Enzkreis · Amt für IT und Digitalisierung',
     projectRows: [
@@ -61,6 +67,12 @@ export const informationContent = {
       ['Experience', 'Enzkreis District Office, IT and Digitalization Department: built a baramundi pilot environment. Deployed and inventoried four Windows 11 reference clients, including baseline software.'],
       ['Approach', 'Understand dependencies, isolate faults systematically, document changes clearly and coordinate reliably with others.'],
       ['Currently', 'Learning Ansible. Docker experience from vocational training, familiar with Python and interested in using it for automation.'],
+    ],
+    profileNotes: [
+      ['VMware vSphere', 'Windows Server', 'Active Directory'],
+      ['baramundi', 'Windows 11', 'Microsoft SQL Server', 'Debian Linux', 'Docker', 'Figma', 'KI / AI', 'C#', 'Python'],
+      ['Network', 'WinPE', 'Drivers', 'Documentation'],
+      ['Ansible (learning)', 'Docker (training)', 'Python'],
     ],
     viewProject: 'View final project', openCv: 'Open CV', getInTouch: 'Get in touch',
     projectTitle: 'baramundi pilot environment', projectLocation: 'Enzkreis District Office · IT and Digitalization Department',

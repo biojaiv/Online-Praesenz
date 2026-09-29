@@ -19,6 +19,11 @@ export function buildBlenderOrrery(source, { createMaterial, centre }) {
       const webSpeed = circleMotionSpeed(object.userData.sourceName || '', speed);
       object.userData.webAngularSpeed = webSpeed;
       rotors.push({ object, speed: webSpeed, axis: object.userData.Achse_Web.toLowerCase() });
+    } else {
+      // Authored local transforms are fixed; moving parents still update each
+      // child's world matrix. Only the actual rotors need per-frame composition.
+      object.updateMatrix();
+      object.matrixAutoUpdate = false;
     }
     if (object.isMesh) {
       let distant = false;

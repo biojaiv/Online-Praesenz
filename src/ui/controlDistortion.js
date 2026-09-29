@@ -1,11 +1,13 @@
 /** A single brief signal ripple on deliberate input, never continuous flashing. */
 export function createControlDistortion() {
-  const selector = '.nav button, .nav a, .foot button, .foot a, .foot summary, .project-choice, .projects-browser button, [data-example-back]';
+  const selector = '.nav button, .nav a, .foot button, .foot a, .foot summary, .foot__contact > span, .foot__crumb-item, .foot__crumb, .project-choice, .projects-browser button, [data-example-back]';
   const timers = new Map();
   function pulse(event) {
     if (document.documentElement.dataset.infoView || document.documentElement.classList.contains('is-site-inspecting')) return;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const control = event.target.closest(selector);
+    // Breadcrumb wrappers contain independently animated controls; pulse only a leaf.
+    if (control?.matches('.foot__crumb') && control.querySelector('.foot__crumb-item, button, a')) return;
     if (!control || control.contains(event.relatedTarget) || timers.has(control)) return;
     control.classList.add('control-ripple');
     function finish() {
@@ -18,7 +20,7 @@ export function createControlDistortion() {
       control.removeEventListener('animationend', ended);
       control.classList.remove('control-ripple'); timers.delete(control);
     }
-    function ended(event) { if (event.target === control && event.animationName === 'control-signal') finish(); }
+    function ended(event) { if (event.target === control && ['control-signal', 'footer-control-signal'].includes(event.animationName)) finish(); }
     control.addEventListener('animationend', ended);
     // Let the browser finish the visible animation, including a delayed first paint.
     timers.set(control, { timer: setTimeout(finish, 2500), finish });

@@ -224,6 +224,7 @@ function startAmbientUi() {
   if (isInformationRoute(currentRoute)) return;
   if (!stopBrandGlitch) stopBrandGlitch = startBrandGlitch({ stage });
   if (!stopHeaderSymbols) stopHeaderSymbols = startHeaderSymbols();
+  if (!enhancements && !introRunning && boot?.classList.contains('is-done')) scheduleEnhancements(0);
 }
 // Die Buehne meldet die Flaeche des Dokuments, bevor die Lesefassung existiert.
 let readerRef = null;
@@ -381,7 +382,7 @@ const router = createRouter({
     // Der initiale Router-Aufruf darf den Kamera-Dolly des Intros nicht
     // sofort mit einer konkurrierenden Heimfahrt überschreiben.
     if (!introRunning) {
-      if (root === 'home') stage?.toHome();
+      if (root === 'home') stage?.toHome(transition.explored ? 0 : .95);
       else if (root !== 'projekte' || !portfolioRoute.startsWith('projekte')) stage?.focusCard(root);
     }
     stage?.setRoute(target);

@@ -24,6 +24,7 @@
     "test:cv:transparency": "node scripts/cv/check_transparency.mjs",
     "test:project-frame": "node scripts/ui/check_project_frame.mjs",
     "test:inspection": "node scripts/ui/check_site_inspection.mjs",
+    "test:inspection:layout": "node scripts/ui/check_inspection_layout.mjs",
     "build:sockel": "node scripts/sockel/build.mjs",
     "test:sockel": "node scripts/sockel/check_browser.mjs",
     "build:background": "node scripts/background/build.mjs",
@@ -36,6 +37,7 @@
     "test:hologram-alignment": "node scripts/ui/check_hologram_alignment.mjs",
     "test:fullscreen": "node scripts/ui/check_fullscreen.mjs",
     "test:efficiency": "node scripts/ui/check_efficiency.mjs",
+    "test:scene:efficiency": "node scripts/ui/check_scene_efficiency.mjs",
     "build:creative-previews": "node scripts/creative/build_previews.mjs",
     "test:creative": "node scripts/creative/check_browser.mjs",
     "build:passung": "node scripts/creative/build_passung.mjs",
@@ -43,7 +45,9 @@
     "build:passung-previews": "node scripts/creative/build_passung_previews.mjs",
     "build:creative-models": "node scripts/creative/build_models.mjs",
     "test:info": "node scripts/info/check_browser.mjs",
-    "test:info:production": "node scripts/info/check_production.mjs"
+    "test:info:production": "node scripts/info/check_production.mjs",
+    "test:info:profile": "node scripts/info/check_profile_refinements.mjs",
+    "test:info:entry": "node scripts/info/check_entry_transition.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",

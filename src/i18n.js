@@ -238,7 +238,11 @@ export function getLanguage() {
 }
 
 export function t(key, replacements = {}) {
-  const language = getLanguage();
+  return translateForLanguage(getLanguage(), key, replacements);
+}
+
+/** Explicit locale for static markup and shared identity content. */
+export function translateForLanguage(language, key, replacements = {}) {
   let value = MESSAGES[language]?.[key]
     ?? MESSAGES[DEFAULT_LANGUAGE]?.[key]
     ?? key;

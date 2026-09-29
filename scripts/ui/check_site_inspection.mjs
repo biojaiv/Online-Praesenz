@@ -17,6 +17,14 @@ async function checkFooterLeaders(page) {
     const visible = element => element?.getClientRects().length && getComputedStyle(element).display !== 'none';
     const zoom = [...document.querySelectorAll('.foot__tools .cv-keyboard-zoom-hint kbd, .foot__tools .cv-mobile-zoom__button, .site-inspection__zoom-cue kbd')].find(visible);
     const failures = [];
+    const overlay = document.querySelector('.site-inspection');
+    if (overlay.dataset.compact !== 'true') {
+      const access = document.querySelector('#site-inspection-access').getBoundingClientRect();
+      const delivery = document.querySelector('#site-inspection-delivery').getBoundingClientRect();
+      const camera = document.querySelector('#site-inspection-camera').getBoundingClientRect();
+      const html = document.querySelector('#site-inspection-html').getBoundingClientRect();
+      if (!(access.left > innerWidth / 2 && delivery.right < innerWidth / 2 && access.top > html.top && delivery.top > camera.top)) failures.push('Access belongs lower-right and delivery lower-left');
+    }
     if (!zoom) failures.push('Zoom symbols must be visible during inspection');
     for (const [topic, target] of [['access', zoom], ['delivery', document.querySelector('.foot__contact a[download]')]]) {
       const group = document.querySelector(`.site-inspection__diagram [data-topic="${topic}"]`);
@@ -26,6 +34,7 @@ async function checkFooterLeaders(page) {
       if (Math.abs(Number(dot.getAttribute('cx')) - rect.left - rect.width / 2) > 1 ||
           Math.abs(Number(dot.getAttribute('cy')) - rect.top - rect.height / 2) > 1) failures.push(`${topic}: marker must centre on its visible target`);
       const path = group.querySelector('path');
+      if (!path.getAttribute('d') || /NaN|Infinity/.test(path.getAttribute('d'))) failures.push(`${topic}: invalid leader path`);
       const texts = [...document.querySelectorAll('.foot__contact a, .site-method button')].filter(el => el !== target).flatMap(el => {
         const range = document.createRange(); range.selectNodeContents(el);
         return [...range.getClientRects()];
