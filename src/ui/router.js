@@ -8,7 +8,7 @@ import { playSound } from './audio.js';
  * damit Links teilbar und der Zurueck-Button nutzbar bleibt, aber es
  * wird nie neu geladen.
  */
-export function createRouter({ onEnter, onMenuHover }) {
+export function createRouter({ onEnter, onMenuHover, onHistory }) {
   const nav = document.getElementById('nav');
   const navLinks = [...nav.querySelectorAll('.nav__link')];
   const groups = [...nav.querySelectorAll('.nav__group')];
@@ -56,7 +56,7 @@ export function createRouter({ onEnter, onMenuHover }) {
   });
 
   function normalise(raw) {
-    const route = (raw || '').replace(/^#/, '').trim() || 'home';
+    const route = (raw || '').replace(/^#/, '').trim() || 'start';
     if (route === 'projekte') return 'projekte/webseiten';
     if (route === 'projekte/privat') return 'projekte/systemintegration';
     return route;
@@ -67,18 +67,19 @@ export function createRouter({ onEnter, onMenuHover }) {
     for (const el of navLinks) el.classList.toggle('is-active', el.dataset.target === root);
   }
 
-  let current = 'home';
+  let current = 'start';
 
   function go(target, push = true) {
     const t = normalise(target);
     setOpenGroup(null);
+    const previous = current;
     current = t;
     markActive(t);
     if (push && normalise(location.hash) !== t) {
-      history.pushState({ t }, '', t === 'home' ? '#' : `#${t}`);
+      history.pushState({ t, previous, portfolio: true }, '', `#${t}`);
     }
     if (t !== 'home') markExplored(t);
-    onEnter?.(t);
+    onEnter?.(t, { previous, history: !push });
   }
 
   nav.addEventListener('click', (e) => {
@@ -91,6 +92,7 @@ export function createRouter({ onEnter, onMenuHover }) {
         setOpenGroup(null);
         return;
       }
+      if (btn.dataset.target === 'abschluss') { go('projekt/abschluss'); return; }
       if (current.split('/')[0] !== btn.dataset.target) go(btn.dataset.target);
       setOpenGroup(group);
       return;
@@ -135,12 +137,13 @@ export function createRouter({ onEnter, onMenuHover }) {
 
   document.querySelector('.head__brand')?.addEventListener('click', (e) => {
     e.preventDefault();
-    go('home');
+    go('start');
   });
 
   // popstate deckt Vor und Zurueck ab, hashchange von Hand editierte Adressen.
   const syncFromHash = () => {
     const t = normalise(location.hash);
+    if (onHistory?.(history.state, t)) return;
     if (t !== current) go(t, false);
   };
   window.addEventListener('popstate', syncFromHash);
@@ -158,5 +161,8 @@ export function createRouter({ onEnter, onMenuHover }) {
 
   go(location.hash, false);
 
-  return { go };
+  return { go, back(fallback = 'start') {
+    if (history.state?.portfolio && history.state.previous) history.back();
+    else go(fallback);
+  } };
 }

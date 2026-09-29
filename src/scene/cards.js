@@ -975,6 +975,18 @@ export function createCards({ renderer, reduced = false } = {}) {
       modelRevealReleased = true;
     },
 
+    finishModelReveal() {
+      // A static information background must not strand late models mid-fade.
+      for (const card of cards) {
+        if (!card.pendingFallback) continue;
+        card.modelReveal = 1;
+        setObjectFade(card.base, 1);
+        card.holder.remove(card.pendingFallback);
+        disposeObject(card.pendingFallback);
+        card.pendingFallback = null;
+      }
+    },
+
     setShaderQuality(profile) {
       shaderQuality = typeof profile === 'number' ? profile : ({ low: 0, balanced: 1, full: 2 }[profile] ?? 0);
       for (const card of cards) {

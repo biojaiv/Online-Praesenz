@@ -1,0 +1,19 @@
+/* Integration and progressive enhancement; information appearance lives in style.css. */
+html:not(.info-enhanced) { background:#050a11; color:#edf1f3; }
+html:not(.info-enhanced) body { margin:0; }
+html:not(.info-enhanced) #frame { display:none; }
+html:not(.info-enhanced) .info-layer { max-width:1200px; margin:auto; }
+html:not(.info-enhanced) .info-page { border-bottom:1px solid #33414f; }
+html:not(.info-enhanced) [data-info-inspect],html:not(.info-enhanced) [data-info-close],html:not(.info-enhanced) [data-info-language],html:not(.info-enhanced) [data-info-route="home"] { display:none; }
+.info-reading-nav { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; padding:20px; font:16px Barlow,sans-serif; }
+.info-reading-nav a { color:#eab16c; }
+html.info-enhanced[data-info-view] #boot { visibility:hidden; pointer-events:none; }
+html.info-enhanced[data-info-view] #frame { pointer-events:none; }
+html.info-enhanced[data-info-view] #frame :is(.cv-reader,.projects-browser,.ihk-reader,.ihk-hologram-film,.stage__fallback,.cv-action,.camera-dolly-guide,.cv-mobile-zoom,.cv-keyboard-zoom-hint) { visibility:hidden; pointer-events:none; }
+html.info-enhanced[data-info-view] #scene { pointer-events:none; }
+html.info-enhanced[data-info-view="kurzprofil"] #frame { filter:brightness(.4); }
+html.info-enhanced[data-info-view="kontakt"] #frame { filter:brightness(.65); }
+html.info-enhanced[data-info-view] #frame .control-ripple { animation:none; }
+html.info-enhanced[data-scene="unavailable"] .info-scene-status { display:block; }
+html.info-enhanced[data-scene="unavailable"] .info-pedestals { opacity:1; }
+html.is-site-inspecting #information-layer { opacity:0; pointer-events:none; }

@@ -83,6 +83,7 @@ export function createSiteInspection(trigger) {
     return { key, card, tab, group, path, dot, orbit };
   });
 
+  let sourceControl = trigger;
   let stage = null, visible = false, pinned = false, selected = 0, updateFrame = 0;
   let timelineWasPaused = false;
   let pausedAnimations = [], playingMedia = [], inertElements = [];
@@ -331,7 +332,7 @@ export function createSiteInspection(trigger) {
   }
   function queueLayout() { if (!updateFrame) updateFrame = requestAnimationFrame(layout); }
   function show() {
-    if (visible || frame.classList.contains('is-intro') || !document.querySelector('#boot.is-done')) return;
+    if (visible || frame.classList.contains('is-intro') || (!document.querySelector('#boot.is-done') && !document.documentElement.dataset.infoView)) return;
     visible = true;
     selected = 0;
     overlay.querySelector('.site-inspection__background-detail').hidden = Boolean(stage);
@@ -340,7 +341,7 @@ export function createSiteInspection(trigger) {
     gsap.globalTimeline.pause();
     pausedAnimations = document.getAnimations().filter(animation => frame.contains(animation.effect?.target) && animation.playState === 'running');
     pausedAnimations.forEach(animation => animation.pause());
-    playingMedia = [...frame.querySelectorAll('video, audio')].filter(media => !media.paused && !media.ended);
+    playingMedia = [...document.querySelectorAll('#frame video, #frame audio, #information-layer video')].filter(media => !media.paused && !media.ended);
     playingMedia.forEach(media => media.pause());
     // Disable the underlying page while keeping the original footer trigger available.
     for (let node = trigger; node && node !== frame; node = node.parentElement) {
@@ -348,6 +349,8 @@ export function createSiteInspection(trigger) {
         if (sibling !== node && !sibling.inert) { inertElements.push(sibling); sibling.inert = true; }
       }
     }
+    const information = document.getElementById('information-layer');
+    if (information && !information.inert) { inertElements.push(information); information.inert = true; }
     document.documentElement.classList.add('is-site-inspecting');
     overlay.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
@@ -369,11 +372,16 @@ export function createSiteInspection(trigger) {
     backgroundAnchor = null;
     stage?.setInspectionFrozen(false);
     playingMedia.forEach(media => { if (media.isConnected) media.play().catch(() => {}); }); playingMedia = [];
-    if (focus) trigger.focus({ preventScroll: true });
+    if (focus) {
+      // Restore focus after the underlying layer becomes interactive again.
+      const source = sourceControl;
+      requestAnimationFrame(() => { if (!visible && source.isConnected) source.focus({ preventScroll: true }); });
+    }
   }
-  function enter(event) { if (event.pointerType === 'mouse') show(); }
+  function enter(event) { sourceControl = trigger; if (event.pointerType === 'mouse') show(); }
   function leave() { if (!pinned) hide(); }
-  function click() {
+  function click(event) {
+    if (event?.currentTarget === trigger) sourceControl = trigger;
     if (pinned) { hide(); return; }
     show();
     if (!visible) return;
@@ -381,6 +389,7 @@ export function createSiteInspection(trigger) {
     trigger.setAttribute('aria-pressed', 'true');
     overlay.classList.add('is-pinned');
     renderText();
+    if (sourceControl !== trigger) close.focus({ preventScroll: true });
   }
   function closePanel() { hide({ focus: true }); }
   function keydown(event) {
@@ -389,7 +398,7 @@ export function createSiteInspection(trigger) {
       event.preventDefault(); event.stopImmediatePropagation(); closePanel();
     } else if (event.key === 'Tab') {
       if (!pinned) { hide(); return; }
-      const controls = [trigger, ...[...tabs.children].filter(element => element.getClientRects().length), close];
+      const controls = [sourceControl, ...tabs.children, close].filter(element => element.getClientRects().length && !element.closest('[inert]') && getComputedStyle(element).visibility !== 'hidden');
       const index = controls.indexOf(document.activeElement);
       const next = (index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length;
       event.preventDefault(); event.stopImmediatePropagation(); controls[next].focus();
@@ -410,6 +419,7 @@ export function createSiteInspection(trigger) {
   const unsubscribe = onLanguageChange(renderText);
   renderText();
   return {
+    open(source = trigger) { sourceControl = source; click(); },
     setStage(value) { stage = value; if (visible) stage?.setInspectionFrozen(true); },
     dispose() {
       hide(); unsubscribe();

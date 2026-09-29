@@ -8,14 +8,14 @@
   <link rel="stylesheet" href="/src/fonts.css" />
   <link rel="preload" as="font" href="/src/assets/fonts/barlow-condensed-500-latin.woff2" type="font/woff2" crossorigin />
   <link rel="preload" as="font" href="/src/assets/fonts/barlow-400-latin.woff2" type="font/woff2" crossorigin />
-  <style>.pre-intro .head{opacity:0;visibility:hidden}</style>
+  <link rel="stylesheet" href="/src/info/style.css" />
+  <link rel="stylesheet" href="/src/info/integration.css" />
   <script>
     (() => {
-      const hash = location.hash.replace(/^#/, '').trim();
-      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      let seen = false;
-      try { seen = localStorage.getItem('vl-intro-seen') === '1'; } catch {}
-      if (!seen && !reduced && (!hash || hash === 'home')) document.documentElement.classList.add('pre-intro');
+      const route = location.hash.slice(1) || 'start';
+      document.documentElement.classList.add('info-enhanced');
+      if (['start', 'kurzprofil', 'projekt/abschluss', 'kontakt'].includes(route)) document.documentElement.dataset.infoView = route;
+      document.documentElement.dataset.scene = 'loading';
     })();
   </script>
 </head>
@@ -125,15 +125,7 @@
     </footer>
   </div>
 
-  <noscript>
-    <div class="noscript">
-      <h2>Vladimir Leicht · Systems Integration</h2>
-      <p>The interactive 3D portfolio needs JavaScript and WebGL. You can also access these documents and projects directly:</p>
-      <p><a href="/cv/CV_EN.pdf">CV (English)</a> · <a href="/cv/CV_DE.pdf" lang="de">Lebenslauf (Deutsch)</a> ·
-      <a href="/ihk/IHK_Project_Report_EN.pdf">Final project</a> · <a href="/beispiel/">Tiefgang</a> · <a href="/beispiele/passung/">PASSUNG</a> ·
-      <a href="/systemintegration/">Recovery Lab</a></p>
-    </div>
-  </noscript>
+  <!-- INFORMATION_LAYER -->
 
   <script type="module" src="/src/main.js"></script>
 </body>

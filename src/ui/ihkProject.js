@@ -1,3 +1,4 @@
+import { IHK_REPORTS } from '../data/ihkMedia.js';
 import { getLanguage, onLanguageChange, t } from '../i18n.js';
 import { ihkIcon, IHK_SECTION_ICONS } from './ihkIcons.js';
 import { IHK_FILMS as FILMS, IHK_POSTERS as POSTERS } from '../data/ihkMedia.js';
@@ -43,7 +44,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
     toggle.setAttribute('aria-controls', 'ihk-reader');
     toggle.classList.toggle('is-docked', open);
     download.hidden = !available;
-    download.href = getLanguage() === 'de' ? '/ihk/IHK_Projektarbeit_DE.pdf' : '/ihk/IHK_Project_Report_EN.pdf';
+    download.href = IHK_REPORTS[getLanguage()];
     download.download = download.href.split('/').pop();
     download.textContent = t('download.visible');
     download.setAttribute('aria-label', copy(getLanguage() === 'de' ? 'downloadDE' : 'downloadEN'));

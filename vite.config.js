@@ -1,10 +1,11 @@
+import { informationHtmlPlugin } from './scripts/info/html_plugin.mjs';
 import { routes } from './src/knallblau/content.js';
 import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { seoPlugin } from './scripts/seo_plugin.mjs';
 
 export default defineConfig({
-  plugins: [seoPlugin()],
+  plugins: [informationHtmlPlugin(), seoPlugin()],
   build: {
     rollupOptions: {
       input: {

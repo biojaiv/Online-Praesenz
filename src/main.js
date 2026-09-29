@@ -1,3 +1,4 @@
+import { createInformationController, isInformationRoute } from './info/controller.js';
 import './style.css';
 import './effects.css';
 import './experienceEnhancements.css';
@@ -11,7 +12,7 @@ import { createStage } from './scene/stage.js';
 import { createExperienceEnhancements } from './scene/experienceEnhancements.js';
 import { createRouter } from './ui/router.js';
 import { igniteTitle } from './ui/title.js';
-import { shouldPlayIntro, playIntro } from './ui/intro.js';
+import { playIntro } from './ui/intro.js';
 import { startBrandGlitch } from './ui/glitch.js';
 import { startHeaderSymbols } from './ui/headerSymbol.js';
 import { createReader } from './ui/reader.js';
@@ -24,6 +25,8 @@ import { primeSounds, playSound } from './ui/audio.js';
 applyStaticTranslations();
 const profileAccess = createProfileAccess();
 const stopControlDistortion = createControlDistortion();
+let stage = null;
+let portfolioRoute = 'home';
 
 const canvas = document.getElementById('scene');
 const boot = document.getElementById('boot');
@@ -63,7 +66,7 @@ function routeLabel(segment) {
   return key ? t(key) : (STATIC_ROUTE_LABELS[segment] || segment);
 }
 
-let currentRoute = 'home';
+let currentRoute = location.hash.slice(1) || 'start';
 let readerIsOpen = false;
 
 function routeParts(target, { includeReader = false } = {}) {
@@ -212,13 +215,13 @@ function updateFooter() {
 const MODEL_GATE = 4000;
 const BOOT_HARD_LIMIT = 6000; // STARTUP_FAILSAFE_V5_1_1
 
-let stage = null;
 let bootLimitTimer = 0;
 let enhancements = null;
 let enhancementTimer = 0;
 let stopBrandGlitch = null;
 let stopHeaderSymbols = null;
 function startAmbientUi() {
+  if (isInformationRoute(currentRoute)) return;
   if (!stopBrandGlitch) stopBrandGlitch = startBrandGlitch({ stage });
   if (!stopHeaderSymbols) stopHeaderSymbols = startHeaderSymbols();
 }
@@ -227,6 +230,7 @@ let readerRef = null;
 let ihkProjectRef = null;
 
 function ensureEnhancements() {
+  if (isInformationRoute(currentRoute)) return enhancements;
   if (enhancements || !stage || !(canvas instanceof HTMLCanvasElement)) {
     return enhancements;
   }
@@ -256,6 +260,27 @@ function scheduleEnhancements(delay = 180) {
   }, Math.max(0, delay));
 }
 
+const information = createInformationController({
+  root: document.getElementById('information-layer'),
+  getStage: () => stage,
+  onNavigate: target => router.go(target),
+  onBack: fallback => router.back(fallback),
+  onInspect: source => profileAccess.inspect(source),
+  onStateChange(view) {
+    if (view) {
+      stopBrandGlitch?.(); stopBrandGlitch = null;
+      stopHeaderSymbols?.(); stopHeaderSymbols = null;
+    } else if (boot?.classList.contains('is-done')) startAmbientUi();
+    enhancements?.setRoute(view || portfolioRoute);
+  },
+});
+function openInformation(event) {
+  const link = event.target.closest('[data-info-open]');
+  if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault(); router.go(link.dataset.infoOpen);
+}
+document.addEventListener('click', openInformation);
+
 try {
   stage = createStage(canvas, {
     onDocumentRect: (rect) => {
@@ -265,6 +290,7 @@ try {
   });
 } catch (err) {
   console.error('WebGL konnte nicht initialisiert werden:', err);
+  document.documentElement.dataset.scene = 'unavailable';
   stageEl?.classList.add('is-fallback');
   if (stageEl) {
     const fallback = document.createElement('p');
@@ -275,9 +301,8 @@ try {
 }
 profileAccess.setStage(stage);
 
-// Intro nur beim ersten Besuch, ohne Deep Link, mit WebGL und mit Bewegung.
-// Die Kamera muss vor dem allerersten Bild in der Tiefe stehen.
-const wantIntro = !!stage && shouldPlayIntro();
+// The information entry and explicit exploration do not play the legacy intro.
+const wantIntro = false; // Information entry and explicit exploration are immediately usable.
 let introRunning = wantIntro;
 if (introRunning) {
   try {
@@ -341,18 +366,23 @@ projectsBrowser = createProjectsBrowser({ container: stageEl, stage, onNavigate:
 
 const router = createRouter({
   onMenuHover(key) { stage?.setMenuHover(key); },
-  onEnter(target) {
+  onHistory: (state, route) => information.onHistory(state, route),
+  onEnter(target, meta) {
     if (exampleProjection.isOpen) {
       exampleProjection.close(target);
       return;
     }
+    const transition = information.enter(target, meta);
+    currentRoute = target;
+    if (transition.handled) { updateFooter(); return; }
+    if (transition.resumed && target === portfolioRoute) { updateFooter(); startAmbientUi(); return; }
     const root = target.split('/')[0];
 
     // Der initiale Router-Aufruf darf den Kamera-Dolly des Intros nicht
     // sofort mit einer konkurrierenden Heimfahrt überschreiben.
     if (!introRunning) {
       if (root === 'home') stage?.toHome();
-      else if (root !== 'projekte' || !currentRoute.startsWith('projekte')) stage?.focusCard(root);
+      else if (root !== 'projekte' || !portfolioRoute.startsWith('projekte')) stage?.focusCard(root);
     }
     stage?.setRoute(target);
     stage?.setExplored(getExplored());
@@ -361,12 +391,13 @@ const router = createRouter({
     projectsBrowser.setRoute(target);
     download?.setVisible(root === 'lebenslauf');
 
-    currentRoute = target;
+    portfolioRoute = target;
     readerIsOpen = Boolean(reader?.isOpen || ihkProject.isOpen);
     stage?.setReaderOpen(readerIsOpen);
     if (['lebenslauf', 'abschluss'].includes(root) && !introRunning) ensureEnhancements();
     enhancements?.setRoute(target);
     updateFooter();
+    startAmbientUi();
   },
 });
 
@@ -428,7 +459,7 @@ crumb?.addEventListener('click', activateBreadcrumb);
 // damit Hash, Kamerafahrt und Zurueck-Knopf nie auseinanderlaufen.
 stage?.on((event, key) => {
   if (event !== 'select') return;
-  const target = key ?? 'home';
+  const target = key === 'abschluss' ? 'projekt/abschluss' : key ?? 'home';
   playSound(target === 'home' ? 'release' : 'focus');
   router.go(target);
 });
@@ -438,13 +469,13 @@ stage?.on((event, key) => {
  * nicht abgebrochen und das fertige Modell blendet später weich ein.
  */
 async function beginExperience() {
-  // Die kurzen Signale werden vorgeladen; das Intro startet anschließend
-  // automatisch wie vor der zusätzlichen Audiofreigabe-Sperre.
+  // Preload the short interaction signals without blocking information access.
   primeSounds();
 
   bootLimitTimer = window.setTimeout(() => {
     // A slow optional asset must not keep the boot overlay visible.
     stage?.releaseModelReveal();
+    stage?.refreshInformation();
     boot?.classList.add('is-done');
     stage?.settleQuality?.();
     scheduleEnhancements(0);
@@ -457,6 +488,8 @@ async function beginExperience() {
   ]);
   window.clearTimeout(gateTimer);
   stage?.releaseModelReveal();
+  document.documentElement.dataset.scene = stage ? 'ready' : 'unavailable';
+  stage?.refreshInformation();
 
   // Zwei Bilder Vorlauf: der erste gerenderte Frame soll stehen, bevor das
   // Boot-Layer aufblendet.
@@ -478,7 +511,7 @@ async function beginExperience() {
       },
     });
   } else {
-    igniteTitle(document.querySelector('.head__role'), { delay: 0.55 });
+    if (!isInformationRoute(currentRoute)) igniteTitle(document.querySelector('.head__role'), { delay: 0.55 });
     startAmbientUi();
   }
 }
@@ -509,6 +542,8 @@ document.addEventListener('visibilitychange', onVisibilityChange);
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
+    document.removeEventListener('click', openInformation);
+    information.dispose();
     hint?.removeEventListener('click', activateFooterHint);
     languageSwitch?.removeEventListener('click', activateLanguageSwitch);
     crumb?.removeEventListener('click', activateBreadcrumb);

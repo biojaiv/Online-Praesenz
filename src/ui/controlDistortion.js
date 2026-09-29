@@ -3,7 +3,7 @@ export function createControlDistortion() {
   const selector = '.nav button, .nav a, .foot button, .foot a, .foot summary, .project-choice, .projects-browser button, [data-example-back]';
   const timers = new Map();
   function pulse(event) {
-    if (document.documentElement.classList.contains('is-site-inspecting')) return;
+    if (document.documentElement.dataset.infoView || document.documentElement.classList.contains('is-site-inspecting')) return;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const control = event.target.closest(selector);
     if (!control || control.contains(event.relatedTarget) || timers.has(control)) return;

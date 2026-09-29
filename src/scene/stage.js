@@ -193,6 +193,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let hovered = null;
   let menuHover = null;
   let opened = null;
+  let informationView = null, informationPresentation = null, informationPaused = false;
+  let informationTweens = [];
+  let informationRefreshFrame = 0;
+  const informationMotion = matchMedia('(prefers-reduced-motion: reduce)');
   let focusedProjectWing = null;
   let listener = null;
   let drag = null;
@@ -745,7 +749,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function onKeydown(event) {
-    if (exampleFlight.active) return;
+    if (exampleFlight.active || informationView) return;
     if (!opened && event.target === canvas && ['Enter', ' '].includes(event.key)) {
       event.preventDefault(); listener?.('select', hovered || (view.mobile ? mobileKeys[mobileSelection] : 'projekte')); return;
     }
@@ -1025,7 +1029,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   cards.onBoundsChange((key) => {
     // Eine nachtraegliche Modellmeldung darf eine bereits laufende
     // Kamerafahrt nicht abbrechen und neu starten.
-    if (opened === key && !viewMoving) focusCard(key, 0.8);
+    if (opened === key && !viewMoving && !informationView) focusCard(key, 0.8);
+    if (informationView) scheduleInformationRefresh();
   });
 
   /* ---------- Groesse ---------- */
@@ -1070,7 +1075,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     else cards.setLayout({ spacing: 8.6, scale: 0.9 });
 
     syncMobileHome();
-    if (!opened && !exampleFlight.active && !introActive) { camPos.copy(HOME.cam); look.copy(HOME.look); }
+    if (!opened && !exampleFlight.active && !introActive && !informationView) { camPos.copy(HOME.cam); look.copy(HOME.look); }
     background.setCompact(view.compact);
     applyBloom();
     currentPixelRatio = Math.min(renderBudget.ratio(w, h), qualitySettled ? Infinity : 1);
@@ -1079,13 +1084,14 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     composer?.setSize(w, h);
     background.setPixelRatio(renderer.getPixelRatio());
     cards.setPixelRatio(renderer.getPixelRatio());
-    if (inspectionFrozen || projectionIdle) {
+    if (inspectionFrozen || projectionIdle || informationPaused) {
+      if (informationPresentation) composeInformationCamera();
       inspectionResized ||= inspectionFrozen;
       if (!document.hidden) {
         if (composer) composer.render(0);
         else renderer.render(scene, camera);
       }
-    } else if (opened && !viewMoving && !exampleFlight.active) focusCard(opened, 0.65);
+    } else if (opened && !viewMoving && !exampleFlight.active && !informationView) focusCard(opened, 0.65);
   }
 
   function settleQuality() {
@@ -1120,7 +1126,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
   function frame(now = performance.now()) {
     raf = 0;
-    if (!running || projectionIdle || inspectionFrozen || document.hidden) return;
+    if (!running || projectionIdle || inspectionFrozen || informationPaused || document.hidden) return;
     raf = requestAnimationFrame(frame);
     // Hold the last space frame behind a settled HTML project; the return flight resumes it.
     if (now - lastFrameAt < FRAME_BUDGET) return;
@@ -1143,6 +1149,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     if (
       !exampleFlight.active
+      && !informationView
       && isZoomableKey(opened)
       && !readerOpen
       && !viewMoving
@@ -1194,7 +1201,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }
     cards.setHover(menuHover || (projectPreviewHover && opened === 'projekte' ? 'projekte' : hovered));
 
-    if (!exampleFlight.active) {
+    if (informationPresentation) {
+      composeInformationCamera();
+    } else if (!exampleFlight.active && !informationView) {
+      camera.clearViewOffset();
       if (opened) drift.multiplyScalar(0.8);
       else drift.lerp(pointer, 0.018);
       scrollLift += (scrollLiftTarget - scrollLift) * (1 - Math.pow(0.01, Math.min(dt, 0.1)));
@@ -1222,7 +1232,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         lookTarget.sub(ORBIT_PIVOT).applyQuaternion(orbitQuaternion).add(ORBIT_PIVOT);
       }
       camera.lookAt(lookTarget);
-    } else exampleFlight.update();
+    } else if (exampleFlight.active) exampleFlight.update();
 
     cards.faceLabels(camera);
     if (composer) composer.render();
@@ -1243,7 +1253,62 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     }
   }
 
+  // Presentation changes the real camera projection; the canvas keeps its native
+  // dimensions. Private document/orbit state stays untouched for modal return.
+  function composeInformationCamera() {
+    const narrow = view.width < 760;
+    const tan = halfFovTan();
+    const distance = Math.max(narrow ? 30 : 34, (narrow ? 18 : 27) / (2 * tan * view.aspect * (narrow ? .88 : .48)));
+    camera.clearViewOffset();
+    if (informationPresentation === 'start' && !narrow) {
+      camera.setViewOffset(view.width, view.height, -view.width * .245, 0, view.width, view.height);
+    }
+    camera.position.set(0, informationPresentation === 'kontakt' ? 3 : 0, distance);
+    camera.lookAt(0, -1.5, 0);
+    camera.updateMatrixWorld();
+    cards.setMobileSelection(null);
+    mobileDots.hidden = true;
+  }
+
+  function setInformationView(next) {
+    const wasInformation = Boolean(informationView);
+    if (next && !wasInformation) {
+      informationTweens = gsap.getTweensOf([camPos, look]).filter(tween => !tween.paused());
+      informationTweens.forEach(tween => tween.pause());
+      onWindowBlur();
+    }
+    informationView = next || null;
+    if (next !== 'kurzprofil') informationPresentation = next || null;
+    informationPaused = false;
+    if (!next) {
+      camera.clearViewOffset();
+      syncMobileHome();
+      informationTweens.forEach(tween => tween.resume()); informationTweens = [];
+    }
+    // A profile keeps the exact last frame, including when opened mid-flight.
+    const freeze = next === 'kurzprofil' || next === 'projekt/abschluss' || next === 'kontakt'
+      || (next === 'start' && informationMotion.matches);
+    if (freeze) cards.finishModelReveal();
+    cancelAnimationFrame(raf); raf = 0;
+    timer.setTimescale(projectionIdle || inspectionFrozen ? 0 : 1); timer.reset();
+    lastFrameAt = 0;
+    if (next !== 'kurzprofil' && running && !projectionIdle && !inspectionFrozen && !document.hidden) frame();
+    informationPaused = freeze;
+    if (freeze) { cancelAnimationFrame(raf); raf = 0; timer.setTimescale(0); }
+    canvas.dispatchEvent(new Event('renderpausechange'));
+  }
+  function refreshInformation() {
+    if (informationPresentation && informationView !== 'kurzprofil') setInformationView(informationView);
+  }
+  function scheduleInformationRefresh() {
+    cancelAnimationFrame(informationRefreshFrame);
+    informationRefreshFrame = requestAnimationFrame(() => { informationRefreshFrame = 0; refreshInformation(); });
+  }
+  background.ready.then(scheduleInformationRefresh);
+  informationMotion.addEventListener('change', refreshInformation);
+
   return {
+    setInformationView, refreshInformation,
     scene, camera, renderer, composer, cards, background,
     ready: cards.ready,
     releaseModelReveal: () => cards.releaseModelReveal(),
@@ -1262,19 +1327,19 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     toHome,
     exampleFlight,
     get renderQuality() { return renderBudget.profile.name; },
-    get isRenderingPaused() { return projectionIdle || inspectionFrozen || !running || document.hidden; },
+    get isRenderingPaused() { return projectionIdle || inspectionFrozen || informationPaused || !running || document.hidden; },
     setProjectionIdle(value) {
       projectionIdle = Boolean(value);
       cancelAnimationFrame(raf); raf = 0;
-      timer.setTimescale(projectionIdle || inspectionFrozen ? 0 : 1); timer.reset();
+      timer.setTimescale(projectionIdle || inspectionFrozen || informationPaused ? 0 : 1); timer.reset();
       lastFrameAt = 0; renderBudget.reset();
-      if (running && !projectionIdle && !inspectionFrozen && !document.hidden) frame();
+      if (running && !projectionIdle && !inspectionFrozen && !informationPaused && !document.hidden) frame();
       canvas.dispatchEvent(new Event('renderpausechange'));
     },
     setInspectionFrozen(value) {
       inspectionFrozen = Boolean(value);
       cancelAnimationFrame(raf); raf = 0;
-      timer.setTimescale(inspectionFrozen || projectionIdle ? 0 : 1);
+      timer.setTimescale(inspectionFrozen || projectionIdle || informationPaused ? 0 : 1);
       if (inspectionFrozen) {
         // A resize may have cleared the drawing buffer just before the hover.
         // Redraw the current state once, without advancing any animation.
@@ -1284,7 +1349,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
         timer.reset();
         if (inspectionResized) { inspectionResized = false; resize(); }
         lastFrameAt = 0; renderBudget.reset();
-        if (running && !projectionIdle && !document.hidden) frame();
+        if (running && !projectionIdle && !informationPaused && !document.hidden) frame();
       }
       canvas.dispatchEvent(new Event('renderpausechange'));
     },
@@ -1420,6 +1485,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     stop() { running = false; cancelAnimationFrame(raf); raf = 0; canvas.dispatchEvent(new Event('renderpausechange')); },
     dispose() {
       this.stop();
+      informationMotion.removeEventListener('change', refreshInformation);
+      cancelAnimationFrame(informationRefreshFrame);
       exampleFlight.dispose();
       unsubscribeMobileLanguage();
       mobileDots.removeEventListener('click', onMobileSelect);
