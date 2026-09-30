@@ -110,7 +110,7 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.ihk-project').isVisible(), false);
     // Verify route access using a real keyboard interaction from the existing navigation.
-    await page.locator('.nav__link[data-target="abschluss"]').focus();
+    await openMenu(page, 'abschluss');
     await page.locator('.ihk-reader-toggle').focus();
     await page.keyboard.press('Enter');
     await page.locator('#ihk-title').waitFor();
