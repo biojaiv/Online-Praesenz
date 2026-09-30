@@ -31,6 +31,7 @@
     "build:background-detail": "node scripts/ui/build_background_detail.mjs",
     "test:background": "node scripts/background/check_browser.mjs",
     "test:tiefgang": "node scripts/example/check_tiefgang.mjs",
+    "test:tiefgang:explained": "node scripts/example/check_explained.mjs",
     "build:recovery-film": "node scripts/recovery/render.mjs",
     "test:project-wings": "node scripts/ui/check_project_wings.mjs",
     "build:cv-hologram": "node scripts/cv/build_legacy_projection.mjs --hologram-only",

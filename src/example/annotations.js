@@ -74,7 +74,7 @@ export function createAnnotations(root) {
     const gap = hardwareLeft.x - occupiedRight;
     const side = innerWidth >= 1000 && gap >= 182;
 
-    const kind = visible.classList.contains('vm-card') ? 'vm' : 'dhcp';
+    const kind = visible.classList.contains('vm-card') ? 'vm' : visible.classList.contains('intro-card') ? 'intro' : 'dhcp';
     rail.dataset.target = kind;
     if (side) {
       const width = Math.min(240, gap - 24);
@@ -125,10 +125,10 @@ export function createAnnotations(root) {
   }
 
   const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
-  [workspace, drawing, rail, ...cards].forEach(node => observer?.observe(node));
+  [workspace, drawing, rail, ...cards, ...story.children].forEach(node => observer?.observe(node));
   window.addEventListener('resize', schedule);
   workspace.addEventListener('scroll', schedule, { passive: true });
-  document.fonts?.ready.then(schedule);
+  document.fonts?.ready.then(()=>{schedule();requestAnimationFrame(()=>requestAnimationFrame(schedule));});
 
   return {
     update(state) {
@@ -136,7 +136,7 @@ export function createAnnotations(root) {
       const station = stationFor(chapter);
       svg.dataset.station = station.id;
       svg.dataset.region = vm ? 'hypervisor' : station.region;
-      const key = `${chapter}/${vm}/${dhcp}`;
+      const key = `${chapter}/${vm}/${dhcp}/${state.intro}`;
       if (key !== lastState) { lastState = key; schedule(); }
     },
     dispose() {

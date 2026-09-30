@@ -1,5 +1,6 @@
-import { writeFile } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import { staticMarkup } from '../../src/example/reading.js';
+import { explainedMarkup, explainedPath } from '../../src/example/explained.js';
 
 // Pre-rendered, bilingual HTML is also usable when JavaScript cannot run.
 await writeFile(new URL('../../beispiel/index.html',import.meta.url),`<!doctype html>
@@ -7,7 +8,7 @@ await writeFile(new URL('../../beispiel/index.html',import.meta.url),`<!doctype 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Tiefgang: one workplace, seven layers. An interactive systems integration story by Vladimir Leicht.">
+  <meta name="description" content="Tiefgang: one workplace, seven steps. An interactive systems integration story by Vladimir Leicht.">
   <title>Tiefgang — Vladimir Leicht</title>
   <link rel="stylesheet" href="/src/example/style.css">
 </head>
@@ -16,4 +17,9 @@ await writeFile(new URL('../../beispiel/index.html',import.meta.url),`<!doctype 
   <script type="module" src="/src/example/main.js"></script>
 </body>
 </html>\n`);
-console.log('Tiefgang: English and German reading views generated.');
+for(const language of ['de','en']) {
+  const directory=new URL(`../..${explainedPath(language)}`,import.meta.url);
+  await mkdir(directory,{recursive:true});
+  await writeFile(new URL('index.html',directory),explainedMarkup(language).replace(/[\t ]+$/gm,''));
+}
+console.log('Tiefgang: bilingual reading views and beginner information pages generated.');

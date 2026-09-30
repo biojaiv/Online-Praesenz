@@ -1,4 +1,4 @@
-import { dhcpLogs, scripts } from './content.js';
+import { dhcpLogs, eventLogs, scripts } from './content.js';
 
 /** Deterministic story and independent, pausable link-failure state machine. */
 export function createJourney(onChange) {
@@ -12,7 +12,7 @@ export function createJourney(onChange) {
     started = performance.now();
     timer = setTimeout(() => {
       timer = 0; remaining = 0; state.link = 'backup'; state.rerouted = true;
-      events.push({text:'uplink B forwarding · traffic restored', kind:'recovered'}); emit();
+      events.push({id:'ev.backup', tech:eventLogs.backup, kind:'recovered'}); emit();
     }, remaining);
   }
   return {
@@ -23,6 +23,8 @@ export function createJourney(onChange) {
       if (chapter > 2) { state.lease = true; state.dhcp = 3; }
       if (chapter < 2 && changed) { state.lease = false; state.dhcp = 0; }
       if (changed) state.rerouted = false;
+      // Resolved link notices must not masquerade as newer provisioning events.
+      if (changed && state.link !== 'failing') events = [];
       if (chapter === 0 && changed) { clear(); state.link = 'primary'; events = []; }
       state.chapter = chapter; state.progress = progress;
       state.ready = chapter === 6 && progress > .97 && state.link !== 'failing';
@@ -38,10 +40,10 @@ export function createJourney(onChange) {
       clear();
       if (state.link === 'primary') {
         state.link = 'failing'; state.ready = false; remaining = 1800;
-        events = [{text:'uplink A LOST · carrier down',kind:'error'}, {text:'convergence · selecting standby path B',kind:'error'}];
+        events = [{id:'ev.lost', tech:eventLogs.lost, kind:'error'}, {id:'ev.converge', tech:eventLogs.converge, kind:'error'}];
         schedule();
       } else {
-        state.link = 'primary'; events = [{text:'uplink A restored · two paths available',kind:'recovered'}];
+        state.link = 'primary'; events = [{id:'ev.restored', tech:eventLogs.restored, kind:'recovered'}];
       }
       emit();
     },
@@ -54,10 +56,10 @@ export function createJourney(onChange) {
     },
     logs() {
       const rows = scripts.slice(0,state.chapter+1).flatMap((lines,i) => i===2
-        ? dhcpLogs.slice(0,state.chapter>2?4:state.dhcp+1).map((text,n)=>({text:`08:01:${String(8+n).padStart(2,'0')}  ${text}`,kind:''}))
-        : lines.map(text=>({text,kind:''})));
+        ? dhcpLogs.slice(0,state.chapter>2?4:state.dhcp+1).map((tech,n)=>({id:`d.${n}`,time:`08:01:${String(8+n).padStart(2,'0')}`,tech,kind:''}))
+        : lines.map(([time,tech],n)=>({id:`${i}.${n}`,time,tech,kind:'',ready:i===6&&n===2})));
       // Provisioning results wait while failover is still converging.
-      const visible = !state.ready ? rows.filter(row=>!row.text.includes('JANA-01 ready')) : rows;
+      const visible = !state.ready ? rows.filter(row=>!row.ready) : rows;
       return [...visible.slice(-5), ...events].slice(-7);
     },
     dispose() { clear(); },

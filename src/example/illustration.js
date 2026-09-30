@@ -11,12 +11,12 @@ const size = `width="${ART.width}" height="${ART.height}"`;
 const LED_TIMING = { ap: [1.3, .2], switch: [1.9, .9], firewall: [1.6, .4], storage: [2.3, 1.3] };
 
 /** Raster drawing with vector state overlays; the client carton unpacks after chapter 01. */
-export function illustration(c, prefix = 'live', active = 0, interactive = true) {
+export function illustration(c, prefix = 'live', active = 0, interactive = true, viewBox = DRAWING_VIEWBOX) {
   const station = stationFor(active);
   const ink = `filter="url(#${prefix}-ink)"`;
   const clientLayer = href => `<image href="${href}" ${size}/><image class="client-ink" href="${href}" ${size} ${ink}/>`;
   const { deck, guide } = CLIENT;
-  return `<svg class="infrastructure source-infrastructure" viewBox="${DRAWING_VIEWBOX}" xmlns="http://www.w3.org/2000/svg" aria-labelledby="${prefix}-title ${prefix}-desc" role="img" data-final="${active === 6}" data-station="${station.id}" data-region="${station.region}" data-unpacked="${active > 0}">
+  return `<svg class="infrastructure source-infrastructure" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-labelledby="${prefix}-title ${prefix}-desc" role="img" data-final="${active === 6}" data-station="${station.id}" data-region="${station.region}" data-unpacked="${active > 0}">
     <title id="${prefix}-title">Tiefgang · JANA-01</title><desc id="${prefix}-desc">${escapeHTML(c.drawing)}</desc>
     <defs>
       <filter id="${prefix}-ink" color-interpolation-filters="sRGB">
@@ -26,10 +26,11 @@ export function illustration(c, prefix = 'live', active = 0, interactive = true)
       </filter>
       ${Object.entries(REGIONS).filter(([id]) => id !== 'client').map(([id, d]) => `<clipPath id="${prefix}-region-${id}"><path d="${d}"/></clipPath>`).join('')}
     </defs>
-    <image class="drawing-art" href="${ART.href}" ${size}/>
+    <image class="drawing-art source-art" href="${ART.href}" ${size}/>
     ${Object.keys(REGIONS).filter(id => id !== 'client').map(id => `<g class="region-highlight" data-region="${id}" clip-path="url(#${prefix}-region-${id})"><image href="${ART.href}" ${size} ${ink}/></g>`).join('')}
     <g class="client-carton">${clientLayer(CLIENT.carton)}</g>
     <g class="client-laptop"><g class="client-deck"><path class="deck-top" d="${deck.top}"/><path class="deck-front" d="${deck.front}"/><path class="deck-side" d="${deck.side}"/></g>${clientLayer(CLIENT.laptop)}</g>
+    <rect class="baked-label-mask" x="538" y="18" width="178" height="997"/>
     <g class="service-slots">${SLOTS.map((slot, i) => `<path class="service-slot${station.slot === i ? ' is-slot-active' : ''}" data-slot="${i}" d="${slot.path}"/>`).join('')}</g>
     <g class="guides">${GUIDES.map(row => `<path class="guide${row.link ? ` uplink uplink-${row.link}` : ''}" d="M${row.x} ${row.from}V${row.to}"/>`).join('')}
       <path class="guide guide-unpacked" d="M${guide.x} ${guide.from}V${guide.to}"/>

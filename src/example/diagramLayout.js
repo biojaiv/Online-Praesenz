@@ -147,4 +147,5 @@ export function cubeFaces(angle = Math.PI / 4, size = 12) {
 export const QUESTION_TARGETS = Object.freeze({
   dhcp: Object.freeze([231, slotTop(0) + 12]),
   vm: Object.freeze([342, 820]),
+  intro: Object.freeze([292, 168]),
 });

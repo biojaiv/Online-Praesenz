@@ -14,6 +14,8 @@ export default defineConfig({
         recovery: fileURLToPath(new URL('./systemintegration/index.html', import.meta.url)),
         portfolio: fileURLToPath(new URL('./index.html', import.meta.url)),
         example: fileURLToPath(new URL('./beispiel/index.html', import.meta.url)),
+        exampleExplainedDe: fileURLToPath(new URL('./beispiel/erklaert/index.html', import.meta.url)),
+        exampleExplainedEn: fileURLToPath(new URL('./beispiel/erklaert/en/index.html', import.meta.url)),
       },
     },
   },
