@@ -34,7 +34,11 @@
 .example-projection__controls button[hidden]{display:none}
 /* While a portal is open the canvas spans the whole window (header and footer step aside). */
 .frame.is-portal-stage > .stage{position:absolute;inset:0;z-index:0}
-.frame.is-portal-stage :is(.head,.head-calibration-marker,.foot){visibility:hidden;pointer-events:none}
+/* The stage leaves the grid; header and footer keep their own rows and vanish at once,
+   otherwise the footer would slide into the freed middle row during the flight. */
+.frame.is-portal-stage > .head{grid-row:1}
+.frame.is-portal-stage > .foot{grid-row:3}
+.frame.is-portal-stage :is(.head,.head-calibration-marker,.foot){visibility:hidden!important;opacity:0!important;transition:none!important;pointer-events:none}
 .frame:is(.is-portal-stage,.is-example-projected) .head__symbol-stage,.frame:is(.is-portal-stage,.is-example-projected) .head__symbol-stage *{visibility:hidden!important}
 /* Zoom hints belong to the pedestal view; hide them during portal flights and open pages. */
 .frame:is(.is-portal-stage,.is-example-projected) :is(.camera-dolly-guide,.cv-keyboard-zoom-hint,.cv-mobile-zoom){visibility:hidden!important;opacity:0!important;transition:none!important}
