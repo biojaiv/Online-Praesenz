@@ -49,7 +49,8 @@
     "test:info:production": "node scripts/info/check_production.mjs",
     "test:info:profile": "node scripts/info/check_profile_refinements.mjs",
     "test:info:entry": "node scripts/info/check_entry_transition.mjs",
-    "build:portal": "node scripts/portal/build.mjs"
+    "build:portal": "node scripts/portal/build.mjs",
+    "build:cv-projection": "node scripts/cv/build_hologram.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",

@@ -104,7 +104,7 @@ npm run test:background
 SITE_URL=http://127.0.0.1:5173 npm run test:inspection
 ```
 
-The browser checks use Playwright Chromium. `npm run build:cv` separately rebuilds CV documents; see the script and [CV documentation](docu_workprogress/) for its additional Python requirements.
+The browser checks use Playwright Chromium. `npm run build:cv-projection` renders the CV hologram (`public/cv/CV_Projection_DE/EN.webp`) and its section anchors from `scripts/cv/hologram_content.mjs`. `npm run build:cv` separately rebuilds the downloadable CV documents; see the script and [CV documentation](docu_workprogress/) for its additional Python requirements.
 
 ## Repository map
 
@@ -234,7 +234,7 @@ npm run test:background
 SITE_URL=http://127.0.0.1:5173 npm run test:inspection
 ```
 
-Die Browserprüfungen verwenden Playwright Chromium. `npm run build:cv` erstellt die Lebenslaufdateien separat neu und benötigt zusätzlich Python-Werkzeuge; Einzelheiten stehen im Skript und in der [CV-Dokumentation](docu_workprogress/).
+Die Browserprüfungen verwenden Playwright Chromium. `npm run build:cv-projection` rendert das Lebenslauf-Hologramm (`public/cv/CV_Projection_DE/EN.webp`) samt Sprungmarken aus `scripts/cv/hologram_content.mjs`. `npm run build:cv` erstellt die Lebenslaufdateien zum Herunterladen separat neu und benötigt zusätzlich Python-Werkzeuge; Einzelheiten stehen im Skript und in der [CV-Dokumentation](docu_workprogress/).
 
 ## Wichtige Dateien
 
