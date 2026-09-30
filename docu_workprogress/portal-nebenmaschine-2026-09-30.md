@@ -17,6 +17,13 @@ des Sichtfelds vom mittleren Sockel.
 3. Die Seite öffnet sich kreisförmig in der Öffnung. Die Szene läuft weiter: Lichtpassagen
    folgen ohne Dunkelpause aufeinander (alle 13 s) und ein weiches Licht um das Portal zeigt
    die drehenden Ringe neben dem Rahmen.
+   Die Seite rückt so weit ein, dass ihre Ecken genau auf dem Öffnungsbogen liegen; nichts
+   wird abgeschnitten. Im Rand dazwischen liegt der innere Portalrahmen nach
+   `Entwuerfe/Vorlage_Objekt.png` (`src/ui/portalRim.js`): Neonkante, die sich beim Öffnen
+   einmal herumzeichnet, ein sich drehender Schimmer im Portalband und Funken in der
+   Projektfarbe. Die Seitenfläche selbst wird nie übermalt.
+   Solange ein Portal aktiv ist, wird die Maschine nach dem Orrery mit gelöschtem
+   Tiefenpuffer gezeichnet: Ringe und Streben können weder Rahmen noch Inhalt überlagern.
 4. ESC schließt das Portal, faltet die Maschine und fliegt zurück (1,65 s / 1,9 s).
 5. Handys (≤ 600 px) und reduzierte Bewegung behalten die bisherige Vollbildprojektion.
 

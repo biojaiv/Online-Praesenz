@@ -1457,6 +1457,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       const flying = exampleFlight.open({ ...plan, duration: reduced ? 0 : 2.1 });
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150));
       if (ticket !== portalTicket) return null; // closed during the flight
+      portals.setForeground(id, true);
       await Promise.all([flying, portals.animate(id, 1, reduced ? 0 : 2.3)]);
       // The scene keeps running around the frame: light passes follow each other
       // without the usual dark pause while the page is open.
@@ -1474,7 +1475,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       window.clearInterval(portalLightTimer); portalLightTimer = 0;
       background.setInspectionPoint?.(null);
       if (projectionIdle) this.setProjectionIdle(false);
-      const folding = portals.animate(id, 0, reduced ? 0 : 1.65);
+      const folding = portals.animate(id, 0, reduced ? 0 : 1.65).then(() => portals.setForeground(id, false));
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 770));
       await Promise.all([folding, exampleFlight.close(reduced ? 0 : 1.9)]);
     },

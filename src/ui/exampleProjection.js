@@ -1,5 +1,6 @@
 import './exampleProjection.css';
 import { createHologramBorder } from './hologramBorder.js';
+import { createPortalRim } from './portalRim.js';
 import { playSound } from './audio.js';
 import { getLanguage, setLanguage, onLanguageChange, t } from '../i18n.js';
 import { getProject, getProjectUrl } from '../data/projects.js';
@@ -20,9 +21,16 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   const controls = dialog.querySelector('.example-projection__controls');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   let portal = null;
+  let rim = null;
   function placeLight(rect, radius = 0) {
     Object.assign(light.style, { left: `${rect.left}px`, top: `${rect.top}px`, right: 'auto', bottom: 'auto',
       width: `${rect.width}px`, height: `${rect.height}px`, borderRadius: radius ? `${radius}px` : '' });
+    // Inside a rounded aperture the page moves in until its corners sit on the arc,
+    // so no edge of the page is cut off; the margin carries the portal rim.
+    const inset = radius ? Math.round(radius * (1 - Math.SQRT1_2) + 8) : 0;
+    light.style.setProperty('--portal-inset', `${inset}px`);
+    if (radius) rim?.setGeometry({ radius, inset });
+    return inset;
   }
   function resize() {
     const view = getProjectionViewport();
@@ -35,6 +43,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   window.addEventListener('resize', resize);
   const status = dialog.querySelector('[role=status]');
   const border = createHologramBorder(light);
+  rim = createPortalRim(light);
   let state = 'closed', originFocus = null, iframe = null, events = null, timer = 0, ticket = 0;
   let project = getProject('systems'), separate = null, preview = null, originRect = null;
   let resolveOpeningContent = null;
@@ -110,13 +119,13 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     frame?.classList.remove('is-example-projected');
     await Promise.all([
       portalId
-        ? animate(light, [{ clipPath: 'circle(75% at 50% 50%)', opacity: lightOpacity }, { clipPath: 'circle(0% at 50% 50%)', opacity: 0 }], 520, 'cubic-bezier(.6, 0, .8, .4)')
+        ? animate(light, [{ clipPath: 'circle(100% at 50% 50%)', opacity: lightOpacity }, { clipPath: 'circle(0% at 50% 50%)', opacity: 0 }], 520, 'cubic-bezier(.6, 0, .8, .4)')
         : animate(light, [{ transform, opacity: lightOpacity }, { transform: originTransform(), opacity: 0 }], 500),
       animate(scrim, [{ opacity: darkness }, { opacity: 0 }], 500),
       animate(controls, [{ opacity: controlOpacity }, { opacity: 0 }], 180),
     ]);
     if (current !== ticket) return;
-    border.stop();
+    border.stop(); rim.stop();
     iframe?.remove(); iframe = null;
     preview?.remove(); preview = null;
     if (portalId) {
@@ -206,10 +215,11 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       light.style.opacity = '0';
       const rect = await stage.openPortal(portal, getProjectionViewport());
       if (current !== ticket) return;
-      if (rect) placeLight(rect, rect.radius);
+      const inset = rect ? placeLight(rect, rect.radius) : 0;
       light.style.opacity = '';
       // No projection idle here: the Orrery keeps moving around the frame.
-      await animate(light, [{ clipPath: 'circle(0% at 50% 50%)', opacity: .4 }, { clipPath: 'circle(75% at 50% 50%)', opacity: 1 }], 900);
+      rim.start({ radius: rect?.radius, inset, accent: stage.portals.accent(portal) });
+      await animate(light, [{ clipPath: 'circle(0% at 50% 50%)', opacity: .4 }, { clipPath: 'circle(100% at 50% 50%)', opacity: 1 }], 900);
       if (current !== ticket) return;
       state = 'open'; dialog.dataset.state = state;
       frame?.classList.add('is-example-projected');
@@ -290,7 +300,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       stage?.cards.setTemporaryActive(null);
       stage?.cards.setProjectHologramHidden(false);
       setBrowserSuspended(false);
-      border.dispose();
+      border.dispose(); rim.dispose();
       dialog.close(); dialog.remove(); unsubscribe();
     },
   };

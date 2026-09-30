@@ -24,7 +24,11 @@
 @media(prefers-reduced-motion:reduce){.example-projection__light{will-change:auto}.example-projection__status{transition:none!important}}
 /* Portal mode: the unfolded machine in the canvas frames the page; no scrim. */
 .example-projection[data-portal] .example-projection__scrim{display:none}
-.example-projection[data-portal] .example-projection__light{overflow:hidden;box-shadow:0 0 0 1px rgb(127 216 255 / .35),0 0 28px rgb(127 216 255 / .28)}
+/* The aperture is the portal surface; the page sits inset so its corners meet the arc. */
+.example-projection[data-portal] .example-projection__light{background:radial-gradient(ellipse at 50% 45%,#0e2a48 0%,#071322 62%,#040a14 100%)}
+.example-projection[data-portal] .example-projection__screen{inset:var(--portal-inset,0);border-radius:6px}
+.portal-rim{position:absolute;inset:-14px;width:calc(100% + 28px);height:calc(100% + 28px);pointer-events:none;z-index:2;display:none}
+.example-projection[data-portal] .portal-rim{display:block}
 .example-projection[data-portal] .hologram-border{display:none}
 /* The button rule above sets display:flex, which would otherwise override [hidden]. */
 .example-projection__controls button[hidden]{display:none}

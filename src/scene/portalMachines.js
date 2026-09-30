@@ -43,6 +43,23 @@ export function createPortalMachines({ reduced = false } = {}) {
   group.name = 'portal-machines';
   const instances = new Map();
   let hovered = null, disposed = false, loading = null;
+  // Drawn just before a foreground portal: clearing depth here puts the active
+  // frame in front of every Orrery ring and strut between it and the camera.
+  const depthClear = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
+  depthClear.name = 'portal-depth-clear';
+  depthClear.frustumCulled = false;
+  depthClear.renderOrder = 999;
+  depthClear.visible = false;
+  depthClear.onBeforeRender = renderer => renderer.clearDepth();
+  group.add(depthClear);
+  function setForeground(item, value) {
+    if (item.foreground === value) return;
+    item.foreground = value;
+    // Transparent queue (after the Orrery's own transparent pass), still writing depth.
+    for (const material of item.materials) { material.transparent = value; material.needsUpdate = true; }
+    item.root.traverse(object => { if (object.isMesh) object.renderOrder = value ? 1000 : 0; });
+    depthClear.visible = [...instances.values()].some(entry => entry.foreground);
+  }
 
   function build(gltf) {
     const clip = gltf.animations.find(item => item.name === 'Entfalten') || gltf.animations[0];
@@ -85,7 +102,7 @@ export function createPortalMachines({ reduced = false } = {}) {
         horizontal: ['oben', 'unten'].map(label => root.getObjectByName(node(`PORTAL / Seite ${label} / Doppelschiene`))),
         vertical: ['rechts', 'links'].map((label, index) => ({ sign: index ? -1 : 1,
           mesh: root.getObjectByName(node(`PORTAL / Seite ${label} / Doppelschiene`)) })),
-        progress: { value: 0 }, stretch: 1, glow: 0, active: false, tween: null,
+        progress: { value: 0 }, stretch: 1, glow: 0, active: false, tween: null, foreground: false,
       });
     }
   }
@@ -128,6 +145,9 @@ export function createPortalMachines({ reduced = false } = {}) {
     group,
     load,
     has: id => instances.has(id),
+    accent: id => `#${new THREE.Color(SLOTS[id]?.accent ?? 0x7fd8ff).getHexString()}`,
+    /** Keep a portal in front of the whole scene (while it frames a page). */
+    setForeground(id, value) { const item = instances.get(id); if (item) setForeground(item, Boolean(value)); },
     get hovered() { return hovered; },
     setHover(id) { hovered = instances.has(id) ? id : null; },
     /** World-space framing data for a camera flight (outer frame size at the given aspect). */
