@@ -1,6 +1,9 @@
-/** Coordinates of /example/tiefgang-zeichnung.webp (768 × 1024). Every device
- *  shares one vertical axis; the packet and the guides follow it exactly. */
-export const ART = Object.freeze({ href: '/example/tiefgang-zeichnung-ohne-client.webp', width: 768, height: 1024 });
+import { DEVICES, VM_CUBES, at, bottomAt, topAt, serviceRow, rowCentreOnAxis, vmBox, corners } from './hardwareGeometry.js';
+
+/** Art space of the drawing (768 × 1024). The hardware below the client is vector
+ *  (hardwareGeometry.js); the client carton and laptop remain raster layers.
+ *  Every device shares one vertical axis; the packet and the guides follow it. */
+export const ART = Object.freeze({ width: 768, height: 1024 });
 
 /** The client is split so the carton can be packed away: carton and laptop
  *  are raster layers; the base hidden by the carton flaps is vector. */
@@ -25,50 +28,49 @@ export const DRAWING_VIEWBOX = '30 18 686 1038';
 export const CAPTION_Y = 1040;
 export const HARDWARE_LEFT = Object.freeze([217, 500]);
 
-/** Visible gaps between device edges, measured along the axis. */
-export const GUIDES = Object.freeze([
-  { id: 'client-ap', x: AXIS, from: 224, to: 255 },
-  { id: 'ap-switch', x: AXIS, from: 307, to: 330 },
-  { id: 'uplink-a', x: 319, from: 429, to: 467, link: 'a' },
-  { id: 'uplink-b', x: 427, from: 449, to: 484, link: 'b' },
-  { id: 'firewall-services', x: AXIS, from: 580, to: 589 },
-  { id: 'services-vm', x: AXIS, from: 778, to: 797 },
-  { id: 'hypervisor-storage', x: AXIS, from: 885, to: 896 },
-].map(Object.freeze));
-
-/** Separating polygons between stacked devices; each includes its right-hand label. */
-export const REGIONS = Object.freeze({
-  client: 'M30 18H716V244H30Z',
-  ap: 'M30 248H716V318H30Z',
-  switch: 'M30 320H716V452H30Z',
-  firewall: 'M30 456H716V606H530L437 598 373 585 300 574 30 575Z',
-  services: 'M30 575 300 574 373 585 437 598 530 606H716V797H437L373 786 300 778 30 774Z',
-  hypervisor: 'M30 774 300 778 373 786 437 797H716V915H515L435 902 373 890 300 876 30 880Z',
-  storage: 'M30 880 300 876 373 890 435 902 515 915H716V1012H30Z',
+/** Visible gaps between device edges, measured along the axis (or the uplink). */
+const gap = (id, x, above, below, extra = {}) => Object.freeze({
+  id, x, from: Math.round(bottomAt(DEVICES[above], x) + 2), to: Math.round(topAt(DEVICES[below], x) - 2), ...extra,
 });
+export const GUIDES = Object.freeze([
+  Object.freeze({ id: 'client-ap', x: AXIS, from: 224, to: Math.round(topAt(DEVICES.ap, AXIS) - 2) }),
+  gap('ap-switch', AXIS, 'ap', 'switch'),
+  gap('uplink-a', 319, 'switch', 'firewall', { link: 'a' }),
+  gap('uplink-b', 427, 'switch', 'firewall', { link: 'b' }),
+  gap('firewall-services', AXIS, 'firewall', 'services'),
+  gap('services-vm', AXIS, 'services', 'hypervisor'),
+  gap('hypervisor-storage', AXIS, 'hypervisor', 'storage'),
+]);
 
-const slotTop = index => 624 + index * 29.5;
-export const SLOTS = Object.freeze(['dhcp', 'pxe', 'uem', 'files'].map((id, i) => Object.freeze({
-  id, path: `M231 ${slotTop(i)} 426 ${slotTop(i) + 32}v25L231 ${slotTop(i) + 25}Z`,
+/** Service rows are the chapter slots: DHCP, PXE, AD, UEM, top to bottom. */
+export const SLOTS = Object.freeze(['dhcp', 'pxe', 'ad', 'uem'].map((id, i) => Object.freeze({
+  id, path: `M${serviceRow(i).points.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')}Z`,
 })));
-const slotCentre = index => slotTop(index) + 23 + 13;
 
+const led = (id, device, u, v, link = false) => {
+  const box = DEVICES[device], [x, y] = at(box, typeof u === 'number' && u < 0 ? box.w + u : u, box.h + v);
+  return Object.freeze({ id, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, ...(link ? { link } : {}) });
+};
 export const LEDS = Object.freeze([
-  { id: 'ap', x: 376, y: 301 },
-  { id: 'switch', x: 418, y: 425, link: true },
-  { id: 'firewall', x: 412, y: 565, link: true },
-  { id: 'storage', x: 418, y: 987 },
-].map(Object.freeze));
+  led('ap', 'ap', DEVICES.ap.w * .8, -8),
+  led('switch', 'switch', -20, -13, true),
+  led('firewall', 'firewall', -22, -16, true),
+  led('storage', 'storage', -18, -12),
+]);
 
-/** Chapter → highlighted device, active service slot and packet stop. */
+const storageStop = (() => {
+  const top = topAt(DEVICES.storage, AXIS), front = at(DEVICES.storage, AXIS - DEVICES.storage.x, 0)[1];
+  return Math.round((top + front) / 2);
+})();
+/** Chapter → highlighted device, active service slot and packet stop. Strictly descending. */
 export const STATIONS = Object.freeze([
   { id: 'client', region: 'client', slot: -1, stop: 146 },
   { id: 'network', region: 'switch', slot: -1, stop: 360 },
-  { id: 'dhcp', region: 'services', slot: 0, stop: slotCentre(0) },
-  { id: 'pxe', region: 'services', slot: 1, stop: slotCentre(1) },
-  { id: 'identity', region: 'services', slot: 0, stop: slotCentre(0) },
-  { id: 'uem', region: 'services', slot: 2, stop: slotCentre(2) },
-  { id: 'backup', region: 'storage', slot: 3, stop: 923 },
+  { id: 'dhcp', region: 'services', slot: 0, stop: rowCentreOnAxis(0, AXIS) },
+  { id: 'pxe', region: 'services', slot: 1, stop: rowCentreOnAxis(1, AXIS) },
+  { id: 'identity', region: 'services', slot: 2, stop: rowCentreOnAxis(2, AXIS) },
+  { id: 'uem', region: 'services', slot: 3, stop: rowCentreOnAxis(3, AXIS) },
+  { id: 'backup', region: 'storage', slot: -1, stop: storageStop },
 ].map(Object.freeze));
 export const packetStops = Object.freeze(STATIONS.map(station => station.stop));
 
@@ -144,8 +146,11 @@ export function cubeFaces(angle = Math.PI / 4, size = 12) {
     .map(({ kind, points }) => ({ kind, d: `M${points.map(p => point(...p).map(n => n.toFixed(1)).join(' ')).join(' ')}Z` }));
 }
 
+const vmFront = (() => { const c = corners(vmBox(VM_CUBES[1])); return c; })();
+/** The PXE drawer slides out of guest VM 02. */
+export const VM_TARGET = Object.freeze({ ftl: vmFront.ftl, fbr: vmFront.fbr, fbl: vmFront.fbl, ftr: vmFront.ftr });
 export const QUESTION_TARGETS = Object.freeze({
-  dhcp: Object.freeze([231, slotTop(0) + 12]),
-  vm: Object.freeze([342, 820]),
+  dhcp: Object.freeze(serviceRow(0).points[0].map((n, i) => n + (i ? 12 : 0))),
+  vm: Object.freeze([vmFront.ftl[0] + 6, (vmFront.ftl[1] + vmFront.fbl[1]) / 2]),
   intro: Object.freeze([292, 168]),
 });

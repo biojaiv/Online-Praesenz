@@ -189,7 +189,7 @@ export function startTiefgang() {
         scene.dataset.unpacked=String(chapter>0);
         $$('.stage .tag-number').forEach(label=>label.textContent=number(chapter)); $$('.stage .tag-text').forEach(label=>label.textContent=c.labels[chapter]);
         scene.dataset.final=String(chapter===6);
-        $$('[data-slot]').forEach((slot,i)=>slot.classList.toggle('is-slot-active',i===({2:0,3:1,4:0,5:2,6:3})[chapter]));
+        $$('[data-slot]').forEach((slot,i)=>slot.classList.toggle('is-slot-active',i===({2:0,3:1,4:2,5:3})[chapter]));
         $('[data-prev]').disabled=chapter===0; $('[data-next]').disabled=chapter===6;
         lastChapter=chapter;
       }

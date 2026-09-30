@@ -89,7 +89,9 @@ try {
     await go(4);
     await page.keyboard.press('Control+k');
     assert.equal(await page.locator('[data-terminal],.terminal-dialog,.xterm').count(),0,'Terminal UI and shortcut are removed');
-    assert(await page.locator('.stage image.source-art').count()>0,'Supplied illustration is used');
+    assert.equal(await page.locator('.stage .hardware .device').count(),6,'Vector hardware drawing is used');
+    const stops=await page.evaluate(()=>import('/src/example/diagramLayout.js').then(m=>[...m.packetStops]));
+    assert(stops.every((y,i)=>!i||y>stops[i-1]),'Packet only travels downward');
     await page.evaluate(()=>scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
     await page.locator('.completion').waitFor({state:'visible'});
     assert(await page.locator('[data-tiefgang-start]').isVisible());
