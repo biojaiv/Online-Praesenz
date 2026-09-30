@@ -28,9 +28,9 @@ export function illustration(c, prefix = 'live', active = 0, interactive = true,
     </defs>
     <image class="drawing-art source-art" href="${ART.href}" ${size}/>
     ${Object.keys(REGIONS).filter(id => id !== 'client').map(id => `<g class="region-highlight" data-region="${id}" clip-path="url(#${prefix}-region-${id})"><image href="${ART.href}" ${size} ${ink}/></g>`).join('')}
+    <rect class="baked-label-mask" x="538" y="18" width="178" height="997"/>
     <g class="client-carton">${clientLayer(CLIENT.carton)}</g>
     <g class="client-laptop"><g class="client-deck"><path class="deck-top" d="${deck.top}"/><path class="deck-front" d="${deck.front}"/><path class="deck-side" d="${deck.side}"/></g>${clientLayer(CLIENT.laptop)}</g>
-    <rect class="baked-label-mask" x="538" y="18" width="178" height="997"/>
     <g class="service-slots">${SLOTS.map((slot, i) => `<path class="service-slot${station.slot === i ? ' is-slot-active' : ''}" data-slot="${i}" d="${slot.path}"/>`).join('')}</g>
     <g class="guides">${GUIDES.map(row => `<path class="guide${row.link ? ` uplink uplink-${row.link}` : ''}" d="M${row.x} ${row.from}V${row.to}"/>`).join('')}
       <path class="guide guide-unpacked" d="M${guide.x} ${guide.from}V${guide.to}"/>

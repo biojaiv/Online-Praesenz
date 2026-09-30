@@ -9,6 +9,15 @@ try {
     const path=`/beispiel/erklaert/${lang==='en'?'en/':''}`;
     const response=await page.goto(base+path);assert.equal(response.status(),200);
     assert.equal(await page.locator('html').getAttribute('lang'),lang);
+    assert(await page.locator('.tiefgang-frame').isVisible());
+    assert.equal(await page.locator('[data-tiefgang-start]').getAttribute('href'),`/beispiel/?lang=${lang}`);
+    assert.equal(await page.locator('[data-tiefgang-hologram]').getAttribute('href'),`/?lang=${lang}#projekte/webseiten`);
+    await page.locator('#glossary').scrollIntoViewIfNeeded();
+    const returns=await page.locator('.tiefgang-navigation a').evaluateAll(links=>links.every(link=>{
+      const box=link.getBoundingClientRect();
+      return box.top>=0&&box.bottom<=innerHeight&&link.contains(document.elementFromPoint(box.left+box.width/2,box.top+box.height/2));
+    }));
+    assert(returns,'Both return destinations stay reachable at the glossary, even without JavaScript');
     assert.match(await page.locator('h1').innerText(),lang==='de'?/Karton.*Arbeitsplatz/:/cardboard box.*workstation/);
     assert.equal(await page.locator('.step-card').count(),8);
     assert.equal(await page.locator('.depth-examples article').count(),3);

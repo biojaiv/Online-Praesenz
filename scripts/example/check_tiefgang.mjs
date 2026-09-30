@@ -12,6 +12,9 @@ try {
     const errors=[], requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
     await page.goto(`${base}/beispiel/?lang=${lang}`);await page.locator('.story-title').waitFor();await page.evaluate(()=>document.fonts.ready);
     assert.equal(await page.locator('html').getAttribute('lang'),lang);
+    assert.equal(await page.locator('.tiefgang-frame .hologram-border').count(),1);
+    assert.equal(await page.locator('[data-tiefgang-start]').getAttribute('href'),`/beispiel/?lang=${lang}`);
+    assert.equal(await page.locator('[data-tiefgang-hologram]').getAttribute('href'),`/?lang=${lang}#projekte/webseiten`);
     assert.equal(await page.locator('.chapter-nav a').count(),7);
     assert.equal(requests.some(url=>/terminal[.-]|@xterm/.test(url)),false,'No terminal code is requested');
     assert(!await page.locator('[data-cable]').isVisible(),'Failure switch is absent before chapter02');
@@ -89,6 +92,9 @@ try {
     assert(await page.locator('.stage image.source-art').count()>0,'Supplied illustration is used');
     await page.evaluate(()=>scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
     await page.locator('.completion').waitFor({state:'visible'});
+    assert(await page.locator('[data-tiefgang-start]').isVisible());
+    assert(await page.locator('[data-tiefgang-hologram]').isVisible());
+    assert.equal(await page.locator('.tiefgang-navigation').evaluate(e=>getComputedStyle(e).position),'fixed');
     assert.equal(await page.locator('.time').textContent(),'00:35:00');assert.equal(await page.locator('progress').getAttribute('value'),'100');
     assert.equal(await page.locator('.ready-list [data-jump]').count(),7);
     assert.equal(await page.locator('.stage .drawing-wrap').evaluate(e=>getComputedStyle(e).opacity),'1');
@@ -107,6 +113,10 @@ try {
     assert.equal(await page.locator('.chapter-content svg.infrastructure').count(),7);
     await page.locator('.chapter-picker').selectOption('2');
     assert(await page.locator('#chapter-3').evaluate(el=>Math.abs(el.getBoundingClientRect().top)<40));
+    await page.locator('[data-tiefgang-start]').click();
+    await page.locator('.tiefgang-frame .hologram-border').waitFor();
+    await page.waitForFunction(()=>scrollY<2);
+    assert.equal(await page.locator('.tiefgang-frame .hologram-border').count(),1);
     await page.close();
   }
   const nojs=await browser.newPage({javaScriptEnabled:false});await nojs.goto(`${base}/beispiel/`);

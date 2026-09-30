@@ -82,8 +82,19 @@ html[data-scene="unavailable"] .info-scene-status { display: block; margin-top: 
 .info-project__availability .info-button { font-size: 16px; min-height: 44px; }
 .info-project__layout { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 28px; margin-top: 26px; }
 .info-project__rows { list-style: none; padding: 0; margin: 0; }
-.info-project__row { display: grid; grid-template-columns: 45px 165px minmax(0, 1fr); gap: 18px; align-items: start; padding: 22px 20px; margin-bottom: 10px; border: 1px solid rgb(234 177 108 / .34); background: rgb(7 16 26 / .83); }
-.info-project__number { color: var(--info-amber); font: 500 36px/1 "Barlow Condensed", sans-serif; }
+.info-project__row { margin-bottom: 10px; border: 1px solid rgb(234 177 108 / .34); background: rgb(7 16 26 / .83); }
+.info-project__row summary { display: grid; grid-template-columns: 45px minmax(0, 1fr) 18px; gap: 18px; align-items: start; padding: 22px 20px; list-style: none; cursor: pointer; }
+.info-project__row summary::-webkit-details-marker { display: none; }
+.info-project__row summary:focus-visible { outline: 2px solid var(--info-amber, var(--amber)); outline-offset: -3px; }
+.info-project__topic strong { display: block; margin-bottom: 7px; color: var(--info-ink, var(--ink)); font: 500 22px/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; }
+.info-project__topic > span { display: block; color: var(--info-muted, var(--ink-dim)); font-size: 15px; line-height: 1.55; }
+.info-project__expand { color: var(--info-amber, var(--amber)); font-size: 23px; line-height: 1; }
+.info-project__row details[open] .info-project__expand { transform: rotate(45deg); }
+.info-project__row details[open] summary { border-bottom: 1px solid rgb(234 177 108 / .2); }
+.info-project__row .info-project__answer { padding: 18px 24px 22px; font-size: 15px; }
+.info-project__answer p + p { margin-top: 14px; }
+.info-project__answer p > strong { display: block; margin-bottom: 4px; color: var(--info-amber, var(--amber)); font-weight: 500; }
+.info-project__number { color: var(--info-amber, var(--amber)); font: 500 36px/1 "Barlow Condensed", sans-serif; }
 .info-project__row h3 { padding-top: 4px; font: 500 22px/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; }
 .info-project__answer { font-size: 17px; color: #d9e1e7; line-height: 1.55; }
 .info-project__answer .info-pilot-note { margin-top: 10px; color: var(--info-amber); font-size: 13px; }
@@ -126,6 +137,8 @@ html:not(.info-enhanced) .info-layer { max-width: 1380px; margin: auto; backgrou
 html:not(.info-enhanced) .info-page { border-bottom: 1px solid var(--info-rule); }
 html:not(.info-enhanced) .info-profile { padding-block: 60px; }
 html:not(.info-enhanced) :is(.info-close, .info-inspect) { display: none; }
+html:not(.info-enhanced) [data-info-focus="project-detailed"],
+html[data-scene="unavailable"] [data-info-focus="project-detailed"] { display: none; }
 
 html.info-enhanced .info-layer { position: fixed; inset: 20px; z-index: 30; pointer-events: none; }
 html.info-enhanced .info-page { position: absolute; inset: 0; display: none; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; pointer-events: auto; scrollbar-color: #516172 transparent; scrollbar-width: thin; }
@@ -146,14 +159,14 @@ html.info-enhanced .info-contact__content { margin-block: auto; padding-block: 4
 html.info-enhanced[data-info-view] #frame :is(.head, .foot, .mobile-pedestals) { visibility: hidden; pointer-events: none; }
 html.info-enhanced[data-info-view] #frame { width: 100%; height: 100%; }
 
-@media (min-width: 1450px) { .info-start__copy .info-introduction { font-size: 20px; } .info-project__row { grid-template-columns: 48px 205px minmax(0, 1fr); padding-block: 25px; } }
+@media (min-width: 1450px) { .info-start__copy .info-introduction { font-size: 20px; } .info-project__row summary { padding-block: 25px; } }
 @media (max-width: 1100px) {
   .info-page { padding: 28px; }
   .info-start__copy .info-introduction { font-size: 16px; }
   .info-start__copy .info-actions { gap: 10px; }
   .info-start__copy .info-button { padding-inline: 12px; font-size: 16px; }
   .info-project__layout { grid-template-columns: minmax(0, 1fr) 190px; gap: 20px; }
-  .info-project__row { grid-template-columns: 34px 130px minmax(0, 1fr); gap: 12px; padding: 18px 14px; }
+  .info-project__row summary { grid-template-columns: 34px minmax(0, 1fr) 18px; gap: 12px; padding: 18px 14px; }
   .info-project__row h3 { font-size: 19px; }
   .info-project__answer { font-size: 15px; }
   .info-media { padding-left: 18px; }
@@ -197,7 +210,7 @@ html.info-enhanced[data-info-view] #frame { width: 100%; height: 100%; }
   .info-project__availability > span { width: 100%; order: 3; }
   .info-project__availability > .info-button { width: auto; order: 2; }
   .info-project__layout { grid-template-columns: minmax(0, 1fr); margin-top: 20px; }
-  .info-project__row { grid-template-columns: 32px minmax(0, 1fr); gap: 10px 12px; padding: 18px 15px; }
+  .info-project__row summary { grid-template-columns: 32px minmax(0, 1fr) 16px; gap: 10px 12px; padding: 18px 15px; }
   .info-project__number { font-size: 30px; }
   .info-project__row h3 { font-size: 21px; }
   .info-project__answer { grid-column: 2; font-size: 15px; }

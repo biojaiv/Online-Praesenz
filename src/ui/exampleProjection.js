@@ -10,9 +10,10 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   const frame = container.closest('.frame');
   const dialog = document.createElement('dialog');
   dialog.className = 'example-projection';
-  dialog.innerHTML = `<div class="example-projection__scrim" aria-hidden="true"></div><div class="example-projection__controls"><button type="button" data-example-back></button></div><p class="example-projection__status" role="status"></p><div class="example-projection__light"><div class="example-projection__screen"></div></div>`;
+  dialog.innerHTML = `<div class="example-projection__scrim" aria-hidden="true"></div><div class="example-projection__controls"><button type="button" data-example-start hidden></button><button type="button" data-example-back></button></div><p class="example-projection__status" role="status"></p><div class="example-projection__light"><div class="example-projection__screen"></div></div>`;
   document.body.append(dialog);
   const back = dialog.querySelector('[data-example-back]');
+  const start = dialog.querySelector('[data-example-start]');
   const screen = dialog.querySelector('.example-projection__screen');
   const light = dialog.querySelector('.example-projection__light');
   const scrim = dialog.querySelector('.example-projection__scrim');
@@ -69,7 +70,10 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   const post = type => iframe?.contentWindow?.postMessage({ type: `example:${type}` }, location.origin);
   function translate() {
     dialog.setAttribute('aria-label', t(project.title));
-    back.innerHTML = `<kbd>ESC</kbd><span>${t('example.back')}</span><span aria-hidden="true">↩</span>`;
+    const tiefgang = project.id === 'systems', german = getLanguage() === 'de';
+    start.hidden = !tiefgang;
+    start.textContent = `${german ? 'Tiefgang-Start' : 'Tiefgang start'} ↶`;
+    back.innerHTML = `<kbd>ESC</kbd><span>${tiefgang ? (german ? 'Zum Hologramm' : 'Back to hologram') : t('example.back')}</span><span aria-hidden="true">↩</span>`;
     status.textContent = t('example.loading');
     if (iframe) iframe.title = t(project.title);
     if (separate) separate.textContent = t('example.separate');
@@ -204,6 +208,9 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   }
   function onCancel(event) { event.preventDefault(); close(); }
   function onBack() { close(); }
+  function onStart() {
+    if (project.id === 'systems' && state === 'open' && iframe) iframe.src = getProjectUrl(project, getLanguage(), true);
+  }
   function visibility() { if (state === 'open') post(document.hidden ? 'pause' : 'visible'); }
   // Escape must be handled before the portfolio router changes its route.
   function onEscape(event) {
@@ -216,6 +223,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   window.addEventListener('keydown', onEscape, true);
   dialog.addEventListener('cancel', onCancel);
   back.addEventListener('click', onBack);
+  start.addEventListener('click', onStart);
   return {
     open, close,
     get isOpen() { return state !== 'closed'; },
@@ -230,6 +238,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       window.removeEventListener('keydown', onEscape, true);
       dialog.removeEventListener('cancel', onCancel);
       back.removeEventListener('click', onBack);
+      start.removeEventListener('click', onStart);
       frame?.classList.remove('is-example-projected');
       stage?.cards.setTemporaryActive(null);
       stage?.cards.setProjectHologramHidden(false);

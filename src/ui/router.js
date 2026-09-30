@@ -8,7 +8,7 @@ import { playSound } from './audio.js';
  * damit Links teilbar und der Zurueck-Button nutzbar bleibt, aber es
  * wird nie neu geladen.
  */
-export function createRouter({ onEnter, onMenuHover, onHistory }) {
+export function createRouter({ onEnter, onMenuHover, onHistory, resolveRoute }) {
   const nav = document.getElementById('nav');
   const navLinks = [...nav.querySelectorAll('.nav__link')];
   const groups = [...nav.querySelectorAll('.nav__group')];
@@ -70,13 +70,16 @@ export function createRouter({ onEnter, onMenuHover, onHistory }) {
   let current = 'start';
 
   function go(target, push = true) {
-    const t = normalise(target);
+    const normalized = normalise(target);
+    const t = resolveRoute?.(normalized) || normalized;
     setOpenGroup(null);
     const previous = current;
     current = t;
     markActive(t);
     if (push && normalise(location.hash) !== t) {
       history.pushState({ t, previous, portfolio: true }, '', `#${t}`);
+    } else if (!push && normalized !== t) {
+      history.replaceState({ ...history.state, t, portfolio: true }, '', `#${t}`);
     }
     if (t !== 'home') markExplored(t);
     onEnter?.(t, { previous, history: !push });
@@ -92,7 +95,6 @@ export function createRouter({ onEnter, onMenuHover, onHistory }) {
         setOpenGroup(null);
         return;
       }
-      if (btn.dataset.target === 'abschluss') { go('projekt/abschluss'); return; }
       if (current.split('/')[0] !== btn.dataset.target) go(btn.dataset.target);
       setOpenGroup(group);
       return;

@@ -5,6 +5,7 @@ import { chromium } from 'playwright';
 
 const base = process.env.IHK_TEST_URL || 'http://127.0.0.1:4173';
 const output = process.env.IHK_TEST_OUTPUT || '/tmp/ihk-navigation-check';
+assert(!process.env.IHK_TEST_MODE || ['desktop', 'mobile'].includes(process.env.IHK_TEST_MODE), 'Unknown IHK_TEST_MODE');
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
   ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
@@ -12,7 +13,7 @@ const browser = await chromium.launch({
 });
 const results = [];
 try {
-  for (const mobile of [false, true]) {
+  for (const mobile of [false, true].filter(value => !process.env.IHK_TEST_MODE || process.env.IHK_TEST_MODE === (value ? 'mobile' : 'desktop'))) {
     const context = await browser.newContext({
       viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
       hasTouch: mobile, isMobile: mobile, reducedMotion: mobile ? 'reduce' : 'no-preference',
@@ -38,10 +39,12 @@ try {
       const route = page.url();
       const box = await page.locator('.nav__group.is-open .nav__sub').boundingBox();
       assert(box.x >= 0 && box.x + box.width <= page.viewportSize().width + 1, 'Submenu fits viewport');
-      assert(await page.locator('.nav__group.is-open .nav__sub button').evaluateAll((items) => items.every((item) => {
+      const hits = await page.locator('.nav__group.is-open .nav__sub button').evaluateAll((items) => items.map((item) => {
         const rect = item.getBoundingClientRect();
-        return item.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
-      })), 'Reading overlays must not cover submenu buttons');
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return { label: item.textContent, hit: hit?.outerHTML.slice(0, 180), accessible: item.contains(hit), rect: [rect.x, rect.y, rect.width, rect.height] };
+      }));
+      assert(hits.every(item => item.accessible), `Reading overlays must not cover ${name} submenu buttons: ${JSON.stringify(hits)}`);
       await activate(root(name));
       assert.equal(await expanded(name), false);
       assert.equal(page.url(), route, 'Collapsing must not navigate or reset content');
@@ -74,7 +77,7 @@ try {
     await root('abschluss').focus();
     await page.keyboard.press('ArrowDown');
     assert(await expanded('abschluss'));
-    assert.equal(await page.evaluate(() => document.activeElement.dataset.target), 'abschluss/server');
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.target), 'abschluss');
     await page.keyboard.press('End');
     assert.equal(await page.evaluate(() => document.activeElement.dataset.menuAction), 'download');
     await page.keyboard.press('ArrowUp');
@@ -88,10 +91,16 @@ try {
 
     // Footer actions remain reachable from every project subroute.
     await activate(page.locator('[data-ihk-scroll="ihk-film"]'));
-    await page.waitForURL('**/#abschluss');
+    await page.waitForURL('**/#abschluss/lesen');
     assert.equal(await page.locator('.ihk-project video').evaluate((el) => el === document.activeElement), true);
-    await activate(page.locator('[data-ihk-scroll="ihk-downloads"]'));
-    assert.equal(await page.evaluate(() => document.activeElement.getAttribute('href')), '/ihk/IHK_Projektarbeit_DE.pdf');
+    const report = page.locator('.ihk-panel .cv-hologram__actions a[download]');
+    const reportUrl = await report.getAttribute('href');
+    const downloadEvent = page.waitForEvent('download');
+    await activate(report);
+    const download = await downloadEvent;
+    assert.equal(download.suggestedFilename(), reportUrl.split('/').pop());
+    assert.equal(await download.failure(), null);
+    assert.equal(new URL(page.url()).hash, '#abschluss/lesen', 'Downloading keeps the reader in place');
 
     await root('abschluss').focus();
     await page.keyboard.press('ArrowUp');
@@ -105,6 +114,20 @@ try {
     await activate(root('abschluss'));
     await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.nav__group.is-open .nav__sub')).opacity) > 0.99);
     await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-submenu.png` });
+    await activate(page.locator('#nav-sub-abschluss [data-target="abschluss"]'));
+    await page.waitForURL('**/#abschluss');
+    await page.locator('.ihk-project').waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('.ihk-hologram-actions').count(), 0, 'No HTML entry beneath the pedestal');
+    assert.equal(await page.locator('#nav-sub-abschluss .ihk-reader-toggle').count(), 1);
+    assert.equal(await page.locator('.ihk-reader-toggle').isVisible(), false, 'HTML is only available in the project menu');
+    assert.equal(await page.locator('.foot [data-info-open="kontakt"]').isVisible(), false);
+    await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-hologram.png` });
+    await activate(root('abschluss'));
+    await activate(page.locator('.ihk-reader-toggle'));
+    await page.locator('#ihk-title').waitFor();
+    await activate(page.locator('.ihk-project-points .info-project__number').first());
+    assert.equal(await page.locator('.ihk-project-points details').first().evaluate(el => el.open), true);
+    await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-expanded.png` });
     assert.deepEqual(errors, []);
     results.push({ mobile, repeatedClick: true, outsideClick: true, otherGroup: true, keyboard: true, mediaActions: true, errors });
     console.log(`PASS: ${mobile ? 'touch/reduced motion' : 'mouse/normal motion'} navigation, direct project content and media actions`);

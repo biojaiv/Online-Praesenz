@@ -1,5 +1,6 @@
 import { getInformationContent } from './content.js';
 import { translateForLanguage } from '../i18n.js';
+import { renderProjectSummary } from './projectSummary.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
@@ -54,11 +55,10 @@ export function renderInformationMarkup(language, resources) {
     </section>
 
     <section class="info-page info-project" id="projekt/abschluss" data-info-page="projekt/abschluss" aria-labelledby="info-project-title" lang="${lang}">
-      <header class="info-project__header"><div><p class="info-eyebrow">01 · ${esc(c.finalProject)}</p><h2 id="info-project-title" tabindex="-1" data-info-entry>${esc(c.projectTitle)}</h2><p class="info-project__location">${esc(c.projectLocation)}</p></div><div class="info-project__availability">${languages('project')}<span><i aria-hidden="true"></i>${esc(c.availabilityShort)}</span>${route('kontakt', c.contact, 'project-contact-top', 'info-button')}</div></header>
-      <div class="info-project__layout"><div class="info-project__body"><ol class="info-project__rows">${c.projectRows.map(([heading, text], i) => `<li class="info-project__row"><span class="info-project__number" aria-hidden="true">0${i + 1}</span><h3>${esc(heading)}</h3><div class="info-project__answer"><p>${esc(text)}</p>${i === 3 ? `<p class="info-pilot-note">${esc(c.pilotNote)}</p>` : ''}</div></li>`).join('')}</ol>
+      <header class="info-project__header"><div><p class="info-eyebrow">01 · ${esc(c.finalProject)}</p><h2 id="info-project-title" tabindex="-1" data-info-entry>${esc(c.projectTitle)}</h2><p class="info-project__location">${esc(c.projectLocation)}</p></div><div class="info-project__availability">${languages('project')}</div></header>
+      <div class="info-project__layout"><div class="info-project__body">${renderProjectSummary(lang)}
       <section class="info-terms" aria-labelledby="info-terms-title"><div class="info-terms__heading"><h3 id="info-terms-title">${esc(c.termsHeading)}</h3><p>${esc(c.termsHint)}</p></div><div class="info-terms__list">${terms}</div></section></div>
-      <aside class="info-media" aria-label="${esc(c.documentation)}"><section><h3 id="info-film-title">${esc(c.film)}</h3><video controls playsinline preload="none" src="${esc(r.filmUrl)}" poster="${esc(r.posterUrl)}" aria-labelledby="info-film-title" data-info-focus="project-film"><a href="${esc(r.filmUrl)}" download>${esc(c.filmFallback)}</a></video><p>${esc(c.filmHint)}</p></section><section class="info-media__documents"><h3>${esc(c.documentation)}</h3>${route('abschluss', arrow(c.deepDive), 'project-detailed')}${r.reportUrl ? `<a class="info-link" href="${esc(r.reportUrl)}" data-info-focus="project-report">${esc(c.report)} ↗</a>` : ''}</section><section class="info-media__more"><h3>${esc(c.moreProjects)}</h3>${route('projekte/webseiten', arrow(c.websiteProjects), 'project-websites')}${route('projekte/systemintegration', arrow(c.recovery), 'project-recovery')}</section></aside></div>
-      <div class="info-project__invitation"><p>${esc(c.match)}</p>${route('kontakt', arrow(c.write), 'project-contact-bottom')}</div>
+      <aside class="info-media" aria-label="${esc(c.documentation)}"><section><h3 id="info-film-title">${esc(c.film)}</h3><video controls playsinline preload="none" src="${esc(r.filmUrl)}" poster="${esc(r.posterUrl)}" aria-labelledby="info-film-title" data-info-focus="project-film"><a href="${esc(r.filmUrl)}" download>${esc(c.filmFallback)}</a></video><p>${esc(c.filmHint)}</p></section><section class="info-media__documents"><h3>${esc(c.documentation)}</h3>${route('abschluss', arrow(c.deepDive), 'project-detailed')}${r.reportUrl ? `<a class="info-link" href="${esc(r.reportUrl)}" download data-info-focus="project-report">${esc(c.report)} ↓</a>` : ''}</section><section class="info-media__more"><h3>${esc(c.moreProjects)}</h3>${route('projekte/webseiten', arrow(c.websiteProjects), 'project-websites')}${route('projekte/systemintegration', arrow(c.recovery), 'project-recovery')}</section></aside></div>
       ${footer('project')}
     </section>
 

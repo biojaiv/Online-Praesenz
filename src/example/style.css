@@ -532,7 +532,7 @@
 .source-infrastructure .figure-caption{display:none}
 .stage .source-infrastructure{top:auto;height:100%;overflow:hidden}
 .diagram-labels{position:absolute;inset:0;pointer-events:none}
-.diagram-label{position:absolute;left:74.34%;width:calc(25.66% - 5px);padding:0 0 0 8px;border:0;border-left:1px dotted #afa896;border-radius:0;background:var(--paper);color:var(--ink);min-height:0;font:12px/1.35 ui-monospace,Consolas,monospace;text-align:left;text-decoration:none;pointer-events:auto;overflow-wrap:anywhere}
+.diagram-label{position:absolute;left:78.717%;width:calc(21.283% - 5px);padding:0 0 0 8px;border:0;border-left:1px dotted #afa896;border-radius:0;background:var(--paper);color:var(--ink);min-height:0;font:12px/1.35 ui-monospace,Consolas,monospace;text-align:left;text-decoration:none;pointer-events:auto;overflow-wrap:anywhere}
 .diagram-label strong{display:block;font-weight:500;font-size:12px;letter-spacing:.03em}
 .diagram-label span{display:block;font-family:Arial,Helvetica,sans-serif;color:var(--muted);font-size:12px;margin-top:4px;line-height:1.35}
 .diagram-label:hover,.diagram-label[aria-expanded=true]{border-color:var(--amber);color:var(--amber)}
@@ -614,7 +614,7 @@
 .chapter-picker{display:none}
 .log-compact{display:none}
 .chapter-content figure .diagram-plate .infrastructure{height:100%}
-.chapter-content .diagram-label{font-family:Arial,Helvetica,sans-serif;padding-left:4px;left:64.3%;width:calc(35.7% - 4px)}
+.chapter-content .diagram-label{font-family:Arial,Helvetica,sans-serif;padding-left:4px;left:69.64%;width:calc(30.36% - 4px)}
 .chapter-content .diagram-label strong{font-family:Arial,Helvetica,sans-serif}
 @media(max-width:900px){
  .workspace,.workspace.has-inline-callout{margin-bottom:110px}
@@ -653,3 +653,22 @@
  .workspace.is-ready .protocol-inner{padding-top:8px}
  .workspace.is-ready .counter .time{position:absolute;right:0;top:-30px;font-size:20px;margin:0}
 }
+
+/* The same projection edge and return destinations on every Tiefgang page. */
+:root{--tiefgang-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+.tiefgang-frame{position:fixed;inset:8px 8px var(--tiefgang-bottom);z-index:25;pointer-events:none;border:1px solid #78bfff66;box-shadow:0 0 0 12px #060c16}
+.tiefgang-frame .hologram-border{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);pointer-events:none}
+.tiefgang-navigation{position:fixed;inset:auto 0 0;z-index:26;min-height:60px;display:flex;align-items:center;justify-content:center;gap:28px;padding:8px 16px max(8px,env(safe-area-inset-bottom));background:#060c16;color:#eedfc7;font:12px/1.4 ui-monospace,Consolas,monospace}
+.tiefgang-navigation a{display:inline-flex;align-items:center;gap:9px;min-height:44px;text-decoration:none;white-space:nowrap}
+.tiefgang-navigation a span{color:#78bfff}.tiefgang-navigation a:hover{color:#efb87e}
+html:not(.tiefgang-embedded){--tiefgang-viewport:calc(100svh - var(--tiefgang-bottom))}
+html:not(.tiefgang-embedded) .experience{height:var(--tiefgang-viewport)}
+.scroll-mode:not(.tiefgang-embedded) .experience{bottom:var(--tiefgang-bottom)}
+.scroll-mode:not(.tiefgang-embedded) .chapter-marker{height:var(--tiefgang-viewport)}
+.scroll-mode:not(.tiefgang-embedded) .chapter-marker:last-child{height:calc(var(--tiefgang-viewport) * 1.5)}
+.reading-mode:not(.tiefgang-embedded) .chapter-track,.tiefgang-standalone .static-reading:last-child{padding-bottom:76px}
+.explained-page:has(.tiefgang-navigation){margin-bottom:92px}
+.tiefgang-embedded .tiefgang-frame,.tiefgang-embedded .tiefgang-navigation{display:none}
+@media(max-width:900px){html:not(.tiefgang-embedded) .protocol,html:not(.tiefgang-embedded) .workspace.has-inline-callout .protocol,html:not(.tiefgang-embedded) .workspace.is-ready .protocol{bottom:calc(70px + var(--tiefgang-bottom))}.tiefgang-navigation{gap:18px}}
+@media(max-width:360px){.tiefgang-navigation{gap:12px;padding-inline:12px}.tiefgang-navigation a{gap:6px}}
+@media print{.tiefgang-frame,.tiefgang-navigation{display:none}.explained-page:has(.tiefgang-navigation){margin:0}}

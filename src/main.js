@@ -88,6 +88,8 @@ function routeParts(target, { includeReader = false } = {}) {
   }
 
   segments.forEach((segment, index) => {
+    // The reading route is a presentation mode, already shown below.
+    if (segments[0] === 'abschluss' && index === 1 && segment === 'lesen') return;
     parts.push({
       key: segment,
       label: routeLabel(segment),
@@ -104,7 +106,7 @@ function routeParts(target, { includeReader = false } = {}) {
     const cvIndex = parts.findIndex((part) => part.key === segments[0]);
     parts.splice(cvIndex + 1, 0, {
       key: 'lesefassung',
-      label: t('route.readable'),
+      label: t(segments[0] === 'abschluss' ? 'ihk.html' : 'route.readable'),
       route: segments[0],
       action: 'reader',
     });
@@ -366,6 +368,7 @@ const exampleProjection = createExampleProjection({
 projectsBrowser = createProjectsBrowser({ container: stageEl, stage, onNavigate: target => router.go(target) });
 
 const router = createRouter({
+  resolveRoute: target => !stage && target.split('/')[0] === 'abschluss' ? 'projekt/abschluss' : target,
   onMenuHover(key) { stage?.setMenuHover(key); },
   onHistory: (state, route) => information.onHistory(state, route),
   onEnter(target, meta) {
@@ -460,7 +463,7 @@ crumb?.addEventListener('click', activateBreadcrumb);
 // damit Hash, Kamerafahrt und Zurueck-Knopf nie auseinanderlaufen.
 stage?.on((event, key) => {
   if (event !== 'select') return;
-  const target = key === 'abschluss' ? 'projekt/abschluss' : key ?? 'home';
+  const target = key ?? 'home';
   playSound(target === 'home' ? 'release' : 'focus');
   router.go(target);
 });

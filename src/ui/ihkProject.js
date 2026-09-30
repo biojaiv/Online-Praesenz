@@ -2,6 +2,7 @@ import { IHK_REPORTS } from '../data/ihkMedia.js';
 import { getLanguage, onLanguageChange, t } from '../i18n.js';
 import { ihkIcon, IHK_SECTION_ICONS } from './ihkIcons.js';
 import { IHK_FILMS as FILMS, IHK_POSTERS as POSTERS } from '../data/ihkMedia.js';
+import { renderProjectSummary } from '../info/projectSummary.js';
 
 const SECTIONS = ['overview', 'server', 'uem', 'clients', 'migration'];
 const TECHNOLOGIES = ['VMware vSphere', 'Windows Server 2022', 'Active Directory',
@@ -39,14 +40,14 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   function refreshControls() {
     const available = route.split('/')[0] === 'abschluss';
     toggle.hidden = !available;
-    toggle.textContent = t(open ? 'reader.projection' : 'reader.readable');
+    toggle.textContent = copy('html');
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-controls', 'ihk-reader');
     toggle.classList.toggle('is-docked', open);
     download.hidden = !available;
     download.href = IHK_REPORTS[getLanguage()];
     download.download = download.href.split('/').pop();
-    download.textContent = t('download.visible');
+    download.textContent = copy('downloadAction');
     download.setAttribute('aria-label', copy(getLanguage() === 'de' ? 'downloadDE' : 'downloadEN'));
   }
   overlay.id = 'ihk-reader';
@@ -73,7 +74,6 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       }
       if (ticket !== transition) return;
       releaseVideo();
-      controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
       overlay.hidden = true;
       overlay.replaceChildren();
       onTransition?.(false);
@@ -81,13 +81,13 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       if (restore && route.split('/')[0] === 'abschluss' && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
     }
   }
-  const clickToggle = () => setOpen(!open);
+  const clickToggle = () => onNavigate('abschluss/lesen');
   toggle.addEventListener('click', clickToggle);
   function escapeReader(event) {
     if (event.key !== 'Escape' || !open || document.querySelector('.nav__group.is-open')) return;
     event.preventDefault();
     event.stopPropagation();
-    setOpen(false);
+    onNavigate('abschluss');
   }
   window.addEventListener('keydown', escapeReader, true);
 
@@ -123,6 +123,11 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
             .map(([value, label, icon]) => `<div><dt>${ihkIcon(icon)}<span>${value}</span></dt><dd>${copy(label)}</dd></div>`).join('')}
         </dl>
       </div>
+      <section class="ihk-project-points" aria-labelledby="ihk-points-title">
+        <h3 id="ihk-points-title" class="ihk-symbol-heading">${copy('projectSteps')}</h3>
+        <p class="ihk-note">${copy('expandHint')}</p>
+        ${renderProjectSummary(getLanguage(), 'ihk')}
+      </section>
       <section class="ihk-areas" aria-labelledby="ihk-areas-title">
         <h3 id="ihk-areas-title" class="ihk-symbol-heading">${ihkIcon('migration')}${copy('areas')}</h3>
         <ul>${SECTIONS.slice(1).map((key) => `<li><a href="#abschluss/${key}" data-ihk-route="abschluss/${key}">
@@ -146,27 +151,31 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   function details() {
     return `<p class="ihk-lead cv-lead">${copy(`${section}.lead`)}</p>
       <ol class="ihk-details cv-timeline cv-timeline--work">${['a', 'b', 'c'].map((part, i) => `
-        <li><span class="ihk-step" aria-hidden="true">${ihkIcon(IHK_SECTION_ICONS[section][i])}</span><div>
-          <h3>${copy(`${section}.${part}.title`)}</h3>
-          <p>${copy(`${section}.${part}.text`)}</p></div></li>`).join('')}</ol>
-      <a class="ihk-return cv-primary-action" href="#abschluss" data-ihk-route="abschluss">← ${copy('overview')}</a>`;
+        <li><details data-ihk-detail="${section}-${part}"><summary><span class="ihk-step">0${i + 1}</span>
+          <span>${copy(`${section}.${part}.title`)}</span><span class="ihk-detail-plus" aria-hidden="true">+</span></summary>
+          <div class="ihk-detail-copy">${ihkIcon(IHK_SECTION_ICONS[section][i])}<p>${copy(`${section}.${part}.text`)}</p>
+          <p>${copy(`${section}.${part}.explanation`)}</p></div></details></li>`).join('')}</ol>
+      <a class="ihk-return cv-primary-action" href="#abschluss/lesen" data-ihk-route="abschluss/lesen">← ${copy('overview')}</a>`;
   }
 
   function render({ focus = false, preserveScroll = false } = {}) {
     const scroll = preserveScroll ? overlay.querySelector('.ihk-body')?.scrollTop || 0 : 0;
     const focusedRoute = overlay.contains(document.activeElement)
       ? document.activeElement.dataset.ihkRoute : null;
+    const openDetails = preserveScroll ? [...overlay.querySelectorAll('details[open]')].map(el => el.dataset.ihkDetail || el.dataset.infoTerm) : [];
+    const focusedDetail = document.activeElement?.closest('details');
+    const focusedDetailKey = focusedDetail?.dataset.ihkDetail || focusedDetail?.dataset.infoTerm;
     releaseVideo();
     overlay.innerHTML = `
       <article class="ihk-panel cv-hologram">
         <header class="ihk-toolbar cv-hologram__header">
-          <button type="button" class="ihk-close cv-back" data-ihk-close aria-label="${escapeHTML(t('reader.closeAria'))}">←</button>
+          <button type="button" class="ihk-close cv-back" data-ihk-close aria-label="${copy('backHologram')}">←</button>
           <div><span>${escapeHTML(t('route.finalProject'))}</span><small>${copy('kicker')}</small></div>
           <span class="cv-status">PoC</span>
         </header>
         <nav class="ihk-nav cv-nav" aria-label="${copy('nav')}">
           ${SECTIONS.map((key) => `<button type="button"
-            data-ihk-route="abschluss${key === 'overview' ? '' : `/${key}`}"
+            data-ihk-route="abschluss/${key === 'overview' ? 'lesen' : key}"
             ${section === key ? 'class="is-active" aria-current="page"' : ''}>${copy(key)}</button>`).join('')}
         </nav>
         <div class="ihk-body cv-hologram__body" tabindex="0" role="region" aria-label="${copy('content')}">
@@ -184,12 +193,17 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
         </div>
         <footer class="cv-hologram__footer"><span>VL // IHK · 2026</span>
           <div class="cv-hologram__actions">
+            <button type="button" class="cv-action is-docked" data-ihk-close>${copy('backHologram')}</button>
             <button type="button" class="cv-action is-docked" data-ihk-scroll="ihk-film">${copy('filmAction')}</button>
-            <button type="button" class="cv-action is-docked" data-ihk-scroll="ihk-downloads">${copy('downloads')}</button>
+            <a class="cv-action is-docked" href="${IHK_REPORTS[getLanguage()]}" download>${copy('downloadAction')}</a>
           </div>
         </footer>
       </article>`;
-    controls.insertBefore(toggle, controls.querySelector('[data-menu-action="download"]'));
+    for (const detail of overlay.querySelectorAll('details')) {
+      const key = detail.dataset.ihkDetail || detail.dataset.infoTerm;
+      detail.open = openDetails.includes(key);
+      if (preserveScroll && key === focusedDetailKey) detail.querySelector('summary').focus({ preventScroll: true });
+    }
     overlay.querySelector('.ihk-body').scrollTop = scroll;
     if (focus) overlay.querySelector('#ihk-title').focus({ preventScroll: true });
     else if (focusedRoute) {
@@ -199,7 +213,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   }
 
   async function openMedia(id) {
-    if (section !== 'overview') onNavigate('abschluss');
+    if (section !== 'overview') onNavigate('abschluss/lesen');
     await setOpen(true);
     if (!open || overlay.hidden) return;
     const target = overlay.querySelector(`#${id}`);
@@ -209,7 +223,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   }
 
   function navigate(event) {
-    if (event.target.closest('[data-ihk-close]')) { setOpen(false); return; }
+    if (event.target.closest('[data-ihk-close]')) { onNavigate('abschluss'); return; }
     const jump = event.target.closest('[data-ihk-scroll]');
     if (jump) {
       openMedia(jump.dataset.ihkScroll);
@@ -241,7 +255,7 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
   refreshControls();
   return {
     get isOpen() { return open; },
-    close() { return setOpen(false); },
+    close() { const closing = setOpen(false); onNavigate('abschluss'); return closing; },
     setRect(rect) {
       if (!rect?.width || !rect?.height) return;
       overlay.style.setProperty('--cv-doc-width', `${Math.round(rect.width)}px`);
@@ -257,7 +271,9 @@ export function createIhkProject({ container, onNavigate, onTransition, onOpenCh
       const next = SECTIONS.includes(child) ? child : 'overview';
       const changed = section !== next;
       section = next;
-      if (changed && open && !overlay.hidden) render({ focus: true });
+      if (!child) { setOpen(false); return; }
+      if (!open) setOpen(true);
+      else if (changed && !overlay.hidden) render({ focus: true });
     },
     dispose() {
       transition += 1;

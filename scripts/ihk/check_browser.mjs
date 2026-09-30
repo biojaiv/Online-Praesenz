@@ -28,6 +28,7 @@ try {
     await page.addInitScript(() => localStorage.setItem('vl-language', 'de'));
     await page.goto(`${base}/#abschluss`);
     assert.equal(await page.locator('.ihk-project').isVisible(), false);
+    assert.equal(await page.locator('.ihk-hologram-actions').count(), 0, 'No HTML entry beneath the pedestal');
     await openMenu(page, 'abschluss');
     await page.locator('.ihk-reader-toggle').click();
     await page.locator('.ihk-project:not([hidden])').waitFor();
@@ -44,6 +45,15 @@ try {
       assert.equal(await page.locator('html').getAttribute('lang'), lang);
       assert.match(await page.locator('.ihk-project video').getAttribute('src'), lang === 'de' ? /Projektfilm_DE/ : /Project_Film_EN/);
       assert.equal(await page.locator('.ihk-project video').count(), 1);
+      assert.equal(await page.locator('.ihk-project-points details').count(), 5);
+      const point = page.locator('.ihk-project-points details').first();
+      await point.locator('.info-project__number').click();
+      assert.equal(await point.evaluate(el => el.open), true);
+      assert((await point.locator('.info-project__answer').textContent()).length > 300);
+      await point.locator('summary').focus();
+      await page.keyboard.press('Space');
+      assert.equal(await point.evaluate(el => el.open), false);
+      assert.equal(await page.locator('.foot [data-info-open="kontakt"]').isVisible(), false);
       await page.locator('.ihk-body').evaluate((el) => { el.scrollTop = 0; });
       await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.ihk-panel')).opacity) > 0.99);
       const filmPosition = await page.locator('.ihk-project video').evaluate((video) => {
@@ -87,6 +97,10 @@ try {
       await page.locator(`.ihk-nav [data-ihk-route="abschluss/${section}"]`).click();
       assert.equal(new URL(page.url()).hash, `#abschluss/${section}`);
       assert.equal(await page.locator('.ihk-project video').count(), 0);
+      const detail = page.locator('.ihk-details details').first();
+      await detail.locator('summary').click();
+      assert.equal(await detail.evaluate(el => el.open), true);
+      assert((await detail.locator('.ihk-detail-copy').textContent()).length > 200);
       assert.equal(await page.locator('.ihk-nav [aria-current="page"]').textContent(), section === 'uem' ? 'UEM' : section[0].toUpperCase() + section.slice(1));
       await page.screenshot({ path: `${output}/${width}-${section}.png` });
     }
@@ -97,7 +111,6 @@ try {
     assert.equal(await page.locator('.ihk-project').isVisible(), false);
     // Verify route access using a real keyboard interaction from the existing navigation.
     await page.locator('.nav__link[data-target="abschluss"]').focus();
-    await page.keyboard.press('Enter');
     await page.locator('.ihk-reader-toggle').focus();
     await page.keyboard.press('Enter');
     await page.locator('#ihk-title').waitFor();
@@ -112,7 +125,6 @@ try {
     await page.locator('.cv-reader-toggle').click();
     await page.waitForFunction(() => document.querySelector('.cv-reader-toggle').getAttribute('aria-expanded') === 'true');
     await page.locator('.nav__link[data-target="abschluss"]').click();
-    await openMenu(page, 'abschluss');
     await page.locator('.ihk-reader-toggle').click();
     await page.locator('.ihk-project:not([hidden])').waitFor();
     await page.locator('.cv-reader').waitFor({ state: 'hidden' });
@@ -123,8 +135,6 @@ try {
   page.on('pageerror', (error) => errors.push(error.message));
   await page.addInitScript(() => localStorage.setItem('vl-language', 'en'));
   await page.goto(`${base}/#abschluss/server`);
-  await openMenu(page, 'abschluss');
-  await page.locator('.ihk-reader-toggle').click();
   await page.locator('#ihk-title').waitFor();
   assert.match(await page.locator('#ihk-title').textContent(), /foundation/);
   for (const file of ['IHK_Projektarbeit_DE.pdf', 'IHK_Project_Report_EN.pdf', 'IHK_Projektfilm_DE.mp4', 'IHK_Project_Film_EN.mp4']) {

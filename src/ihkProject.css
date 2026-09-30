@@ -1,6 +1,10 @@
 /* Reuse the CV's hologram, navigation, typography, facts and timeline.
    Only project-specific content and stage containment need additional rules. */
 .ihk-project {
+  --info-rule: var(--line);
+  --info-amber: var(--amber);
+  --info-ink: var(--ink);
+  --info-muted: var(--ink-dim);
   position: absolute;
   inset: 0;
   z-index: 4;
@@ -48,6 +52,7 @@
 .ihk-step { grid-column: 2; color: var(--amber); font: 400 14px/1.35 var(--font-display); letter-spacing: var(--tracking-label); }
 .ihk-return { min-height: 44px; display: inline-flex; align-items: center; }
 .ihk-panel .cv-hologram__footer { flex-wrap: wrap; }
+.ihk-panel .cv-hologram__actions > :is(button, a) { display: inline-flex; align-items: center; min-height: 36px; }
 @media (max-width: 680px), (max-height: 620px) {
   .ihk-downloads p { font-size: 12px; }
   .ihk-panel .ihk-metrics div { grid-template-columns: 116px minmax(0, 1fr); }
@@ -55,6 +60,7 @@
   .ihk-panel .ihk-details li { grid-template-columns: 14px 24px minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
+  .ihk-panel.cv-hologram { width: calc(100% - 24px); height: calc(100% - 24px); }
   .frame.is-ihk-open .head__brand { max-width: 100%; grid-template-columns: auto minmax(0, 1fr); }
   .frame.is-ihk-open .head__role { white-space: normal; line-height: 1.4; }
   .foot[data-section="abschluss"] { flex-direction: column; align-items: stretch; gap: 7px; padding-block: 8px; }
@@ -64,9 +70,56 @@
   .ihk-metrics { grid-template-columns: 1fr; }
   .ihk-areas ul { grid-template-columns: 1fr; }
   .ihk-panel .cv-hologram__actions { flex-wrap: wrap; }
+  .ihk-panel .cv-hologram__actions > :is(button, a) { min-height: 44px; }
 }
 
 .ihk-reader-toggle:not(.is-docked) { top: var(--s-4); }
+.ihk-project-points { margin-block: 28px; }
+.ihk-project-points > h3 { color: var(--amber); font: 500 20px/1.3 var(--font-display); }
+.ihk-project-points > .ihk-note { margin-bottom: 16px; }
+.ihk-project .info-project__row { display: block; padding: 0; }
+.ihk-panel .ihk-details li { display: block; padding-left: 0; }
+.ihk-panel .ihk-details li::before { display: none; }
+.ihk-details details { border-block-end: 1px solid var(--line); }
+.ihk-details summary { display: grid; grid-template-columns: 30px minmax(0, 1fr) 18px; align-items: center; gap: 12px; min-height: 60px; padding: 14px 0; list-style: none; cursor: pointer; color: var(--amber); font: 500 20px/1.3 var(--font-display); }
+.ihk-details summary::-webkit-details-marker { display: none; }
+.ihk-details summary:focus-visible { outline: 1px solid var(--cyan); outline-offset: 2px; }
+.ihk-details .ihk-step { grid-column: auto; font-size: 22px; }
+.ihk-detail-plus { font-size: 24px; }
+.ihk-details details[open] .ihk-detail-plus { transform: rotate(45deg); }
+.ihk-detail-copy { padding: 4px 0 22px 42px; color: var(--ink-dim); font-size: 15px; line-height: 1.65; }
+.ihk-detail-copy > svg { float: left; margin: 2px 12px 4px 0; }
+.ihk-detail-copy p + p { margin-top: 12px; }
+.frame.is-ihk-open .info-shortcuts [data-info-open="kontakt"],
+.frame.is-ihk-open .foot__contact > span { display: none; }
+@media (max-width: 620px) {
+  .ihk-project .info-project__row summary { grid-template-columns: 30px minmax(0, 1fr) 14px; gap: 10px; padding: 15px 12px; }
+  .ihk-project .info-project__number { font-size: 27px; }
+  .ihk-project .info-project__topic strong { font-size: 19px; }
+  .ihk-project .info-project__answer { padding: 14px; }
+  .ihk-panel .cv-hologram__footer { gap: 8px; }
+}
+
+/* Short phones need room for the explanation, not three stacked toolbars.
+   Keep the site navigation, reader tabs and both essential actions accessible. */
+@media (max-width: 600px) and (max-height: 700px) {
+  .frame:has(.ihk-project:not([hidden])) .head__summary,
+  .foot.is-reader-open[data-section="abschluss"] .foot__contact { display: none; }
+  .ihk-project .ihk-panel.cv-hologram { width: calc(100% - 16px); height: calc(100% - 12px); }
+  .ihk-project .ihk-panel .ihk-toolbar { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; padding: 4px 8px; }
+  .ihk-project .ihk-toolbar > div > span { font-size: 16px; letter-spacing: .1em; }
+  .ihk-project .ihk-toolbar small { display: none; }
+  .ihk-project .ihk-close { width: 44px; height: 44px; }
+  .ihk-project .ihk-panel .ihk-nav { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 0 8px 3px; }
+  .ihk-project .ihk-nav button { flex: 0 0 auto; min-height: 44px; padding: 8px 10px; white-space: nowrap; }
+  .ihk-project .ihk-panel .ihk-body { padding: 18px 16px 22px; }
+  .ihk-project .ihk-panel .cv-hologram__footer { display: block; padding: 4px 10px; }
+  .ihk-project .cv-hologram__footer > span,
+  .ihk-project .cv-hologram__footer [data-ihk-scroll="ihk-film"] { display: none; }
+  .ihk-project .ihk-panel .cv-hologram__actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .ihk-project .cv-hologram__actions > :is(button, a) { min-height: 44px; padding: 4px 0; font-size: 11px; letter-spacing: .07em; line-height: 1.4; }
+  .ihk-project .ihk-detail-copy p { font-size: 15px; line-height: 1.6; }
+}
 
 /* Place the project projection's zoom guidance on the left. */
 .frame.is-ihk-open .camera-dolly-guide { left: var(--s-4); right: auto; }

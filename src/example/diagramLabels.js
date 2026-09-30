@@ -31,7 +31,7 @@ export function createDiagramLabels(root) {
     let previousBottom = -Infinity;
     const cableHeight = root.querySelector('.cable-pin')?.offsetHeight || 44;
     for(const label of wrap.querySelectorAll('.diagram-label')) {
-      const p=new DOMPoint(540,Number(label.dataset.labelY)).matrixTransform(matrix);
+      const p=new DOMPoint(570,Number(label.dataset.labelY)).matrixTransform(matrix);
       label.style.left=`${p.x-box.left}px`;
       const cableRoom=label.dataset.term==='firewall'?(innerWidth<=900?32:16):0;
       label.style.width=`${Math.max(70,box.right-p.x-4)}px`;

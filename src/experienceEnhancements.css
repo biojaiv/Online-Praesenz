@@ -142,7 +142,7 @@
   background: rgba(3, 8, 14, 0.76);
   color: var(--ink);
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.45);
-  font: 600 15px/1 system-ui, sans-serif;
+  font: 600 16.5px/1 system-ui, sans-serif;
 }
 
 .cv-keyboard-zoom-hint.is-near kbd:first-child,
@@ -181,7 +181,7 @@
   border-radius: 12px;
   background: rgba(6, 17, 29, 0.88);
   color: var(--ink);
-  font: 500 27px/1 system-ui, sans-serif;
+  font: 500 29.7px/1 system-ui, sans-serif;
   touch-action: manipulation;
   cursor: pointer;
 }

@@ -1,6 +1,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { staticMarkup } from '../../src/example/reading.js';
 import { explainedMarkup, explainedPath } from '../../src/example/explained.js';
+import { navigationMarkup } from '../../src/example/navigation.js';
 
 // Pre-rendered, bilingual HTML is also usable when JavaScript cannot run.
 await writeFile(new URL('../../beispiel/index.html',import.meta.url),`<!doctype html>
@@ -13,6 +14,7 @@ await writeFile(new URL('../../beispiel/index.html',import.meta.url),`<!doctype 
   <link rel="stylesheet" href="/src/example/style.css">
 </head>
 <body>
+  ${navigationMarkup()}
   <div id="example">${staticMarkup().replace(/[\t ]+$/gm,'')}</div>
   <script type="module" src="/src/example/main.js"></script>
 </body>

@@ -10,6 +10,7 @@ import { createAnnotations } from './annotations.js';
 import { createCablePin } from './cablePin.js';
 import { richText } from './glossary.js';
 import { diagramLabels, createDiagramLabels } from './diagramLabels.js';
+import { startNavigation } from './navigation.js';
 
 /** Scenario clock: seconds since 08:00 at the start of each chapter, then ready. */
 const CHAPTER_SECONDS=[0,65,68,120,1100,1200,1920,2100];
@@ -19,6 +20,8 @@ gsap.registerPlugin(ScrollTrigger);
 export function startTiefgang() {
   const params = new URLSearchParams(location.search);
   if (['en','de'].includes(params.get('lang'))) setLanguage(params.get('lang'));
+  document.documentElement.lang = getLanguage();
+  const navigation = startNavigation();
   const embedded = window.parent!==window && params.get('embedded')==='1';
   const root = document.getElementById('example');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -33,7 +36,7 @@ export function startTiefgang() {
     document.documentElement.classList.toggle('reading-mode',reading);
     root.innerHTML=`<div class="experience">
       <header class="masthead"><a class="wordmark" href="#chapter-1" data-jump="0">TIEFGANG<span aria-hidden="true">■</span></a>
-        <p>${c.tagline}</p><div class="head-actions"><a class="explain-link glossary-link" href="/beispiel/erklaert/${language==='en'?'en/':''}#glossary"${embedded?' target="_blank" rel="noopener"':''}>${language==='de'?'Glossar':'Glossary'}</a><a class="explain-link" href="/beispiel/erklaert/${language==='en'?'en/':''}"${embedded?' target="_blank" rel="noopener"':''}>${c.explain}</a><button id="example-language" aria-label="${language==='de'?'Switch to English':'Auf Deutsch wechseln'}">${language==='de'?'EN':'DE'}</button></div>
+        <p>${c.tagline}</p><div class="head-actions"><a class="explain-link glossary-link" href="/beispiel/erklaert/${language==='en'?'en/':''}#glossary">${language==='de'?'Glossar':'Glossary'}</a><a class="explain-link" href="/beispiel/erklaert/${language==='en'?'en/':''}">${c.explain}</a><button id="example-language" aria-label="${language==='de'?'Switch to English':'Auf Deutsch wechseln'}">${language==='de'?'EN':'DE'}</button></div>
       </header>
       <div class="workspace">
         <aside class="story"><p class="eyebrow" id="chapter-kicker"></p><h1><span class="story-time"></span><span class="story-title"></span></h1>
@@ -245,7 +248,7 @@ export function startTiefgang() {
     }
     function syncScroll() {
       if(reading) return;
-      const height=innerHeight, position=scrollY/height;
+      const height=$('.experience').offsetHeight, position=scrollY/height;
       const chapter=Math.max(0,Math.min(6,Math.floor(position+.35)));
       journey.chapter(chapter,Math.max(0,Math.min(1,position/6.5)));
     }
@@ -293,7 +296,7 @@ export function startTiefgang() {
     if(reading) {
       $('.reading-switch').hidden=motion.matches;
       journey.chapter(savedChapter,savedChapter/6);
-    } else { scrollTo({top:savedChapter*innerHeight,behavior:'instant'});syncScroll(); }
+    } else { scrollTo({top:savedChapter*$('.experience').offsetHeight,behavior:'instant'});syncScroll(); }
     let lastScroll = scrollY, scrollHold = 0;
     const noteScroll = (direction) => {
       if (!direction) return;
@@ -312,7 +315,7 @@ export function startTiefgang() {
     post('ready');
   }
   render(Math.max(0,Math.min(6,Number(location.hash.match(/^#chapter-(\d)$/)?.[1]||1)-1)));
-  const offLanguage=onLanguageChange(()=>{const chapter=Number(root.querySelector('.chapter-nav [aria-current]')?.dataset.jump||0);render(chapter);root.querySelector('#example-language')?.focus({preventScroll:true});});
+  const offLanguage=onLanguageChange(()=>{const chapter=Number(root.querySelector('.chapter-nav [aria-current]')?.dataset.jump||0);navigation.translate(getLanguage());render(chapter);root.querySelector('#example-language')?.focus({preventScroll:true});});
   const onMotion=()=>render(); motion.addEventListener('change',onMotion);
   window.addEventListener('pagehide',event=>{if(!event.persisted){cleanup();offLanguage();motion.removeEventListener('change',onMotion);}});
 }
