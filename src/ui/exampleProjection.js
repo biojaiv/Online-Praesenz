@@ -143,6 +143,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     preview?.remove(); preview = null;
     if (portalId) {
       await stage?.closePortal(portalId);
+      frame?.classList.remove('is-portal-stage');
       portal = null; delete dialog.dataset.portal;
       setBrowserSuspended(false);
       resize();
@@ -227,6 +228,11 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     timer = window.setTimeout(() => { status.textContent = t('example.error'); }, 12000);
     if (portal) {
       light.style.opacity = '0';
+      // The header and footer step aside: the canvas takes the whole window so the
+      // frame can be large without its top edge being cut off.
+      frame?.classList.add('is-portal-stage');
+      for (let i = 0; i < 3; i++) await new Promise(resolve => requestAnimationFrame(resolve));
+      if (current !== ticket) return;
       const rect = await stage.openPortal(portal, getProjectionViewport());
       if (current !== ticket) return;
       const inset = rect ? placeLight(rect, rect.radius) : 0;
@@ -310,7 +316,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       dialog.removeEventListener('cancel', onCancel);
       back.removeEventListener('click', onBack);
       start.removeEventListener('click', onStart);
-      frame?.classList.remove('is-example-projected');
+      frame?.classList.remove('is-example-projected', 'is-portal-stage');
       stage?.cards.setTemporaryActive(null);
       stage?.cards.setProjectHologramHidden(false);
       setBrowserSuspended(false);

@@ -32,3 +32,7 @@
 .example-projection[data-portal] .hologram-border{display:none}
 /* The button rule above sets display:flex, which would otherwise override [hidden]. */
 .example-projection__controls button[hidden]{display:none}
+/* While a portal is open the canvas spans the whole window (header and footer step aside). */
+.frame.is-portal-stage > .stage{position:absolute;inset:0;z-index:0}
+.frame.is-portal-stage :is(.head,.head-calibration-marker,.foot){visibility:hidden;pointer-events:none}
+.frame:is(.is-portal-stage,.is-example-projected) .head__symbol-stage,.frame:is(.is-portal-stage,.is-example-projected) .head__symbol-stage *{visibility:hidden!important}

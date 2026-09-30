@@ -68,6 +68,8 @@ try {
    await page.waitForFunction(()=>!document.querySelector('.example-projection').open);
    assert.equal(await page.locator('.example-projection iframe').count(),0);
    assert.equal(await page.evaluate(()=>__stage.exampleFlight.active),false);
+   // After the flight back the view re-fits the restored canvas; allow it to settle.
+   await page.waitForFunction(before=>Math.hypot(...__stage.camera.position.toArray().map((v,i)=>v-before[i]))<.3,before.position,{timeout:5000}).catch(()=>{});
    const after=await page.evaluate(()=>__stage.camera.position.toArray());
    assert(Math.hypot(...after.map((v,i)=>v-before.position[i]))<.3,'Camera returned to the pedestals');
    assert.equal(await page.evaluate(()=>document.activeElement.dataset.projectId),id,'Focus returns to selected object');
