@@ -42,3 +42,9 @@
 .frame:is(.is-portal-stage,.is-example-projected) .head__symbol-stage,.frame:is(.is-portal-stage,.is-example-projected) .head__symbol-stage *{visibility:hidden!important}
 /* Zoom hints belong to the pedestal view; hide them during portal flights and open pages. */
 .frame:is(.is-portal-stage,.is-example-projected) :is(.camera-dolly-guide,.cv-keyboard-zoom-hint,.cv-mobile-zoom){visibility:hidden!important;opacity:0!important;transition:none!important}
+/* The same scan line passes over the example pages; it never takes clicks or scrolling. */
+/* Visible on light pages too: a blue wash with a thin crisp leading line. */
+.example-projection__scan{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,transparent 0,rgb(60 150 220 / .05) 46%,rgb(60 150 220 / .12) 49.6%,rgb(40 130 210 / .38) 50%,transparent 50.25%) 0 0/100% 220% no-repeat;animation:scan-pass-page 40s linear -30s infinite}
+.example-projection[data-portal] .example-projection__scan{inset:var(--portal-inset,0);border-radius:6px}
+@keyframes scan-pass-page{0%{background-position:0 120%}9%{background-position:0 -120%}100%{background-position:0 -120%}}
+@media (prefers-reduced-motion:reduce){.example-projection__scan{display:none}}

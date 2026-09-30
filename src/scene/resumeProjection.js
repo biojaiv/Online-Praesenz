@@ -69,7 +69,15 @@ export function createResumeProjection({
     uGlow: { value: 1.18 },
     uBias: { value: -0.65 },
     uSurface: { value: lightColor('deep') },
+    // Scan line travelling down the document, as on the 30-second profile: one sweep of
+    // about 3.6 s every 40 s. A light distortion follows it; both stay off with reduced motion.
+    uScan: { value: -0.2 },
+    uScanStrength: { value: reduced ? 0 : 1 },
+    uTime: { value: 0 },
   };
+  const SCAN_CYCLE = 40, SCAN_SWEEP = 3.6;
+  // Documents start at different points of the cycle so they never sweep in unison.
+  let scanClock = documentKey === 'abschluss' ? 14 : 30;
 
   const material = new THREE.ShaderMaterial({
     uniforms,
@@ -85,14 +93,24 @@ export function createResumeProjection({
     `,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap;
-      uniform float uWindow, uOffset, uOpacity, uGlow, uBias;
+      uniform float uWindow, uOffset, uOpacity, uGlow, uBias, uScan, uScanStrength, uTime;
+      float hash(float n) { return fract(sin(n) * 43758.5453); }
       uniform vec2 uFade;
       uniform vec3 uSurface;
       varying vec2 vUv;
 
       void main() {
         float v = 1.0 - uOffset - (1.0 - vUv.y) * uWindow;
-        vec4 texel = texture2D(uMap, vec2(vUv.x, v), uBias);
+        // Light hologram distortion: rows ripple where the scan line passes, a faint
+        // shimmer stays, and very rarely a thin band slips sideways for a moment.
+        float depth = (1.0 - vUv.y) - uScan;
+        float scan = smoothstep(-0.14, 0.0, depth) * (1.0 - smoothstep(0.0, 0.006, depth));
+        float ripple = sin(vUv.y * 240.0 + uTime * 9.0) * 0.0024 * scan;
+        float shimmer = sin(vUv.y * 36.0 + uTime * 1.4) * 0.00035;
+        float slot = floor(uTime * 6.0);
+        float band = step(0.985, hash(slot)) * step(abs(vUv.y - hash(slot + 7.0)), 0.012);
+        float offsetX = (ripple + shimmer + band * (hash(slot + 3.0) - 0.5) * 0.012) * uScanStrength;
+        vec4 texel = texture2D(uMap, vec2(vUv.x + offsetX, v), uBias);
         float topFade = smoothstep(0.0, uFade.x, 1.0 - vUv.y);
         float bottomFade = smoothstep(0.0, uFade.y, vUv.y);
         float fade = topFade * bottomFade;
@@ -102,7 +120,10 @@ export function createResumeProjection({
         // Fade the ink into the dark surface at the scrolling edges, rather
         // than revealing the animated scene through the document.
         vec3 ink = clamp(lifted * uGlow, 0.0, 1.0);
-        gl_FragColor = vec4(mix(uSurface, ink, texel.a * fade), uOpacity);
+        vec3 colour = mix(uSurface, ink, texel.a * fade);
+        // Soft trailing glow above a crisp leading edge, moving from top to bottom.
+        colour += vec3(0.50, 0.85, 1.0) * scan * 0.07 * uScanStrength;
+        gl_FragColor = vec4(colour, uOpacity);
       }
     `,
   });
@@ -291,6 +312,13 @@ export function createResumeProjection({
 
     update(delta) {
       if (!ready) return;
+      if (uniforms.uScanStrength.value > 0) {
+        const dt = Math.min(delta, 0.1);
+        scanClock = (scanClock + dt) % SCAN_CYCLE;
+        uniforms.uTime.value += dt;
+        // -0.2 … 1.2 during the sweep, then parked below the document until the next pass.
+        uniforms.uScan.value = scanClock < SCAN_SWEEP ? -0.2 + 1.4 * scanClock / SCAN_SWEEP : 1.3;
+      }
 
       const step = 1 - Math.pow(0.0025, Math.min(delta, 0.1));
       if (scroll !== scrollTarget) {

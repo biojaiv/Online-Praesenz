@@ -3,6 +3,7 @@
 .project-book-sheets{position:absolute;inset:0;pointer-events:none}
 .project-wing{--wing:#efb46c;position:absolute;left:0;top:0;transform-origin:0 0;width:800px;height:1428px;box-sizing:border-box;padding:48px;background:#07101d;color:#c6d5e2;font:31px/1.5 Barlow,sans-serif;pointer-events:auto;touch-action:pan-y}
 .project-wing[data-wing="systemintegration"]{--wing:#83d5e5}
+.project-wing[data-wing="systemintegration"]::after{animation-delay:-14s}
 .project-wing header{color:var(--wing);font:500 27px "Barlow Condensed",sans-serif;letter-spacing:.1em}
 .wing-heading{margin:35px 0 0;text-align:center;color:#e2edf6;font:600 64px/1.1 "Barlow Condensed",sans-serif}
 .project-wing p{margin:0}.wing-subtitle{text-align:center;color:#acbac8;font-size:30px}
@@ -61,3 +62,8 @@
  .project-book-ui .project-wing .gallery-hint{position:static;font-size:16px;margin-top:25px}
 }
 @media(prefers-reduced-motion:reduce){.wing-gallery .gallery-card{transition:none}}
+/* Scan line from the 30-second profile, running down each wing (decorative, click-through). */
+.project-wing{overflow:hidden}
+.project-wing::after{content:'';position:absolute;inset:0;z-index:5;pointer-events:none;background:linear-gradient(180deg,transparent 0,rgb(127 216 255 / .045) 48%,rgb(127 216 255 / .09) 50%,transparent 52%) 0 0/100% 220% no-repeat;animation:scan-pass 40s linear -8s infinite}
+@keyframes scan-pass{0%{background-position:0 120%}9%{background-position:0 -120%}100%{background-position:0 -120%}}
+@media (prefers-reduced-motion:reduce){.project-wing::after{animation:none;display:none}}
