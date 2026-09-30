@@ -15,3 +15,5 @@ apply-online-praesenz-*.py
 # Local tool state
 FETCH_HEAD
 .devin/
+# Screenshots for corrections stay local
+Zu_korrigieren/

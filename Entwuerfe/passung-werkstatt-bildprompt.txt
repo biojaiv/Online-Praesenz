@@ -1,6 +1,0 @@
-PASSUNG workshop image
-Generated with built-in image_gen__imagegen, using beispiel-passung-konzept.jpg as a style reference.
-Delivery asset: public/passung/workshop.webp
-Illustrative image for a fictional business; not a real employee photograph.
-
-Use case: photorealistic-natural. Create a single wide editorial workshop photograph for the lower strip of a precision-engineering website. The reference image is only a style and subject reference: recreate the little lower-left workshop photograph as an independent, high-quality photo, NOT the webpage. Close crop of a technician's naturally positioned hands using a real metal vernier caliper to measure a small satin-machined aluminium bearing housing on a clean dark machine-shop workbench. Similar sophisticated compact CNC-machined housing with circular shaft aperture and real bolt holes, foreground metal surface detail, worker wearing dark blue workwear, no visible face. Natural, authentic, warm human care and quiet concentration, believable caliper grip and measuring contact. Soft daylight from upper left, restrained blue-grey background, shallow depth of field. Landscape panoramic photo, approximately 3:1, no typography, logos, borders, montage or webpage elements. A refined realistic photograph, not an illustration.

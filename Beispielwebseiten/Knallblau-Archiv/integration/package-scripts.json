@@ -1,5 +1,0 @@
-{
-  "generate:knallblau": "node scripts/knallblau/build_pages.mjs",
-  "test:knallblau": "node scripts/knallblau/check_browser.mjs",
-  "test:knallblau:projection": "node scripts/knallblau/check_projection.mjs"
-}
