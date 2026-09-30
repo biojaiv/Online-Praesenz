@@ -138,6 +138,16 @@ export function startTiefgang() {
       }
       runRoute(packetRoute(shown,target,fromLink,link),link==='failing'?easeOut:easeInOut);
     }
+    // The needle sits exactly on its layer's tick; ticks follow label widths and language.
+    let needleLevel=0;
+    function placeNeedle(level=needleLevel) {
+      needleLevel=level;
+      const tick=$$('.depth-scale>span')[level]; if(!tick) return;
+      const x=tick.offsetLeft+parseFloat(getComputedStyle(tick,'::before').left||'0')+.5;
+      $('.depth-needle').style.left=`${x.toFixed(1)}px`;
+    }
+    const needleSize=new ResizeObserver(()=>placeNeedle()); needleSize.observe($('.depth-scale'));
+    document.fonts?.ready.then(()=>placeNeedle());
     const journey=createJourney(update);
     function showStoryText(chapter) {
       const data=c.chaptersData[chapter];
@@ -231,7 +241,7 @@ export function startTiefgang() {
       const percent=ready?100:Math.min(99,Math.round(seconds/21));
       $('progress').value=percent; $('.percentage').textContent=`${percent}%`;
       const level=[0,1,1,2,2,2,3][chapter];
-      $('.depth-needle').style.left=`${3+level*31.33}%`;
+      placeNeedle(level);
       $('.depth-scale').setAttribute('aria-label',`${c.depthLabel}: ${c.layers[level]}, ${c.layerSub[level]}`);
       $$('.depth-scale>span').forEach((item,i)=>item.classList.toggle('is-current',i===level));
       movePacket(packetPosition({ progress, chapter, lease, link, rerouted: state.rerouted }), link);
@@ -311,7 +321,7 @@ export function startTiefgang() {
       lastScroll = next;
     }, { signal, passive: true });
     window.addEventListener('wheel', (event) => noteScroll(Math.sign(event.deltaY)), { signal, passive: true });
-    cleanup=()=>{clearTimeout(scrollHold);stopRoute();abort.abort();protocolSize.disconnect();annotations.dispose();cablePin.dispose();labels.dispose();journey.dispose();scrollTrigger?.kill();};
+    cleanup=()=>{clearTimeout(scrollHold);stopRoute();abort.abort();protocolSize.disconnect();needleSize.disconnect();annotations.dispose();cablePin.dispose();labels.dispose();journey.dispose();scrollTrigger?.kill();};
     post('ready');
   }
   render(Math.max(0,Math.min(6,Number(location.hash.match(/^#chapter-(\d)$/)?.[1]||1)-1)));

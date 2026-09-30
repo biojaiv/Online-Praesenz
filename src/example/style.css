@@ -714,4 +714,8 @@ html:not(.tiefgang-embedded) .experience{height:var(--tiefgang-viewport)}
 /* Short desktop viewports (e.g. inside the portfolio frame): the log column must
    not grow over the masthead links or the depth scale. */
 @media (min-width:901px){.protocol{justify-content:safe center;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}}
-@media (min-width:901px) and (max-height:860px){.protocol .signature{display:none}}
+/* The decorative signature needs about 1000px of height; below that the log column would cut it. */
+@media (min-width:901px) and (max-height:999px){.protocol .signature{display:none}}
+/* Needle line and dot share one centre: the line is 1px wide, the 8px dot is centred on it. */
+.depth-needle{transform:translateX(-.5px)}
+.depth-needle:after{left:-3.5px}
