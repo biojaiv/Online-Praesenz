@@ -369,7 +369,7 @@ projectsBrowser = createProjectsBrowser({ container: stageEl, stage, onNavigate:
 
 const router = createRouter({
   resolveRoute: target => !stage && target.split('/')[0] === 'abschluss' ? 'projekt/abschluss' : target,
-  onMenuHover(key) { stage?.setMenuHover(key); },
+  onMenuHover(key) { stage?.setMenuHover(key); if (key) playSound('menu', { queue: false }); },
   onHistory: (state, route) => information.onHistory(state, route),
   onEnter(target, meta) {
     if (exampleProjection.isOpen) {
@@ -431,6 +431,8 @@ function activateLanguageSwitch() {
   setLanguage(target);
 }
 languageSwitch?.addEventListener('click', activateLanguageSwitch);
+const languageHoverSound = () => playSound('menu', { queue: false });
+languageSwitch?.addEventListener('pointerenter', languageHoverSound);
 
 // Sprachwechsel aktualisiert nur sichtbare Texte. Route, Kamera, geoeffnete
 // Lesefassung und Dokumentposition bleiben dabei unveraendert.
@@ -462,6 +464,11 @@ crumb?.addEventListener('click', activateBreadcrumb);
 // Klick in der Szene fuehrt ueber denselben Weg wie die Kopfzeile,
 // damit Hash, Kamerafahrt und Zurueck-Knopf nie auseinanderlaufen.
 stage?.on((event, key) => {
+  // Resting on a pedestal in the overview answers with its own selection tone.
+  if (event === 'hover') {
+    if (key && currentRoute.split('/')[0] === 'home' && !introRunning) playSound('pedestal', { queue: false });
+    return;
+  }
   if (event !== 'select') return;
   const target = key ?? 'home';
   playSound(target === 'home' ? 'release' : 'focus');
@@ -550,6 +557,7 @@ if (import.meta.hot) {
     information.dispose();
     hint?.removeEventListener('click', activateFooterHint);
     languageSwitch?.removeEventListener('click', activateLanguageSwitch);
+    languageSwitch?.removeEventListener('pointerenter', languageHoverSound);
     crumb?.removeEventListener('click', activateBreadcrumb);
     unsubscribeExplored();
     unsubscribeLanguage();

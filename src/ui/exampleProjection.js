@@ -1,7 +1,7 @@
 import './exampleProjection.css';
 import { createHologramBorder } from './hologramBorder.js';
 import { createPortalRim } from './portalRim.js';
-import { playSound } from './audio.js';
+import { playSound, stopSound } from './audio.js';
 import { getLanguage, setLanguage, onLanguageChange, t } from '../i18n.js';
 import { getProject, getProjectUrl } from '../data/projects.js';
 import { getProjectionViewport } from './projectionViewport.js';
@@ -125,7 +125,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     post('pause'); iframe && (iframe.inert = true);
     clearTimeout(timer); status.hidden = true;
     events?.abort(); events = null;
-    playSound('release');
+    playSound(portal ? 'powerdown' : 'release');
     stage?.cards.setProjectHologramHidden(false);
     const portalId = portal;
     if (!portalId) setBrowserSuspended(false);
@@ -183,7 +183,8 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       preview.className = 'example-projection__preview'; preview.alt = '';
       preview.src = sourcePreview?.currentSrc || sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
     }
-    playSound('focus');
+    stopSound('beacon', 120);
+    playSound(portal ? 'charge' : 'focus');
     stage.cards.setTemporaryActive('projekte');
     if (portal) setBrowserSuspended(true);
     else if (!liveOpening) {
@@ -225,7 +226,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     }, { signal: events.signal });
     screen.replaceChildren(iframe, ...(preview ? [preview] : []));
     pageFit = null; fitPage();
-    timer = window.setTimeout(() => { status.textContent = t('example.error'); }, 12000);
+    timer = window.setTimeout(() => { status.textContent = t('example.error'); playSound('warn', { queue: false }); }, 12000);
     if (portal) {
       light.style.opacity = '0';
       // The header and footer step aside: the canvas takes the whole window so the
@@ -233,7 +234,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       frame?.classList.add('is-portal-stage');
       for (let i = 0; i < 3; i++) await new Promise(resolve => requestAnimationFrame(resolve));
       if (current !== ticket) return;
-      const rect = await stage.openPortal(portal, getProjectionViewport());
+      const rect = await stage.openPortal(portal, getProjectionViewport(), { onUnfold: () => playSound('unfold', { queue: false }) });
       if (current !== ticket) return;
       const inset = rect ? placeLight(rect, rect.radius) : 0;
       light.style.opacity = '';
@@ -285,13 +286,23 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     }
   }
   // Hovering or focusing a project entry lights its portal machine in the background.
+  let beaconFor = null;
   function hoverPortal(event) {
     if (state !== 'closed') return;
     const link = event.target.closest?.('[data-example-open]');
     const leaving = event.type === 'pointerout' || event.type === 'focusout';
     if (leaving) {
-      if (link && !link.contains(event.relatedTarget)) stage?.portals?.setHover(null);
-    } else if (link) stage?.portals?.setHover(link.dataset.projectId);
+      if (link && !link.contains(event.relatedTarget)) {
+        stage?.portals?.setHover(null);
+        beaconFor = null; stopSound('beacon');
+      }
+    } else if (link) {
+      stage?.portals?.setHover(link.dataset.projectId);
+      // The portal machine pulses in the dark; its signal sounds once per entry.
+      if (beaconFor !== link.dataset.projectId && stage?.portals?.has(link.dataset.projectId)) {
+        beaconFor = link.dataset.projectId; playSound('beacon', { queue: false });
+      }
+    }
   }
   ['pointerover', 'pointerout', 'focusin', 'focusout'].forEach(type => document.addEventListener(type, hoverPortal));
   document.addEventListener('click', activate);

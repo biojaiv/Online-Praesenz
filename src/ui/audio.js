@@ -1,8 +1,9 @@
 /**
  * Die Klangebene der Buehne.
  *
- * Wenige kurze Signale, mehr nicht: der Aufbau und der Absprung des Intros
- * sowie das Heran- und Herausfahren an einen Sockel. Knoepfe bleiben stumm.
+ * Kurze Signale fuer Momente, die etwas bedeuten: Aufbau und Absprung des
+ * Intros, Sockel und Menue, das Portal (Aufladen, Entfalten, Herunterfahren),
+ * das 30-Sekunden-Profil und Ladefehler. Keine Dauerschleifen.
  * Jeder Ruf bleibt folgenlos, wenn der Browser das Abspielen ohne Nutzergeste
  * verweigert — die Seite funktioniert vollstaendig ohne Ton.
  *
@@ -12,11 +13,27 @@
  */
 
 const losslessAudio = document.createElement('audio').canPlayType('audio/flac');
+const lossless = (flac, wav) => (losslessAudio ? flac : wav).href;
 const SOURCES = {
-  build: losslessAudio ? new URL('../../sounds/combeep1.flac', import.meta.url).href : new URL('../../sounds/combeep1.wav', import.meta.url).href,
-  warp: losslessAudio ? new URL('../../sounds/pbewht00.flac', import.meta.url).href : new URL('../../sounds/pbewht00.wav', import.meta.url).href,
-  focus: losslessAudio ? new URL('../../sounds/tdrtra00.flac', import.meta.url).href : new URL('../../sounds/tdrtra00.wav', import.meta.url).href,
-  release: losslessAudio ? new URL('../../sounds/tdrtra01.flac', import.meta.url).href : new URL('../../sounds/tdrtra01.wav', import.meta.url).href,
+  build: lossless(new URL('../../sounds/combeep1.flac', import.meta.url), new URL('../../sounds/combeep1.wav', import.meta.url)),
+  warp: lossless(new URL('../../sounds/Start.flac', import.meta.url), new URL('../../sounds/pbewht00.wav', import.meta.url)),
+  focus: lossless(new URL('../../sounds/tdrtra00.flac', import.meta.url), new URL('../../sounds/tdrtra00.wav', import.meta.url)),
+  release: lossless(new URL('../../sounds/tdrtra01.flac', import.meta.url), new URL('../../sounds/tdrtra01.wav', import.meta.url)),
+  // Menu buttons at the top right and the language switch.
+  menu: lossless(new URL('../../sounds/Menue_Knöpfe_rechts_oben.flac', import.meta.url), new URL('../../sounds/Menue_Knöpfe_rechts_oben.wav', import.meta.url)),
+  // Pointer comes to rest on a pedestal.
+  pedestal: new URL('../../sounds/Sockelauswahlgeräusch.mp3', import.meta.url).href,
+  // A project entry is hovered and its portal machine blinks in the dark.
+  beacon: lossless(new URL('../../sounds/pulsemachine.flac', import.meta.url), new URL('../../sounds/pulsemachine.wav', import.meta.url)),
+  // Portal: power up on selection, machinery while unfolding, power down on close.
+  charge: lossless(new URL('../../sounds/ppbwht00.flac', import.meta.url), new URL('../../sounds/ppbwht00.wav', import.meta.url)),
+  unfold: lossless(new URL('../../sounds/dronemachine3.flac', import.meta.url), new URL('../../sounds/dronemachine3.wav', import.meta.url)),
+  powerdown: lossless(new URL('../../sounds/ppwrdown.flac', import.meta.url), new URL('../../sounds/ppwrdown.wav', import.meta.url)),
+  // 30-second profile: incoming briefing and completed reading time.
+  transmit: lossless(new URL('../../sounds/t2b00tad.flac', import.meta.url), new URL('../../sounds/t2b00tad.wav', import.meta.url)),
+  complete: lossless(new URL('../../sounds/ppywht00.flac', import.meta.url), new URL('../../sounds/ppywht00.wav', import.meta.url)),
+  // A page could not be loaded.
+  warn: lossless(new URL('../../sounds/warn1.flac', import.meta.url), new URL('../../sounds/warn1.wav', import.meta.url)),
 };
 
 // Bewusst zurueckhaltend: nochmals rund vierzig Prozent leiser.
@@ -26,7 +43,20 @@ const VOLUME = {
   warp: 0.2,
   focus: 0.18,
   release: 0.18,
+  menu: 0.16,
+  pedestal: 0.14,
+  beacon: 0.12,
+  charge: 0.16,
+  unfold: 0.12,
+  powerdown: 0.16,
+  transmit: 0.08,
+  complete: 0.08,
+  warn: 0.16,
 };
+// Longer signals are cut short with a fade so they never outstay the moment.
+const LENGTH = { transmit: 1500, complete: 1600 };
+// Hover signals repeat at most this often (ms).
+const SPACING = { menu: 90, pedestal: 250 };
 
 const cache = new Map();
 
@@ -87,17 +117,51 @@ export function waitForSoundUnlock() {
   return unlocked ? Promise.resolve() : unlockPromise;
 }
 
-export function playSound(name) {
+const fades = new Map(), lastPlayed = new Map();
+
+function fade(name, audio, to, duration, then) {
+  cancelAnimationFrame(fades.get(name));
+  const from = audio.volume, start = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - start) / Math.max(1, duration));
+    audio.volume = from + (to - from) * t;
+    if (t < 1) fades.set(name, requestAnimationFrame(step));
+    else { fades.delete(name); then?.(); }
+  };
+  fades.set(name, requestAnimationFrame(step));
+}
+
+/**
+ * Play a signal. `queue: false` drops it while audio is still locked instead of
+ * replaying it after the first gesture (for signals that only make sense now).
+ */
+export function playSound(name, { queue = true } = {}) {
   if (!(name in SOURCES)) return;
-  if (!unlocked) { pending = name; return; }
+  if (!unlocked) { if (queue) pending = name; return; }
+  const now = performance.now();
+  if (SPACING[name] && now - (lastPlayed.get(name) ?? -Infinity) < SPACING[name]) return;
+  lastPlayed.set(name, now);
   const audio = base(name);
+  cancelAnimationFrame(fades.get(name));
   audio.pause();
   audio.currentTime = 0;
   audio.volume = VOLUME[name] ?? 0.3;
   const started = audio.play();
   if (started && typeof started.catch === 'function') {
     started.catch(() => {
-      if (!unlocked) pending = name;
+      if (!unlocked && queue) pending = name;
     });
   }
+  if (LENGTH[name]) {
+    const ticket = now;
+    window.setTimeout(() => { if (lastPlayed.get(name) === ticket) stopSound(name, 500); }, LENGTH[name]);
+  }
+}
+
+/** Fade a running signal out (e.g. when the pointer leaves what triggered it). */
+export function stopSound(name, duration = 220) {
+  const audio = cache.get(name);
+  if (!audio || audio.paused) return;
+  if (pending === name) pending = null;
+  fade(name, audio, 0, duration, () => { audio.pause(); audio.currentTime = 0; });
 }

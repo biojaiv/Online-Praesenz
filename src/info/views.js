@@ -1,4 +1,5 @@
 import { renderInformationMarkup } from './markup.js';
+import { playSound } from '../ui/audio.js';
 
 /** DOM-only view adapter. History, scene state and modal focus ownership stay in the controller. */
 export function createInformationViews({ root, getResources, getLanguage }) {
@@ -18,7 +19,7 @@ export function createInformationViews({ root, getResources, getLanguage }) {
 
   // 30-second reading clock: drives the sigil ring, the station rails and the countdown.
   const PROFILE_SECONDS = 30;
-  let clock = 0, clockStart = 0;
+  let clock = 0, clockStart = 0, completeSounded = false;
   function tickProfile() {
     const sheet = root.querySelector('[data-profile-sheet]');
     if (!sheet) return;
@@ -34,6 +35,7 @@ export function createInformationViews({ root, getResources, getLanguage }) {
     const left = Math.ceil(PROFILE_SECONDS - elapsed);
     const value = sheet.querySelector('.info-time__value');
     const complete = elapsed >= PROFILE_SECONDS;
+    if (complete && !completeSounded && !reduced) { completeSounded = true; playSound('complete', { queue: false }); }
     if (value) value.textContent = complete ? sheet.dataset.doneLabel : `00:${String(left).padStart(2, '0')}`;
     sheet.classList.toggle('is-complete', complete);
     if (complete) stopProfileClock();
@@ -41,6 +43,7 @@ export function createInformationViews({ root, getResources, getLanguage }) {
   function startProfileClock() {
     stopProfileClock();
     clockStart = performance.now();
+    completeSounded = false;
     tickProfile();
     if (!root.querySelector('[data-profile-sheet].is-complete')) clock = window.setInterval(tickProfile, 250);
   }
@@ -79,7 +82,7 @@ export function createInformationViews({ root, getResources, getLanguage }) {
     const entering = view === 'kurzprofil' && activeView !== 'kurzprofil';
     activeView = view;
     applyVisibility();
-    if (entering) startProfileClock();
+    if (entering) { startProfileClock(); playSound('transmit', { queue: false }); }
     else if (view !== 'kurzprofil') stopProfileClock();
   }
 

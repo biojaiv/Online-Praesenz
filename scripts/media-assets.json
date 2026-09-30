@@ -27,10 +27,6 @@
     "digest": "c2d71d9174fbb0689e4d50f5c86b22319cc7e0e41ce001e905763d896b163bfe",
     "output": "sounds/combeep1.flac"
   },
-  "sounds/pbewht00.wav": {
-    "digest": "ee24e6e71806e7d373b6027aad01666be9d406053daa2550983a3a65fa2cd6d1",
-    "output": "sounds/pbewht00.flac"
-  },
   "sounds/tdrtra00.wav": {
     "digest": "09cd3e3686a2f54f277e5e56f8f6d61e7b3f9962e0589e4889a00104cade9a5a",
     "output": "sounds/tdrtra00.flac"
@@ -38,5 +34,37 @@
   "sounds/tdrtra01.wav": {
     "digest": "a4b6e1aeb66d9900f18451389a88c5bb8b1ccf8eae67c8600f8aecd910507fff",
     "output": "sounds/tdrtra01.flac"
+  },
+  "sounds/ppbwht00.wav": {
+    "digest": "d5a7e9c29570c00ce3b0b7a088ed64ac9f826d11e6a5af6df21acbc2e440b9f9",
+    "output": "sounds/ppbwht00.flac"
+  },
+  "sounds/ppwrdown.wav": {
+    "digest": "9348bdcca89c102a93705970ff7f9be7d00315ad840349a48d3474dff985d627",
+    "output": "sounds/ppwrdown.flac"
+  },
+  "sounds/dronemachine3.wav": {
+    "digest": "08446a49f71c252716f6c3e8304ea902725ab4e3b615a36548a2b5a51b118c39",
+    "output": "sounds/dronemachine3.flac"
+  },
+  "sounds/pulsemachine.wav": {
+    "digest": "effcc93405d3902b99f5b62b703dc98043db182839d242f070e26de93a9999a1",
+    "output": "sounds/pulsemachine.flac"
+  },
+  "sounds/t2b00tad.wav": {
+    "digest": "8bce0e07d5154b2ca8491ff740a6e6c4162ed4e59507dde1988edb707a615e64",
+    "output": "sounds/t2b00tad.flac"
+  },
+  "sounds/ppywht00.wav": {
+    "digest": "ef1a97bf4ad0b6282ccc8cc43871baa8284ca17358845d638ce7ec55b89dfdd4",
+    "output": "sounds/ppywht00.flac"
+  },
+  "sounds/warn1.wav": {
+    "digest": "9dcca8a2de591866437545696debceda152d0cbf684381ba78f42b7d0a63db1d",
+    "output": "sounds/warn1.flac"
+  },
+  "sounds/Menue_Kn\u00f6pfe_rechts_oben.wav": {
+    "digest": "6cc2745dc0aa5d33e2bb98fe62641c3230f3424cb7493f4b0ac06876771cb9ce",
+    "output": "sounds/Menue_Kn\u00f6pfe_rechts_oben.flac"
   }
 }

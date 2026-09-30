@@ -1456,7 +1456,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       return { look: lookPoint, position: lookPoint.clone().addScaledVector(info.normal, distance) };
     },
     /** Fly in, unfold and resolve with the aperture rectangle in CSS pixels. */
-    async openPortal(id, viewport) {
+    async openPortal(id, viewport, { onUnfold } = {}) {
       const plan = this.portalPlan(id, viewport);
       if (!plan) return null;
       const ticket = ++portalTicket;
@@ -1464,6 +1464,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150));
       if (ticket !== portalTicket) return null; // closed during the flight
       portals.setForeground(id, true);
+      onUnfold?.();
       await Promise.all([flying, portals.animate(id, 1, reduced ? 0 : 2.3)]);
       // The scene keeps running around the frame: light passes follow each other
       // without the usual dark pause while the page is open.

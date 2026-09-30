@@ -10,7 +10,7 @@ for (const language of ['de', 'en']) {
   for (const format of ['desktop', 'mobile']) jobs.push({ source: `public/example/preview-${format}-${language}.jpg`, type: 'webp' });
   jobs.push({ source: `public/recovery/preview-${language}.jpg`, type: 'webp' });
 }
-for (const sound of ['combeep1', 'pbewht00', 'tdrtra00', 'tdrtra01']) jobs.push({ source: `sounds/${sound}.wav`, type: 'flac' });
+for (const sound of ['combeep1', 'tdrtra00', 'tdrtra01', 'ppbwht00', 'ppwrdown', 'dronemachine3', 'pulsemachine', 't2b00tad', 'ppywht00', 'warn1', 'Menue_Knöpfe_rechts_oben']) jobs.push({ source: `sounds/${sound}.wav`, type: 'flac' });
 for (const { source, type } of jobs) {
   const output = source.replace(/\.[^.]+$/, `.${type}`);
   const digest = createHash('sha256').update(await readFile(source)).update(type === 'webp' ? 'webp-q92-m6' : 'flac-12').digest('hex');
