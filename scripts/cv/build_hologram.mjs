@@ -95,8 +95,7 @@ body{color:var(--ink);font:400 22px/1.45 Barlow,sans-serif;-webkit-font-smoothin
 .timeline{list-style:none;margin:0 0 56px}
 .timeline li{position:relative;display:grid;grid-template-columns:210px 46px 1fr;align-items:start;padding-bottom:30px}
 .timeline li:last-child{padding-bottom:0}
-.timeline li::before{content:'';position:absolute;left:232px;top:18px;bottom:-12px;width:2px;background:linear-gradient(var(--amber),#ee8a2e55)}
-.timeline li:last-child::before{display:none}
+/* Stations stand as single points; no connecting lines between them. */
 .when{padding-top:2px;text-align:right;padding-right:18px;font:500 27px/1.2 'Barlow Condensed',sans-serif;color:var(--amber);font-variant-numeric:tabular-nums}
 .node{position:relative;width:24px;height:24px;margin:5px 0 0 1px;border:3px solid var(--amber);border-radius:50%;background:var(--ground);box-shadow:0 0 12px #ee8a2e99}
 .node::after{content:'';position:absolute;inset:5px;border-radius:50%;background:var(--amber)}
@@ -106,7 +105,6 @@ body{color:var(--ink);font:400 22px/1.45 Barlow,sans-serif;-webkit-font-smoothin
 .timeline--blue .when{color:#9fc9ec}
 .timeline--blue .node{border-color:#6fb3e8;box-shadow:0 0 12px #6fb3e877}
 .timeline--blue .node::after{background:#6fb3e8}
-.timeline--blue li::before{background:linear-gradient(#6fb3e8,#6fb3e844)}
 .skills{display:grid;grid-template-columns:1fr 1fr;gap:34px 54px}
 .skills h3{margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid var(--line);font:600 23px/1.1 'Barlow Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--amber-soft)}
 .skills ul{display:flex;flex-wrap:wrap;gap:10px;list-style:none}
@@ -117,7 +115,7 @@ body{color:var(--ink);font:400 22px/1.45 Barlow,sans-serif;-webkit-font-smoothin
 .projects strong{font:500 27px/1.25 Barlow,sans-serif;color:var(--ink)}
 .projects .tag{flex:none;padding:4px 10px 3px;border:1px solid #ee8a2e88;font:600 17px/1 'Barlow Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-soft)}
 .projects p{margin-top:8px;font:400 21px/1.45 Barlow,sans-serif;color:var(--soft)}
-.closing{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:58px}
+.closing{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:34px}
 .closing .heading{font-size:32px;margin-bottom:22px}
 .icons{list-style:none;display:grid;gap:16px}
 .icons li{display:flex;align-items:center;gap:18px;font:400 23px/1.3 Barlow,sans-serif;color:var(--ink)}

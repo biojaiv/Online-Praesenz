@@ -18,7 +18,7 @@ export const hologramContent = {
       { when: '2001 – 2004', title: 'Technisches Gymnasium Heinrich-Wieland', meta: 'Abitur · Leistungskurse IT und Englisch' },
     ],
     skills: [
-      ['Systeme & Infrastruktur', ['Windows Server 2025', 'Active Directory', 'Microsoft SQL Server', 'VMware vSphere', 'Linux (Debian)', 'DHCP · DNS · PXE']],
+      ['Systeme & Infrastruktur', ['Windows Server 2025', 'Active Directory', 'Microsoft SQL Server', 'VMware vSphere', 'Debian-basierte Linux-Systeme', 'DHCP · DNS · PXE']],
       ['Endpoint-Management & Monitoring', ['baramundi Management Suite', 'Matrix42 Empirum', 'WinPE & Treiber', 'CheckMK']],
       ['Automatisierung & Entwicklung', ['Bash', 'Python', 'Ansible (Einarbeitung)', 'Docker', 'Git / GitHub', 'C#', 'HTML · CSS · JavaScript']],
       ['Dokumentation & Sprachen', ['Technische Dokumentation', 'Englisch', 'Russisch']],
@@ -58,7 +58,7 @@ export const hologramContent = {
       { when: '2001 – 2004', title: 'Heinrich-Wieland Technical Grammar School', meta: 'Abitur · advanced courses in IT and English' },
     ],
     skills: [
-      ['Systems & Infrastructure', ['Windows Server 2025', 'Active Directory', 'Microsoft SQL Server', 'VMware vSphere', 'Linux (Debian)', 'DHCP · DNS · PXE']],
+      ['Systems & Infrastructure', ['Windows Server 2025', 'Active Directory', 'Microsoft SQL Server', 'VMware vSphere', 'Debian-based Linux systems', 'DHCP · DNS · PXE']],
       ['Endpoint Management & Monitoring', ['baramundi Management Suite', 'Matrix42 Empirum', 'WinPE & drivers', 'CheckMK']],
       ['Automation & Development', ['Bash', 'Python', 'Ansible (learning)', 'Docker', 'Git / GitHub', 'C#', 'HTML · CSS · JavaScript']],
       ['Documentation & Languages', ['Technical documentation', 'English', 'Russian']],
