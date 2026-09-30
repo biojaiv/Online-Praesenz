@@ -20,8 +20,9 @@ Tastatur und mit reduzierter Bewegung erreichbar.
 - **Startseite, 30-Sekunden-Profil und Kontakt:** echtes HTML mit Glossar, Fokusführung und Scanlinie.
 - **Abschlussprojekt (IHK):** Migration der Endpoint-Management-Infrastruktur (Matrix42 Empirum →
   baramundi). Die Dokumentation ist ein scrollbares Hologramm mit eingebettetem Projektfilm.
-- **IT-Projekte:** Der mittlere Sockel öffnet zwei Flügel. Jede Beispielseite ruft eine Portalmaschine im
-  Hintergrund auf: Die Kamera fliegt hin, die Maschine entfaltet sich zum Rahmen, und die Seite erscheint darin.
+- **IT-Projekte:** Der mittlere Sockel öffnet zwei Flügel. Jede Beispielseite ruft eine Portalmaschine auf, die
+  auf einer eigenen Bahn des Orrery mitfährt: Die Kamera fliegt hin, die Maschine entfaltet sich zum Rahmen, und die
+  Seite erscheint darin, während das Orrery dahinter weiterzieht.
   - [Tiefgang](https://vladimir-leicht.com/beispiel/) zeigt interaktiv, wie ein Arbeitsplatz entsteht
     (DHCP, PXE, AD, UEM), mit Vektorzeichnung und Lesetiefen.
   - [PASSUNG](https://vladimir-leicht.com/beispiele/passung/) ist eine Präzisionsfertigung mit
@@ -126,7 +127,8 @@ orrery. Everything stays accessible without WebGL, by keyboard and with reduced 
 
 - **Final project (IHK):** migration of an endpoint management infrastructure (Matrix42 Empirum →
   baramundi). The documentation is a scrollable hologram with an embedded project film.
-- **IT projects:** each example site opens inside a portal machine that unfolds in the background.
+- **IT projects:** each example site opens inside a portal machine that rides its own orbit of the
+  orrery and unfolds into a frame.
   [Tiefgang](https://vladimir-leicht.com/beispiel/) shows how a workplace is provisioned.
   [PASSUNG](https://vladimir-leicht.com/beispiele/passung/) presents precision manufacturing.
   [Recovery Lab](https://vladimir-leicht.com/systemintegration/) documents a Debian VM lab.

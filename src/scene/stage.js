@@ -63,6 +63,13 @@ const FRAME_BUDGET = 1000 / 30 - 3;
 const PORTAL_FRAME_FILL = 0.92;
 // Radius of the Orrery light around an open portal (world units).
 const PORTAL_SURROUND_LIGHT = 16;
+// Warp timing: portals ride the Orrery, so the distance differs from visit to
+// visit. The duration follows it gently (fourth root) and stays within bounds.
+const PORTAL_WARP = Object.freeze({ base: 2.1, distance: 47, min: 1.85, max: 2.4 });
+function portalWarpScale(distance) {
+  const duration = PORTAL_WARP.base * Math.pow(Math.max(1, distance) / PORTAL_WARP.distance, .25);
+  return THREE.MathUtils.clamp(duration, PORTAL_WARP.min, PORTAL_WARP.max) / PORTAL_WARP.base;
+}
 
 // ORBIT_V6: Im Ruhezustand laesst sich die Buehne anfassen und drehen. Die
 // Kamera kreist dann um die Mitte der Sockelreihe; die Maschine im
@@ -111,7 +118,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   scene.add(background.group);
 
   // Portal machines load after the first usable frame (see settleQuality).
-  const portals = createPortalMachines({ reduced });
+  let orreryTracks = false;
+  background.ready.then(ok => { orreryTracks = ok; });
+  const findTrack = name => {
+    if (!orreryTracks) return null;
+    let track = null;
+    background.group.traverse(object => { if (!track && object.userData.sourceName === name) track = object; });
+    return track;
+  };
+  const portals = createPortalMachines({ reduced, findTrack });
   scene.add(portals.group);
 
   const cards = createCards({ renderer, reduced });
@@ -423,6 +438,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   let examplePreviewUpdate = null, projectPreviewHover = false, portalTicket = 0, portalLightTimer = 0;
+  // The portal the camera currently follows (flying, open or closing) and its viewport.
+  let portalFollow = null, portalWarp = 1;
   const examplePreviewPoint = new THREE.Vector3();
   const exampleFlight = createExampleFlight({
     camera, cards, scene,
@@ -1177,6 +1194,24 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let running = false;
   let lastFrameAt = 0;
 
+  // A portal keeps riding its track while it frames a page: the camera moves
+  // with it, so the frame stays still and the Orrery travels past behind it.
+  const followedLight = new THREE.Vector3();
+  function followPortal() {
+    if (!portalFollow) return;
+    if (!exampleFlight.active) { portals.hold(portalFollow.id, false); portalFollow = null; return; }
+    const plan = stageApi.portalPlan(portalFollow.id, portalFollow.viewport);
+    if (!plan) return;
+    exampleFlight.retarget(plan);
+    if (portalFollow.lit) {
+      const centre = portals.frameInfo(portalFollow.id, portalFollow.aspect).center;
+      if (centre.distanceToSquared(followedLight) > 1) {
+        followedLight.copy(centre);
+        background.setInspectionPoint?.(centre, PORTAL_SURROUND_LIGHT);
+      }
+    }
+  }
+
   function frame(now = performance.now()) {
     raf = 0;
     if (!running || projectionIdle || inspectionFrozen || informationPaused || document.hidden) return;
@@ -1193,6 +1228,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
 
     background.update(t, dt);
     portals.update(t, dt);
+    followPortal();
     cards.update(t, dt);
 
     if (
@@ -1411,7 +1447,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   background.ready.then(scheduleInformationRefresh);
   informationMotion.addEventListener('change', refreshInformation);
 
-  return {
+  const stageApi = {
     setInformationView, refreshInformation, animateInformationExit, cancelInformationExit, pickInformationSection,
     scene, camera, renderer, composer, cards, background,
     ready: cards.ready,
@@ -1457,11 +1493,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     },
     /** Fly in, unfold and resolve with the aperture rectangle in CSS pixels. */
     async openPortal(id, viewport, { onUnfold } = {}) {
+      if (portalFollow && portalFollow.id !== id) portals.hold(portalFollow.id, false);
+      portals.hold(id, true);
       const plan = this.portalPlan(id, viewport);
-      if (!plan) return null;
+      if (!plan) { portals.hold(id, false); return null; }
       const ticket = ++portalTicket;
-      const flying = exampleFlight.open({ ...plan, duration: reduced ? 0 : 2.1 });
-      await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150));
+      portalWarp = portalWarpScale(camera.position.distanceTo(plan.position));
+      portalFollow = { id, viewport: { ...viewport }, aspect: viewport.width / viewport.height, lit: false };
+      const flying = exampleFlight.open({ ...plan, duration: reduced ? 0 : PORTAL_WARP.base * portalWarp });
+      await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150 * portalWarp));
       if (ticket !== portalTicket) return null; // closed during the flight
       portals.setForeground(id, true);
       onUnfold?.();
@@ -1470,8 +1510,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       // without the usual dark pause while the page is open.
       if (ticket === portalTicket) {
         background.triggerSparseIllumination?.();
-        // A soft key around the portal reveals the turning rings beside the frame.
-        background.setInspectionPoint?.(portals.frameInfo(id, viewport.width / viewport.height).center, PORTAL_SURROUND_LIGHT);
+        // A soft key around the portal reveals the turning rings beside the frame;
+        // followPortal() moves it along as the portal rides on.
+        portalFollow.lit = true;
+        followedLight.set(Infinity, 0, 0);
         window.clearInterval(portalLightTimer);
         portalLightTimer = window.setInterval(() => background.triggerSparseIllumination?.(), 13000);
       }
@@ -1482,12 +1524,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       window.clearInterval(portalLightTimer); portalLightTimer = 0;
       background.setInspectionPoint?.(null);
       if (projectionIdle) this.setProjectionIdle(false);
+      if (portalFollow) portalFollow.lit = false;
       const folding = portals.animate(id, 0, reduced ? 0 : 1.65).then(() => portals.setForeground(id, false));
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 770));
-      await Promise.all([folding, exampleFlight.close(reduced ? 0 : 1.9)]);
+      await Promise.all([folding, exampleFlight.close(reduced ? 0 : 1.9 * portalWarp)]);
+      if (portalFollow?.id === id && !exampleFlight.active) { portalFollow = null; portals.hold(id, false); }
     },
     /** Keep an open portal framed after a resize; the running loop draws it. */
     relayoutPortal(id, viewport) {
+      if (portalFollow?.id === id) Object.assign(portalFollow, { viewport: { ...viewport }, aspect: viewport.width / viewport.height });
       const plan = this.portalPlan(id, viewport);
       if (!plan) return null;
       exampleFlight.retarget(plan);
@@ -1704,4 +1749,5 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       renderer.dispose();
     },
   };
+  return stageApi;
 }

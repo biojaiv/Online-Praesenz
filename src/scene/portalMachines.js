@@ -17,15 +17,27 @@ const HALF_APERTURE_Y = CY + R_IN - RAIL;
 const SCALE = 2.1;
 
 /**
- * One portal machine per project, in the dark gaps of the middle-pedestal view:
- * Tiefgang between the left and middle pedestal, PASSUNG at the left edge,
- * Recovery Lab between the middle and right pedestal. Each faces the camera.
+ * One portal machine per project, each riding its own track of the Orrery.
+ * Only the tilted rings that precess about the vertical stay in front of the
+ * camera; the tumbling rings and Laufbahnen turn face-on and would carry a portal
+ * out of view. On its track a portal sits at the rail point nearest its home and
+ * glides slowly along the rail around it, so it moves with the ring's precession
+ * and tilt and is found in a slightly different place on every visit.
+ * Homes (simulated over full precession cycles, see docu_workprogress): Tiefgang
+ * upper right, always in view; PASSUNG left and Recovery Lab far right, in view
+ * about three quarters of the time (their rings rise above the top edge).
+ * `position`/`yaw` are the fallback while the Orrery is not (yet) available.
  */
 const SLOTS = Object.freeze({
-  systems: { position: [-15.5, -14.6, -40.5], yaw: .26, accent: 0xffb347 },
-  passung: { position: [-38, 4.2, -30.5], yaw: .66, accent: 0xcfe6ff },
-  recovery: { position: [15.5, -14.6, -40.5], yaw: -.26, accent: 0x4fd6e8 },
+  systems: { track: '01 HAUPTMASCHINE / Wanderringneigung 0', radius: 25, home: [12.5, -1, -33.7],
+    swing: .34, period: 83, phase: 0, position: [-15.5, -14.6, -40.5], yaw: .26, accent: 0xffb347 },
+  passung: { track: '01 HAUPTMASCHINE / Wanderringneigung 1', radius: 44, home: [-15, -13, -53.3],
+    swing: .2, period: 97, phase: 2.1, position: [-38, 4.2, -30.5], yaw: .66, accent: 0xcfe6ff },
+  recovery: { track: '01 HAUPTMASCHINE / Aussenring 1 / Eigenrotation', radius: 49, home: [16.8, -13, -58],
+    swing: .18, period: 71, phase: 4.2, position: [15.5, -14.6, -40.5], yaw: -.26, accent: 0x4fd6e8 },
 });
+// Portals turn towards the stage camera's resting position.
+const VIEWER = new THREE.Vector3(0, -1.2, 18);
 const node = name => THREE.PropertyBinding.sanitizeNodeName(name);
 const CORNERS = ['NO', 'NW', 'SW', 'SO'];
 
@@ -42,11 +54,11 @@ function revealMaterial(source, uniform) {
   return material;
 }
 
-export function createPortalMachines({ reduced = false } = {}) {
+export function createPortalMachines({ reduced = false, findTrack = () => null } = {}) {
   const group = new THREE.Group();
   group.name = 'portal-machines';
   const instances = new Map();
-  let hovered = null, disposed = false, loading = null;
+  let hovered = null, disposed = false, loading = null, lastElapsed = 0;
   // Drawn just before a foreground portal: clearing depth here puts the active
   // frame in front of every Orrery ring and strut between it and the camera.
   const depthClear = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
@@ -108,7 +120,8 @@ export function createPortalMachines({ reduced = false } = {}) {
       action.time = 0;
       mixer.update(0);
       instances.set(id, {
-        id, holder, spinner, root, mixer, action, clip, reveal, accent,
+        id, holder, spinner, root, mixer, action, clip, reveal, accent, slot,
+        track: null, home: new THREE.Vector3().fromArray(slot.home), held: false,
         materials: [...materials.values()],
         // Corner pivots are posed from their rail's morph weight (same curve as their
         // translation track) so the aspect stretch never compounds between frames.
@@ -121,6 +134,7 @@ export function createPortalMachines({ reduced = false } = {}) {
         bezel, backing, bandStretch: 0, open: 0,
         progress: { value: 0 }, stretch: 1, glow: 0, active: false, tween: null, foreground: false,
       });
+      ride(instances.get(id), lastElapsed);
     }
   }
 
@@ -137,6 +151,21 @@ export function createPortalMachines({ reduced = false } = {}) {
       return false;
     });
     return loading;
+  }
+
+  const railInverse = new THREE.Matrix4(), railLocal = new THREE.Vector3();
+  /** Seat a portal on its track: nearest rail point to its home, swinging along the rail. */
+  function ride(item, elapsed) {
+    item.track ||= findTrack(item.slot.track);
+    if (!item.track) return;
+    const { radius, swing, period, phase } = item.slot;
+    railInverse.copy(item.track.matrixWorld).invert();
+    railLocal.copy(item.home).applyMatrix4(railInverse);
+    const angle = Math.atan2(railLocal.z, railLocal.x)
+      + (reduced ? 0 : swing * Math.sin(elapsed * Math.PI * 2 / period + phase));
+    item.holder.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius).applyMatrix4(item.track.matrixWorld);
+    // A framed page keeps its orientation; the camera follows the position only.
+    if (!item.held) item.holder.lookAt(VIEWER);
   }
 
   /** Scrub the unfold clip and widen the open frame to the requested aspect. */
@@ -182,6 +211,8 @@ export function createPortalMachines({ reduced = false } = {}) {
     setForeground(id, value) { const item = instances.get(id); if (item) setForeground(item, Boolean(value)); },
     get hovered() { return hovered; },
     setHover(id) { hovered = instances.has(id) ? id : null; },
+    /** Freeze a portal's orientation while it frames a page (it keeps riding its track). */
+    hold(id, value) { const item = instances.get(id); if (item) item.held = Boolean(value); },
     /** World-space framing data for a camera flight (outer frame size at the given aspect). */
     frameInfo(id, aspect) {
       const item = instances.get(id);
@@ -234,7 +265,9 @@ export function createPortalMachines({ reduced = false } = {}) {
     update(elapsed, delta) {
       if (disposed) return;
       const dt = Math.min(.1, Math.max(0, delta || 0));
+      lastElapsed = elapsed;
       for (const item of instances.values()) {
+        ride(item, elapsed);
         const hover = hovered === item.id;
         // Dark by default, fully lit and pulsing while its gallery entry is hovered.
         const pulse = reduced ? .7 : (.5 + .5 * Math.sin(elapsed * Math.PI * 2 * 1.3)) ** 2;
