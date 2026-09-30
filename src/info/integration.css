@@ -26,3 +26,5 @@ html.is-site-inspecting #information-layer { opacity:0; pointer-events:none; }
 .info-layer[data-info-exiting="explore"] .info-start { pointer-events:none; }
 .info-layer[data-info-exiting="explore"] :is(.info-start__copy > :not(.info-identity), .info-topline, .info-start__footer) { will-change:transform, opacity; }
 .info-layer[data-info-scene-hover] .info-start { cursor:pointer; }
+/* Without WebGL there is no 3D view, so its technical details are not offered. */
+html[data-scene="unavailable"] .site-method{display:none}

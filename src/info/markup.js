@@ -46,9 +46,9 @@ export function renderInformationMarkup(language, resources) {
   const arrow = label => `${label} →`;
   const cv = (label, key, className = 'info-link') => `<a class="${className}" href="${esc(r.cvUrl)}" download="${esc(r.cvDownload || '')}" data-info-focus="${key}">${esc(label)}</a>`;
   const languages = prefix => `<nav class="info-language" aria-label="${c.language}"><a href="?lang=de" lang="de" hreflang="de" data-info-language="de" data-info-focus="${prefix}-lang-de" ${lang === 'de' ? 'aria-current="true"' : ''}>DE</a><span aria-hidden="true">/</span><a href="?lang=en" lang="en" hreflang="en" data-info-language="en" data-info-focus="${prefix}-lang-en" ${lang === 'en' ? 'aria-current="true"' : ''}>EN</a></nav>`;
-  const inspect = prefix => `<button class="info-link info-inspect" type="button" data-info-inspect data-info-focus="${prefix}-inspect">${esc(c.inspect)}</button>`;
   const availability = `<span class="info-availability"><i aria-hidden="true"></i>${esc(c.available)}<span aria-hidden="true"> · </span>${esc(r.location)}<span aria-hidden="true"> · </span>${esc(c.remote)}</span>`;
-  const footer = prefix => `<footer class="info-footer">${route('home', c.home, `${prefix}-home`)}${inspect(prefix)}</footer>`;
+  // Technical details of the site are offered only in the 3D view (footer: “How this site is built”).
+  const footer = prefix => `<footer class="info-footer">${route('home', c.home, `${prefix}-home`)}</footer>`;
   const terms = c.terms.map(([id, name, title, text]) => `<details class="info-term" data-info-term="${id}"><summary data-info-focus="term-${id}">${esc(name)}<span aria-hidden="true">+</span></summary><div class="info-term__explanation"><strong>${esc(title)}</strong><p>${esc(text)}</p></div></details>`).join('');
 
   return `
@@ -68,7 +68,7 @@ export function renderInformationMarkup(language, resources) {
         <div class="info-secondary">${cv(`${c.cvPdf} ↓`, 'start-cv')}${route('kontakt', arrow(c.contact), 'start-contact')}</div>
         <p class="info-scene-status" data-info-scene-status role="status">${esc(c.sceneUnavailable)}</p>
       </div>
-      <footer class="info-footer info-start__footer"><span>01 — 03</span>${inspect('start')}</footer>
+      <footer class="info-footer info-start__footer"><span>01 — 03</span></footer>
     </section>
 
     <section class="info-page info-profile" id="kurzprofil" data-info-page="kurzprofil" aria-labelledby="info-profile-title" lang="${lang}">

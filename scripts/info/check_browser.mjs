@@ -112,14 +112,8 @@ try {
   assert(await page.evaluate(() => __stage.isRenderingPaused));
   await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
   assert(await page.evaluate(() => __stage.isRenderingPaused), 'Tab return retains information pause');
-  // Technical details are operable above the new information layer and return focus.
-  await page.locator('[data-info-focus="contact-inspect"]').click();
-  await page.locator('.site-inspection:not([hidden])').waitFor();
-  await page.keyboard.press('Tab');
-  assert(await page.evaluate(() => document.activeElement.closest('.site-inspection') !== null));
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => document.activeElement.dataset.infoFocus === 'contact-inspect');
-  assert.equal(await focused(page), 'contact-inspect', JSON.stringify(await page.evaluate(() => ({focus:document.activeElement.outerHTML,view:document.documentElement.dataset.infoView,inspecting:document.documentElement.classList.contains('is-site-inspecting'),inert:document.getElementById('information-layer').inert})))) ;
+  // Technical details are offered only in the 3D view, not in the HTML information views.
+  assert.equal(await page.locator('[data-info-inspect]').count(), 0, 'No technical-details entry in information views');
   assert(await page.evaluate(() => __stage.isRenderingPaused));
   for (const legacy of ['abschluss/server','projekte/webseiten','projekte/systemintegration','lebenslauf/contact']) {
     await route(page, legacy);
