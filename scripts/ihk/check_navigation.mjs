@@ -119,6 +119,9 @@ try {
     await page.locator('.ihk-project').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.ihk-hologram-actions').count(), 0, 'No HTML entry beneath the pedestal');
     assert.equal(await page.locator('#nav-sub-abschluss .ihk-reader-toggle').count(), 1);
+    assert.equal(await page.locator('.nav__group.is-open').count(), 0);
+    assert.equal(await page.locator('#nav-sub-abschluss').evaluate(el => el.inert), true);
+    await page.locator('.ihk-reader-toggle').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.ihk-reader-toggle').isVisible(), false, 'HTML is only available in the project menu');
     assert.equal(await page.locator('.foot [data-info-open="kontakt"]').isVisible(), false);
     await page.screenshot({ path: `${output}/${mobile ? 'mobile' : 'desktop'}-hologram.png` });
