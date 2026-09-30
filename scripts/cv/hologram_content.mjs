@@ -14,7 +14,7 @@ export const hologramContent = {
     },
     education: [
       { when: '2024 – 2026', title: 'Umschulung zum Fachinformatiker für Systemintegration', meta: 'TASys GmbH · Abschluss 2026 (IHK)' },
-      { when: '01 – 07/2026', title: 'Praxisphase', meta: 'Landratsamt Enzkreis · Amt für IT und Digitalisierung', detail: 'Abschlussprojekt: baramundi-Pilotumgebung (siehe Projekte)' },
+      { when: '01/2026 – 07/2026', title: 'Praxisphase', meta: 'Landratsamt Enzkreis · Amt für IT und Digitalisierung', detail: 'Abschlussprojekt: baramundi-Pilotumgebung (siehe Projekte)' },
       { when: '2001 – 2004', title: 'Technisches Gymnasium Heinrich-Wieland', meta: 'Abitur · Leistungskurse IT und Englisch' },
     ],
     skills: [
@@ -35,7 +35,7 @@ export const hologramContent = {
       { when: '02/2018 – 01/2024', title: 'Fachfremde Tätigkeiten', meta: 'Lager, Kommissionierung, Versand, Bau und Galvanik · Pforzheim', detail: 'Übertragbar: Warenwirtschaft und Bestandsführung, strukturiertes Arbeiten im Schichtbetrieb, Termintreue.' },
     ],
     more: [
-      { when: '07 – 10/2016', title: 'Auslandsaufenthalt in Brasilien', meta: 'Handwerkliche Arbeiten auf einer Selbstversorgerfarm' },
+      { when: '07/2016 – 10/2016', title: 'Auslandsaufenthalt in Brasilien', meta: 'Handwerkliche Arbeiten auf einer Selbstversorgerfarm' },
       { when: '10/2005 – 10/2006', title: 'Zivildienst · Betreuer', meta: 'IB Bildungszentrum · Pforzheim' },
     ],
     interests: [['fist', 'Kampfsport'], ['book', 'Lesen'], ['chip', 'KI-gestützte Entwicklung']],
@@ -54,7 +54,7 @@ export const hologramContent = {
     },
     education: [
       { when: '2024 – 2026', title: 'Retraining as IT Specialist for Systems Integration', meta: 'TASys GmbH · qualification 2026 (IHK)' },
-      { when: '01 – 07/2026', title: 'Practical phase', meta: 'Enzkreis District Office · IT and Digitalisation Department', detail: 'Final project: baramundi pilot environment (see Projects)' },
+      { when: '01/2026 – 07/2026', title: 'Practical phase', meta: 'Enzkreis District Office · IT and Digitalisation Department', detail: 'Final project: baramundi pilot environment (see Projects)' },
       { when: '2001 – 2004', title: 'Heinrich-Wieland Technical Grammar School', meta: 'Abitur · advanced courses in IT and English' },
     ],
     skills: [
@@ -75,7 +75,7 @@ export const hologramContent = {
       { when: '02/2018 – 01/2024', title: 'Roles outside IT', meta: 'Warehousing, order picking, shipping, construction and electroplating · Pforzheim', detail: 'Transferable: inventory management, structured shift work, reliability with deadlines.' },
     ],
     more: [
-      { when: '07 – 10/2016', title: 'Stay abroad in Brazil', meta: 'Manual work on a self-sufficient farm' },
+      { when: '07/2016 – 10/2016', title: 'Stay abroad in Brazil', meta: 'Manual work on a self-sufficient farm' },
       { when: '10/2005 – 10/2006', title: 'Civilian service · carer', meta: 'IB education centre · Pforzheim' },
     ],
     interests: [['fist', 'Martial arts'], ['book', 'Reading'], ['chip', 'AI-assisted development']],

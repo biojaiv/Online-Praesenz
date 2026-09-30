@@ -1,196 +1,197 @@
 {
   "name": "Vladimir Leicht",
   "title": "IT Specialist for Systems Integration",
-  "fokus": "is on durable, cleanly engineered IT solutions that I deliver with persistence and ingenuity.",
+  "fokus": "I plan, build and maintain reliable IT infrastructure, with a focus on Windows environments, virtualisation and automated client deployment.",
   "signatur": [
     "Windows Server",
-    "Virtualisation",
-    "UEM",
-    "Cloud Solutions"
+    "Active Directory",
+    "VMware vSphere",
+    "baramundi UEM"
   ],
-  "verfuegbar": "Open to professional opportunities",
-  "interessensschwerpunkte": "Planning, configuration and administration of complex IT infrastructures",
+  "verfuegbar": "Available immediately · Remote possible",
+  "interessensschwerpunkte": "Career goal: Cloud Engineering",
   "bildungsweg": [
     {
-      "zeitraum": "2024–2026",
-      "titel": "Vocational retraining as an IT Specialist for Systems Integration",
-      "beschreibung": "TASys GmbH · Qualification completed in 2026",
-      "hinweis": "Practical phase 01/2026–07/2026 · IT & Digitalisation Office, Enzkreis District Administration"
+      "zeitraum": "2024 – 2026",
+      "titel": "Retraining as IT Specialist for Systems Integration",
+      "beschreibung": "TASys GmbH · qualification 2026 (IHK)"
     },
     {
-      "zeitraum": "2001–2004",
-      "titel": "Heinrich-Wieland Technical Upper Secondary School",
-      "beschreibung": "Abitur · Advanced courses in IT and English"
+      "zeitraum": "01/2026 – 07/2026",
+      "titel": "Practical phase",
+      "beschreibung": "Enzkreis District Office · IT and Digitalisation Department",
+      "hinweis": "Final project: baramundi pilot environment (see Projects)"
+    },
+    {
+      "zeitraum": "2001 – 2004",
+      "titel": "Heinrich-Wieland Technical Grammar School",
+      "beschreibung": "Abitur · advanced courses in IT and English"
+    }
+  ],
+  "projekte": [
+    {
+      "titel": "Final project (IHK): baramundi pilot environment",
+      "status": "Completed",
+      "beschreibung": "Planned, built, tested and documented a pilot environment as a basis for deciding on a possible replacement of Matrix42 Empirum. Four out of four Windows 11 reference clients fully deployed and inventoried."
+    },
+    {
+      "titel": "Recovery Lab",
+      "status": "Existing + extension",
+      "beschreibung": "Lab with four Debian VMs, an application and a database. External backup and automated recovery are planned."
+    },
+    {
+      "titel": "Ansible test lab",
+      "status": "In development",
+      "beschreibung": "Reproducible configuration of test servers and clients with Ansible."
+    },
+    {
+      "titel": "Interactive portfolio",
+      "status": "Online",
+      "beschreibung": "vladimir-leicht.com – bilingual, accessible, built with Three.js, Blender and automated browser tests."
     }
   ],
   "beruflicherWerdegang": [
     {
-      "zeitraum": "03/2023–12/2024",
-      "titel": "Service Station Attendant",
-      "beschreibung": "Esso Service Station · Pforzheim, BW"
+      "zeitraum": "03/2023 – 12/2024",
+      "titel": "Service station attendant (part-time)",
+      "beschreibung": "Esso service station · Pforzheim"
     },
     {
-      "zeitraum": "11/2023–01/2024",
-      "titel": "Warehouse Associate / Inventory Management",
-      "beschreibung": "Kaufhof · Pforzheim, BW"
+      "zeitraum": "04/2021 – 02/2022",
+      "titel": "Seeking employment",
+      "beschreibung": "COVID-19 period"
     },
     {
-      "zeitraum": "02/2022–01/2023",
-      "titel": "Order Picker / Warehouse Associate",
-      "beschreibung": "gastromatic Aldinger · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "04/2021–02/2022",
-      "titel": "Seeking Employment",
-      "beschreibung": "Under challenging economic conditions"
-    },
-    {
-      "zeitraum": "07/2019–09/2020",
-      "titel": "Order Picker / Warehouse Associate",
-      "beschreibung": "gastromatic Aldinger · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "02/2019–06/2019",
-      "titel": "Construction Assistant",
-      "beschreibung": "Pfirmann · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "09/2018–01/2019",
-      "titel": "Shipping Associate",
-      "beschreibung": "Klingel · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "02/2018–08/2018",
-      "titel": "Electroplater",
-      "beschreibung": "Dudaco · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "08/2017–01/2018",
-      "titel": "Seeking Employment",
-      "beschreibung": ""
-    },
-    {
-      "zeitraum": "11/2011–07/2017",
-      "titel": "Care Assistant",
-      "beschreibung": "ISB, Helfende Hand and Mobilee · Karlsruhe, BW"
-    },
-    {
-      "zeitraum": "10/2010–09/2011",
-      "titel": "Various Part-Time Roles",
-      "beschreibung": ""
-    },
-    {
-      "zeitraum": "04/2010–09/2010",
-      "titel": "Unable to Work",
-      "beschreibung": "",
-      "hinweis": "Stable health since this period"
-    },
-    {
-      "zeitraum": "02/2010–04/2010",
-      "titel": "Warehouse Assistant",
-      "beschreibung": "DEKRA Arbeit GmbH · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "08/2008–01/2010",
-      "titel": "Unable to Work",
-      "beschreibung": ""
-    },
-    {
-      "zeitraum": "07/2008–09/2008",
-      "titel": "Production Worker",
-      "beschreibung": "Witzenmann · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "02/2008–05/2008",
-      "titel": "Delivery Driver",
-      "beschreibung": "City Briefkurier · Pforzheim, BW"
-    },
-    {
-      "zeitraum": "06/2007–09/2007",
-      "titel": "Internship in Journalism and Culture",
-      "beschreibung": "M.D. · Magdeburg, SA"
+      "zeitraum": "02/2018 – 01/2024",
+      "titel": "Roles outside IT",
+      "beschreibung": "Warehousing, order picking, shipping, construction and electroplating · Pforzheim",
+      "hinweis": "Transferable: inventory management, structured shift work, reliability with deadlines."
     }
   ],
-  "skillsMax": 14,
+  "weitereStationen": [
+    {
+      "zeitraum": "07/2016 – 10/2016",
+      "titel": "Stay abroad in Brazil",
+      "beschreibung": "Manual work on a self-sufficient farm"
+    },
+    {
+      "zeitraum": "10/2005 – 10/2006",
+      "titel": "Civilian service · carer",
+      "beschreibung": "IB education centre · Pforzheim"
+    }
+  ],
+  "skillGroups": [
+    {
+      "titel": "Systems & Infrastructure",
+      "items": [
+        "Windows Server 2025",
+        "Active Directory",
+        "Microsoft SQL Server",
+        "VMware vSphere",
+        "Debian-based Linux systems",
+        "DHCP · DNS · PXE"
+      ]
+    },
+    {
+      "titel": "Endpoint Management & Monitoring",
+      "items": [
+        "baramundi Management Suite",
+        "Matrix42 Empirum",
+        "WinPE & drivers",
+        "CheckMK"
+      ]
+    },
+    {
+      "titel": "Automation & Development",
+      "items": [
+        "Bash",
+        "Python",
+        "Ansible (learning)",
+        "Docker",
+        "Git / GitHub",
+        "C#",
+        "HTML · CSS · JavaScript"
+      ]
+    },
+    {
+      "titel": "Documentation & Languages",
+      "items": [
+        "Technical documentation",
+        "English",
+        "Russian"
+      ]
+    }
+  ],
   "skills": [
     {
-      "label": "Windows Server 2025",
-      "level": 6
+      "label": "Windows Server 2025"
     },
     {
-      "label": "Active Directory",
-      "level": 6
+      "label": "Active Directory"
     },
     {
-      "label": "Virtualisation",
-      "level": 6
+      "label": "Microsoft SQL Server"
     },
     {
-      "label": "UEM",
-      "level": 6
+      "label": "VMware vSphere"
     },
     {
-      "label": "Microsoft 365 / Cloud Solutions",
-      "level": 6
+      "label": "Debian-based Linux systems"
     },
     {
-      "label": "Linux",
-      "level": 6
+      "label": "DHCP · DNS · PXE"
     },
     {
-      "label": "Docker",
-      "level": 6
+      "label": "baramundi Management Suite"
     },
     {
-      "label": "IT Security",
-      "level": 5
+      "label": "Matrix42 Empirum"
     },
     {
-      "label": "Python",
-      "level": 5
+      "label": "WinPE & drivers"
     },
     {
-      "label": "SQL",
-      "level": 5
+      "label": "CheckMK"
     },
     {
-      "label": "GitHub",
-      "level": 5
+      "label": "Bash"
     },
     {
-      "label": "Visual Studio Code",
-      "level": 6
+      "label": "Python"
     },
     {
-      "label": "HTML, CSS & PHP",
-      "level": 3
+      "label": "Ansible (learning)"
     },
     {
-      "label": "C#",
-      "level": 4
+      "label": "Docker"
+    },
+    {
+      "label": "Git / GitHub"
+    },
+    {
+      "label": "C#"
+    },
+    {
+      "label": "HTML · CSS · JavaScript"
+    },
+    {
+      "label": "Technical documentation"
+    },
+    {
+      "label": "English"
+    },
+    {
+      "label": "Russian"
     }
   ],
-  "soft": [
-    {
-      "label": "English",
-      "level": 10
-    },
-    {
-      "label": "Russian",
-      "level": 6
-    },
-    {
-      "label": "Work Discipline & Reliability",
-      "level": 10
-    }
-  ],
+  "soft": [],
   "interessen": [
-    "Martial Arts",
+    "Martial arts",
     "Reading",
-    "AI-Assisted Development"
+    "AI-assisted development"
   ],
   "persoenlich": {
     "kontakt": "vleicht@keemail.me",
-    "wohnort": "Pforzheim"
+    "wohnort": "Pforzheim, Germany"
   }
 }

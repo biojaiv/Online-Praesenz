@@ -24,17 +24,18 @@ Zeitleisten mit Ringpunkten), aber als echte Typografie (Barlow / Barlow Condens
 Kein eigener Seitenrahmen und ein einfarbiger Grund: die Projektion macht den Grund
 transparent und zeichnet den Hologrammrahmen selbst (`webTransform: false`).
 
-## PDF mit echtem Text
-`npm run build:cv-projection` erzeugt aus derselben Vorlage auch `public/cv/CV_DE.pdf` und
-`CV_EN.pdf`: zwei Seiten im bisherigen Format (210 × 320 mm), Design des bisherigen PDFs
-(dunkle Seite, leuchtender Seitenrahmen), aber mit echtem, auswählbarem Text statt Bildern.
-Tagged PDF, Titel, eingebettete Schriften, klickbare E-Mail und Website. Starke Sperrung
-wird im PDF auf 0,02 em reduziert, weil gesperrte Großbuchstaben sonst als Einzelbuchstaben
-extrahiert werden („F A C H …“) und Bewerbermanagement-Systeme die Begriffe nicht finden.
-Achtung: `npm run build:cv` (Altskript) würde die PDFs wieder aus dem Bild-SVG erzeugen.
+## Eine Quelle für alle Fassungen
+`scripts/cv/hologram_content.mjs` speist alles; `npm run build:cv-projection` erzeugt:
+- **Hologramm** (dunkel, Website): `public/cv/CV_Projection_DE/EN.webp` + Sprungmarken.
+- **Bewerbungs-PDF** (hell, `scripts/cv/print_cv.mjs`): `public/cv/CV_DE/EN.pdf`, A4, einspaltig,
+  echter Text, Tagged PDF, Fußzeile mit Seitenzahl, klickbare E-Mail und Website. Hell und einspaltig,
+  weil Bewerbermanagement-Systeme neutrale Hintergründe und einspaltigen Text am zuverlässigsten lesen.
+  Geringe Sperrung, damit Begriffe nicht als Einzelbuchstaben extrahiert werden.
+- **DOCX** (LibreOffice aus semantischem HTML): `public/cv/CV_Reader_DE/EN.docx` mit echten Word-Überschriften.
+- **Lesefassung**: `src/data/cv.de/en.json` (inkl. Projekte, Kenntnisgruppen, weitere Stationen) für `reader.js`.
+Datumsangaben einheitlich MM/JJJJ. Achtung: das Altskript `npm run build:cv` würde PDFs und DOCX
+wieder aus den alten Quellen erzeugen.
 
 ## Offen
-- Die Lesefassung (`reader.js`, Daten aus `src/data/cv.*.json`) und die DOCX-Downloads
-  (`public/cv/CV_Reader_*.docx`) enthalten weiterhin den ausführlichen Werdegang.
 - `scripts/cv/check_transparency.mjs`: Transparenz und Inhalt bestehen; die anschließende
   Prüfung auf `.project-choice` ist veraltet (Element existiert seit den Projektflügeln nicht mehr).

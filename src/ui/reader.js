@@ -131,20 +131,34 @@ function education(data) {
     </section>`;
 }
 
+function projects(data) {
+  if (!data.projekte?.length) return '';
+  return `
+    <section class="cv-section" id="cv-projects" aria-labelledby="cv-projects-title">
+      <p class="cv-kicker">${escapeHTML(t('reader.kickerProjects'))}</p>
+      <h2 id="cv-projects-title">${escapeHTML(t('reader.projectsTitle'))}</h2>
+      <ul class="cv-projects">${data.projekte.map((project) => `
+        <li><h3>${escapeHTML(project.titel)} <span class="cv-projects__status">${escapeHTML(project.status)}</span></h3>
+        <p>${escapeHTML(project.beschreibung)}</p></li>`).join('')}</ul>
+    </section>`;
+}
+
 function work(data) {
   return `
     <section class="cv-section cv-section--work" id="cv-work" aria-labelledby="cv-work-title">
       <p class="cv-kicker cv-kicker--amber">${escapeHTML(t('reader.kickerExperience'))}</p>
       <h2 id="cv-work-title">${escapeHTML(t('reader.careerTitle'))}</h2>
       ${timeline(data.beruflicherWerdegang, 'cv-timeline--work')}
+      ${data.weitereStationen?.length ? `<h3 class="cv-subtitle">${escapeHTML(t('reader.moreTitle'))}</h3>${timeline(data.weitereStationen, 'cv-timeline--work')}` : ''}
     </section>`;
 }
 
 function skills(data) {
-  const groups = [
-    [t('reader.technicalSkills'), data.skills || []],
-    [t('reader.languagesWorkingStyle'), data.soft || []],
-  ];
+  // Grouped skills from the shared CV content; the older flat lists remain a fallback.
+  const groups = data.skillGroups?.length
+    ? data.skillGroups.map((group) => [group.titel, group.items.map((label) => ({ label }))])
+    : [[t('reader.technicalSkills'), data.skills || []], [t('reader.languagesWorkingStyle'), data.soft || []]]
+      .filter(([, rows]) => rows.length);
 
   return `
     <section class="cv-section" id="cv-skills" aria-labelledby="cv-skills-title">
@@ -291,6 +305,7 @@ export function createReader({ container, onNavigate, onOpenChange, onTransition
       overview(data),
       skills(data),
       education(data),
+      projects(data),
       work(data),
       contact(data),
     ].join('');

@@ -1,64 +1,197 @@
 {
   "name": "Vladimir Leicht",
   "title": "Fachinformatiker für Systemintegration",
-  "fokus": "liegt auf nachhaltigen, sauber umgesetzten IT-Lösungen, die ich mit Ausdauer und Ideenreichtum realisiere.",
-  "signatur": ["Windows Server", "Virtualisierung", "UEM", "Cloud-Lösungen"],
-  "verfuegbar": "Offen für berufliche Anfragen",
-  "interessensschwerpunkte": "Planung, Konfiguration und Administration komplexer IT-Infrastrukturen",
+  "fokus": "Ich plane, baue und betreue zuverlässige IT-Infrastrukturen – mit einem Schwerpunkt auf Windows-Umgebungen, Virtualisierung und automatisierter Clientbereitstellung.",
+  "signatur": [
+    "Windows Server",
+    "Active Directory",
+    "VMware vSphere",
+    "baramundi UEM"
+  ],
+  "verfuegbar": "Ab sofort verfügbar · Remote möglich",
+  "interessensschwerpunkte": "Entwicklungsziel: Cloud Engineering",
   "bildungsweg": [
     {
-      "zeitraum": "2024–2026",
+      "zeitraum": "2024 – 2026",
       "titel": "Umschulung zum Fachinformatiker für Systemintegration",
-      "beschreibung": "TASys GmbH · Abschluss 2026",
-      "hinweis": "Praxisphase 01/2026–07/2026 beim Amt für IT und Digitalisierung des Landratsamts Enzkreis"
+      "beschreibung": "TASys GmbH · Abschluss 2026 (IHK)"
     },
     {
-      "zeitraum": "2001–2004",
+      "zeitraum": "01/2026 – 07/2026",
+      "titel": "Praxisphase",
+      "beschreibung": "Landratsamt Enzkreis · Amt für IT und Digitalisierung",
+      "hinweis": "Abschlussprojekt: baramundi-Pilotumgebung (siehe Projekte)"
+    },
+    {
+      "zeitraum": "2001 – 2004",
       "titel": "Technisches Gymnasium Heinrich-Wieland",
       "beschreibung": "Abitur · Leistungskurse IT und Englisch"
     }
   ],
+  "projekte": [
+    {
+      "titel": "Abschlussprojekt (IHK): baramundi-Pilotumgebung",
+      "status": "Abgeschlossen",
+      "beschreibung": "Planung, Aufbau, Test und Dokumentation einer Pilotumgebung als Entscheidungsgrundlage für eine mögliche Ablösung von Matrix42 Empirum. Vier von vier Windows-11-Referenzclients vollständig bereitgestellt und inventarisiert."
+    },
+    {
+      "titel": "Recovery Lab",
+      "status": "Bestand + Erweiterung",
+      "beschreibung": "Labor mit vier Debian-VMs, Anwendung und Datenbank. Externe Sicherung und automatisierter Wiederanlauf sind geplant."
+    },
+    {
+      "titel": "Ansible-Testlab",
+      "status": "In Entwicklung",
+      "beschreibung": "Reproduzierbare Konfiguration von Test-Servern und -Clients mit Ansible."
+    },
+    {
+      "titel": "Interaktives Portfolio",
+      "status": "Online",
+      "beschreibung": "vladimir-leicht.com – zweisprachig, barrierearm, mit Three.js, Blender und automatisierten Browsertests."
+    }
+  ],
   "beruflicherWerdegang": [
-    {"zeitraum":"03/2023–12/2024","titel":"Servicemitarbeiter","beschreibung":"Esso Tankstelle · Pforzheim, BW"},
-    {"zeitraum":"11/2023–01/2024","titel":"Lagerist / Warenwirtschaftssteuerung","beschreibung":"Kaufhof · Pforzheim, BW"},
-    {"zeitraum":"02/2022–01/2023","titel":"Kommissionierer / Lagerist","beschreibung":"gastromatic Aldinger · Pforzheim, BW"},
-    {"zeitraum":"04/2021–02/2022","titel":"Arbeitssuchend","beschreibung":"Unter erschwerten wirtschaftlichen Bedingungen"},
-    {"zeitraum":"07/2019–09/2020","titel":"Kommissionierer / Lagerist","beschreibung":"gastromatic Aldinger · Pforzheim, BW"},
-    {"zeitraum":"02/2019–06/2019","titel":"Bauhelfer","beschreibung":"Pfirmann · Pforzheim, BW"},
-    {"zeitraum":"09/2018–01/2019","titel":"Versandmitarbeiter","beschreibung":"Klingel · Pforzheim, BW"},
-    {"zeitraum":"02/2018–08/2018","titel":"Galvaniseur","beschreibung":"Dudaco · Pforzheim, BW"},
-    {"zeitraum":"08/2017–01/2018","titel":"Arbeitssuchend","beschreibung":""},
-    {"zeitraum":"11/2011–07/2017","titel":"Pflegehelfer","beschreibung":"ISB, Helfende Hand und Mobilee · Karlsruhe, BW"},
-    {"zeitraum":"10/2010–09/2011","titel":"Verschiedene Nebentätigkeiten","beschreibung":""},
-    {"zeitraum":"04/2010–09/2010","titel":"Arbeitsunfähig","beschreibung":"","hinweis":"Seit diesem Zeitpunkt stabiler gesundheitlicher Zustand"},
-    {"zeitraum":"02/2010–04/2010","titel":"Helfer in der Lagerwirtschaft","beschreibung":"DEKRA Arbeit GmbH · Pforzheim, BW"},
-    {"zeitraum":"08/2008–01/2010","titel":"Arbeitsunfähig","beschreibung":""},
-    {"zeitraum":"07/2008–09/2008","titel":"Produktionsmitarbeiter","beschreibung":"Witzenmann · Pforzheim, BW"},
-    {"zeitraum":"02/2008–05/2008","titel":"Auslieferungsfahrer","beschreibung":"City Briefkurier · Pforzheim, BW"},
-    {"zeitraum":"06/2007–09/2007","titel":"Praktikum im Bereich Journalismus und Kultur","beschreibung":"M.D. · Magdeburg, SA"}
+    {
+      "zeitraum": "03/2023 – 12/2024",
+      "titel": "Servicemitarbeiter (Nebentätigkeit)",
+      "beschreibung": "Esso Tankstelle · Pforzheim"
+    },
+    {
+      "zeitraum": "04/2021 – 02/2022",
+      "titel": "Arbeitssuchend",
+      "beschreibung": "Corona-Zeit"
+    },
+    {
+      "zeitraum": "02/2018 – 01/2024",
+      "titel": "Fachfremde Tätigkeiten",
+      "beschreibung": "Lager, Kommissionierung, Versand, Bau und Galvanik · Pforzheim",
+      "hinweis": "Übertragbar: Warenwirtschaft und Bestandsführung, strukturiertes Arbeiten im Schichtbetrieb, Termintreue."
+    }
   ],
-  "skillsMax": 14,
+  "weitereStationen": [
+    {
+      "zeitraum": "07/2016 – 10/2016",
+      "titel": "Auslandsaufenthalt in Brasilien",
+      "beschreibung": "Handwerkliche Arbeiten auf einer Selbstversorgerfarm"
+    },
+    {
+      "zeitraum": "10/2005 – 10/2006",
+      "titel": "Zivildienst · Betreuer",
+      "beschreibung": "IB Bildungszentrum · Pforzheim"
+    }
+  ],
+  "skillGroups": [
+    {
+      "titel": "Systeme & Infrastruktur",
+      "items": [
+        "Windows Server 2025",
+        "Active Directory",
+        "Microsoft SQL Server",
+        "VMware vSphere",
+        "Debian-basierte Linux-Systeme",
+        "DHCP · DNS · PXE"
+      ]
+    },
+    {
+      "titel": "Endpoint-Management & Monitoring",
+      "items": [
+        "baramundi Management Suite",
+        "Matrix42 Empirum",
+        "WinPE & Treiber",
+        "CheckMK"
+      ]
+    },
+    {
+      "titel": "Automatisierung & Entwicklung",
+      "items": [
+        "Bash",
+        "Python",
+        "Ansible (Einarbeitung)",
+        "Docker",
+        "Git / GitHub",
+        "C#",
+        "HTML · CSS · JavaScript"
+      ]
+    },
+    {
+      "titel": "Dokumentation & Sprachen",
+      "items": [
+        "Technische Dokumentation",
+        "Englisch",
+        "Russisch"
+      ]
+    }
+  ],
   "skills": [
-    {"label":"Windows Server 2025","level":6},
-    {"label":"Active Directory","level":6},
-    {"label":"Virtualisierung","level":6},
-    {"label":"UEM","level":6},
-    {"label":"Microsoft 365 / Cloud-Lösungen","level":6},
-    {"label":"Linux","level":6},
-    {"label":"Docker","level":6},
-    {"label":"IT-Sicherheit","level":5},
-    {"label":"Python","level":5},
-    {"label":"SQL","level":5},
-    {"label":"GitHub","level":5},
-    {"label":"Visual Studio Code","level":6},
-    {"label":"HTML, CSS & PHP","level":3},
-    {"label":"C#","level":4}
+    {
+      "label": "Windows Server 2025"
+    },
+    {
+      "label": "Active Directory"
+    },
+    {
+      "label": "Microsoft SQL Server"
+    },
+    {
+      "label": "VMware vSphere"
+    },
+    {
+      "label": "Debian-basierte Linux-Systeme"
+    },
+    {
+      "label": "DHCP · DNS · PXE"
+    },
+    {
+      "label": "baramundi Management Suite"
+    },
+    {
+      "label": "Matrix42 Empirum"
+    },
+    {
+      "label": "WinPE & Treiber"
+    },
+    {
+      "label": "CheckMK"
+    },
+    {
+      "label": "Bash"
+    },
+    {
+      "label": "Python"
+    },
+    {
+      "label": "Ansible (Einarbeitung)"
+    },
+    {
+      "label": "Docker"
+    },
+    {
+      "label": "Git / GitHub"
+    },
+    {
+      "label": "C#"
+    },
+    {
+      "label": "HTML · CSS · JavaScript"
+    },
+    {
+      "label": "Technische Dokumentation"
+    },
+    {
+      "label": "Englisch"
+    },
+    {
+      "label": "Russisch"
+    }
   ],
-  "soft": [
-    {"label":"Englisch","level":10},
-    {"label":"Russisch","level":6},
-    {"label":"Arbeitsdisziplin & Verlässlichkeit","level":10}
+  "soft": [],
+  "interessen": [
+    "Kampfsport",
+    "Lesen",
+    "KI-gestützte Entwicklung"
   ],
-  "interessen": ["Kampfsport", "Lesen", "KI-gestützte Entwicklung"],
-  "persoenlich": {"kontakt":"vleicht@keemail.me","wohnort":"Pforzheim"}
+  "persoenlich": {
+    "kontakt": "vleicht@keemail.me",
+    "wohnort": "Pforzheim"
+  }
 }

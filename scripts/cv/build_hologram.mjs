@@ -6,11 +6,28 @@
  * Run: npm run build:cv-projection   (requires Playwright Chromium and ImageMagick)
  */
 import { chromium } from 'playwright';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, copyFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { hologramContent } from './hologram_content.mjs';
+import { printMarkup, docxMarkup } from './print_cv.mjs';
+
+const EMAIL = 'vleicht@keemail.me', WEB = 'vladimir-leicht.com';
+
+/** The HTML reading version (reader.js) reads src/data/cv.*.json; derive it from the same content. */
+function readerData(c) {
+  const station = row => ({ zeitraum: row.when, titel: row.title, beschreibung: row.meta, ...(row.detail ? { hinweis: row.detail } : {}) });
+  return {
+    name: 'Vladimir Leicht', title: c.role, fokus: c.profile, signatur: c.focus,
+    verfuegbar: `${c.status[0]} · ${c.status[2]}`, interessensschwerpunkte: c.goal,
+    bildungsweg: c.education.map(station), projekte: c.projects.map(p => ({ titel: p.title, status: p.tag, beschreibung: p.text })),
+    beruflicherWerdegang: c.work.map(station), weitereStationen: c.more.map(station),
+    skillGroups: c.skills.map(([titel, items]) => ({ titel, items })),
+    skills: c.skills.flatMap(([, items]) => items).map(label => ({ label })), soft: [],
+    interessen: c.interests.map(([, label]) => label), persoenlich: { kontakt: EMAIL, wohnort: c.status[1] },
+  };
+}
 
 const ROOT = resolve(new URL('../..', import.meta.url).pathname);
 const PAGE = { width: 1241, height: 1893 };
@@ -44,14 +61,8 @@ const timeline = (rows, tone = 'amber') => `<ol class="timeline timeline--${tone
   <span class="when">${esc(row.when)}</span><span class="node" aria-hidden="true"></span>
   <div class="what"><strong>${esc(row.title)}</strong><span>${esc(row.meta)}</span>${row.detail ? `<em>${esc(row.detail)}</em>` : ''}</div></li>`).join('')}</ol>`;
 
-function markup(c, { print = false } = {}) {
-  // The PDF adds the page frame, a clickable address and the website; the hologram gets neither.
-  const contact = print ? [...c.contact, ['globe', 'vladimir-leicht.com']] : c.contact;
-  const contactItem = ([name, label]) => {
-    const href = name === 'mail' ? `mailto:${label}` : name === 'globe' ? `https://${label}/` : '';
-    const text = href && print ? `<a href="${href}">${esc(label)}</a>` : esc(label);
-    return `<li>${icon(name, 30)}<span>${text}</span></li>`;
-  };
+function markup(c) {
+  const contactItem = ([name, label]) => `<li>${icon(name, 30)}<span>${esc(label)}</span></li>`;
   const page1 = `<section class="page">
     <header class="masthead" data-anchor="uebersicht">
       <h1><span class="slash">./</span> Vladimir Leicht</h1>
@@ -66,7 +77,7 @@ function markup(c, { print = false } = {}) {
     <div class="skills">${c.skills.map(([group, items]) => `<div><h3>${esc(group)}</h3><ul>${items.map(item => `<li>${esc(item)}</li>`).join('')}</ul></div>`).join('')}</div>
     <div class="closing">
       <div>${heading('star', c.sections.interests)}<ul class="icons">${c.interests.map(([name, label]) => `<li>${icon(name, 30)}<span>${esc(label)}</span></li>`).join('')}</ul></div>
-      <div>${heading('user', c.sections.contact, 'kontakt')}<ul class="icons">${contact.map(contactItem).join('')}</ul></div>
+      <div>${heading('user', c.sections.contact, 'kontakt')}<ul class="icons">${c.contact.map(contactItem).join('')}</ul></div>
     </div>
   </section>`;
   const page2 = `<section class="page">
@@ -75,8 +86,7 @@ function markup(c, { print = false } = {}) {
     ${heading('case', c.sections.work, 'arbeitsleben')}${timeline(c.work, 'blue')}
     ${heading('globe', c.sections.more)}${timeline(c.more, 'blue')}
   </section>`;
-  const title = c.lang === 'de' ? 'Lebenslauf – Vladimir Leicht' : 'CV – Vladimir Leicht';
-  return `<!doctype html><html lang="${c.lang}"><head><meta charset="utf-8"><title>${title}</title><meta name="author" content="Vladimir Leicht"><style>${FONTS}${CSS}${print ? PRINT_CSS : ''}</style></head><body${print ? ' class="print"' : ''}>${page1}${page2}</body></html>`;
+  return `<!doctype html><html lang="${c.lang}"><head><meta charset="utf-8"><style>${FONTS}${CSS}</style></head><body>${page1}${page2}</body></html>`;
 }
 
 const CSS = `
@@ -130,24 +140,6 @@ body{color:var(--ink);font:400 22px/1.45 Barlow,sans-serif;-webkit-font-smoothin
 .icons .icon{stroke:#9fc9ec}
 `;
 
-/** PDF pages keep the former CV format: A4 width (210 mm), height in the page aspect (≈ 320 mm).
- *  The 1241 px layout is scaled onto that width, so text stays text at print size. */
-const PDF_WIDTH_MM = 210, PDF_HEIGHT_MM = Math.round(210 * PAGE.height / PAGE.width * 100) / 100;
-const PDF_SCALE = PDF_WIDTH_MM / (PAGE.width * 25.4 / 96);
-
-/** PDF only: the glowing page frame of the original design around each page. */
-const PRINT_CSS = `
-@page{size:${PDF_WIDTH_MM}mm ${PDF_HEIGHT_MM}mm;margin:0}
-.print .page{break-after:page;background:radial-gradient(ellipse 80% 60% at 50% 30%,#0a1628 0%,#050b16 70%)}
-.print .page:last-child{break-after:auto}
-.print .page::before{content:'';position:absolute;inset:26px;border:2px solid #3b82c4;border-radius:30px;box-shadow:0 0 18px #2f7fd099,inset 0 0 26px #2f7fd033;pointer-events:none}
-.print .page::after{content:'';position:absolute;left:50%;top:24px;width:180px;height:4px;margin-left:-90px;border-radius:2px;background:linear-gradient(90deg,transparent,#6fb3e8,transparent)}
-.print .icons a{color:var(--ink);text-decoration:none}
-/* Wide letter-spacing makes PDF text extract as single letters ("F A C H …"), which ATS and
-   screen readers cannot match; the PDF keeps capitals but spaces them only slightly. */
-.print :is(.role,.status,.goal,.projects .tag,.skills h3,.heading){letter-spacing:.02em}
-`;
-
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const temp = await mkdtemp(join(tmpdir(), 'cv-hologram-'));
 const projection = JSON.parse(await readFile(join(ROOT, 'src/data/cvProjection.json'), 'utf8'));
@@ -166,12 +158,20 @@ try {
     const png = join(temp, `cv-${language}.png`);
     await page.screenshot({ path: png, fullPage: true });
     execFileSync('magick', [png, '-quality', '92', '-define', 'webp:method=6', join(ROOT, `public/cv/CV_Projection_${language.toUpperCase()}.webp`)]);
-    // Text PDF for download: real, selectable text (ATS and screen readers), same layout and design.
+    // Application documents: light, single-column A4 PDF with real text and a DOCX (see print_cv.mjs).
+    const LANG = language.toUpperCase();
     const printHtml = join(temp, `cv-${language}-print.html`);
-    await writeFile(printHtml, markup(content, { print: true }));
+    await writeFile(printHtml, printMarkup(content, { fonts: FONTS, email: EMAIL, web: WEB }));
     await page.goto(`file://${printHtml}`);
     await page.evaluate(() => document.fonts.ready);
-    await page.pdf({ path: join(ROOT, `public/cv/CV_${language.toUpperCase()}.pdf`), width: `${PDF_WIDTH_MM}mm`, height: `${PDF_HEIGHT_MM}mm`, scale: PDF_SCALE, printBackground: true, preferCSSPageSize: true, tagged: true, outline: false });
+    const footer = `<div style="width:100%;padding:0 17mm;font:7.5pt Arial,sans-serif;color:#8a97a5;display:flex;justify-content:space-between"><span>Vladimir Leicht · ${language === 'de' ? 'Lebenslauf' : 'CV'}</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`;
+    await page.pdf({ path: join(ROOT, `public/cv/CV_${LANG}.pdf`), preferCSSPageSize: true, printBackground: true, tagged: true,
+      displayHeaderFooter: true, headerTemplate: '<span></span>', footerTemplate: footer });
+    const docxHtml = join(temp, `CV_Reader_${LANG}.html`);
+    await writeFile(docxHtml, docxMarkup(content, { email: EMAIL, web: WEB }));
+    execFileSync('soffice', ['--headless', '--infilter=HTML (StarWriter)', '--convert-to', 'docx:MS Word 2007 XML', '--outdir', temp, docxHtml], { stdio: 'ignore' });
+    await copyFile(join(temp, `CV_Reader_${LANG}.docx`), join(ROOT, `public/cv/CV_Reader_${LANG}.docx`));
+    await writeFile(join(ROOT, `src/data/cv.${language}.json`), JSON.stringify(readerData(content), null, 2) + '\n');
     projection[language] = { pageCount: 2, pageAspect: PAGE.width / PAGE.height, webTransform: false, anchors };
     console.log(`CV_Projection_${language.toUpperCase()}.webp`, JSON.stringify(anchors));
     await page.close();
