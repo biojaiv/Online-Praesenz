@@ -1434,9 +1434,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     /** Camera pose that frames a portal's open frame inside the projection viewport. */
     portalPlan(id, fullViewport) {
       // The frame takes most of the viewport; the moving scene stays visible around it.
-      const fill = PORTAL_FRAME_FILL;
-      const viewport = { width: fullViewport.width * fill, height: fullViewport.height * fill,
-        left: fullViewport.left + fullViewport.width * (1 - fill) / 2, top: fullViewport.top + fullViewport.height * (1 - fill) / 2 };
+      // Fit inside both the projection viewport and the canvas, which starts below
+      // the site header; otherwise the top of the frame would be cut off.
+      const top = Math.max(fullViewport.top, view.top + 6);
+      const bottom = Math.min(fullViewport.top + fullViewport.height, view.top + view.height - 6);
+      const left = Math.max(fullViewport.left, view.left + 6);
+      const right = Math.min(fullViewport.left + fullViewport.width, view.left + view.width - 6);
+      const fill = PORTAL_FRAME_FILL, width = right - left, height = bottom - top;
+      const viewport = { width: width * fill, height: height * fill,
+        left: left + width * (1 - fill) / 2, top: top + height * (1 - fill) / 2 };
       const info = portals.frameInfo(id, viewport.width / viewport.height);
       if (!info) return null;
       const tan = halfFovTan();

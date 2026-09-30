@@ -1,6 +1,32 @@
 import { getInformationContent } from './content.js';
 import { translateForLanguage } from '../i18n.js';
 import { renderProjectSummary } from './projectSummary.js';
+import { RUNES } from '../scene/runes.js';
+import { SACRED_FIGURES } from '../scene/sacredGeometry.js';
+
+/** Stroke data (unit box, y up) to an SVG path centred on cx/cy. */
+const strokePath = (strokes, cx = 0, cy = 0, size = 1) => strokes.map(([x1, y1, x2, y2]) =>
+  `M${(cx + x1 * size).toFixed(2)} ${(cy - y1 * size).toFixed(2)}L${(cx + x2 * size).toFixed(2)} ${(cy - y2 * size).toFixed(2)}`).join('');
+const PROFILE_RUNES = ['ansuz', 'jera', 'algiz', 'kenaz'];
+const rune = name => `<svg class="info-rune" viewBox="-14 -14 28 28" aria-hidden="true" focusable="false"><circle r="12.5"/><path d="${strokePath(RUNES[name].strokes, 0, 0, 7.5)}"/></svg>`;
+// Orrery sigil: scale ring, 30-second progress, turning orbit and the monogram.
+const orrerySigil = () => {
+  const ticks = Array.from({ length: 60 }, (_, i) => {
+    const a = i / 60 * Math.PI * 2, inner = i % 5 ? 54 : 51;
+    return `M${(Math.sin(a) * inner).toFixed(2)} ${(-Math.cos(a) * inner).toFixed(2)}L${(Math.sin(a) * 57).toFixed(2)} ${(-Math.cos(a) * 57).toFixed(2)}`;
+  }).join('');
+  const seeds = Array.from({ length: 6 }, (_, i) => { const a = i / 6 * Math.PI * 2; return `<circle cx="${(Math.cos(a) * 29).toFixed(2)}" cy="${(Math.sin(a) * 29).toFixed(2)}" r="1.6"/>`; }).join('');
+  return `<svg class="info-orrery" viewBox="-60 -60 120 120" aria-hidden="true" focusable="false">
+    <path class="info-orrery__ticks" d="${ticks}"/>
+    <circle class="info-orrery__track" r="47"/>
+    <circle class="info-orrery__progress" r="47" pathLength="100" transform="rotate(-90)"/>
+    <g class="info-orrery__orbit"><circle class="info-orrery__ring" r="39"/><circle class="info-orrery__planet" cx="39" r="3"/></g>
+    <g class="info-orrery__seeds"><circle class="info-orrery__ring info-orrery__ring--inner" r="29"/>${seeds}</g>
+    <text class="info-orrery__monogram" y="1" text-anchor="middle" dominant-baseline="middle">VL</text>
+  </svg>`;
+};
+const flower = SACRED_FIGURES.find(figure => figure.name === 'Flower of Life') || SACRED_FIGURES[0];
+const watermark = () => `<svg class="info-profile__watermark" viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true" focusable="false"><path d="${strokePath(flower.strokes)}"/></svg>`;
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
@@ -46,10 +72,15 @@ export function renderInformationMarkup(language, resources) {
     </section>
 
     <section class="info-page info-profile" id="kurzprofil" data-info-page="kurzprofil" aria-labelledby="info-profile-title" lang="${lang}">
-      <div class="info-profile__sheet">
-        <div class="info-profile__top"><p class="info-eyebrow">${esc(c.profileKicker)} <span class="info-time">30 ${lang === 'de' ? 'SEK' : 'SEC'}</span></p><div class="info-profile__tools">${languages('profile')}<button class="info-close" type="button" data-info-close data-info-focus="profile-close" aria-label="${esc(c.close)}"><span aria-hidden="true">×</span> <span>${esc(c.close)}</span></button></div></div>
-        <header class="info-profile__identity"><div class="info-monogram" aria-hidden="true">VL</div><div><h2 id="info-profile-title" tabindex="-1" data-info-entry>${esc(r.name)}</h2><p class="info-role">${esc(c.role)}</p><p class="info-meta">${esc(r.location)} · ${esc(c.remote)} · ${esc(c.available)}</p></div></header>
-        <div class="info-profile__fields">${c.profileFields.map(([heading, text], i) => `<section class="info-profile__field"><h3><span aria-hidden="true">0${i + 1}</span>${esc(heading)}</h3><p>${esc(text)}</p><p class="info-profile__note">[ ${c.profileNotes[i].map(esc).join(' • ')} ]</p></section>`).join('')}</div>
+      <div class="info-profile__sheet" data-profile-sheet data-done-label="✓ ${esc(c.profileDone)}">
+        ${watermark()}<div class="info-profile__scan" aria-hidden="true"></div>
+        <div class="info-profile__top"><p class="info-eyebrow">${esc(c.profileKicker)} <span class="info-time" data-profile-clock><span class="info-time__dot" aria-hidden="true"></span><span class="info-time__value" aria-hidden="true">00:30</span><span class="u-visually-hidden">30 ${lang === 'de' ? 'Sekunden' : 'seconds'}</span></span></p><div class="info-profile__tools">${languages('profile')}<button class="info-close" type="button" data-info-close data-info-focus="profile-close" aria-label="${esc(c.close)}"><span aria-hidden="true">×</span> <span>${esc(c.close)}</span></button></div></div>
+        <header class="info-profile__identity">
+          <div class="info-monogram">${orrerySigil()}</div>
+          <div class="info-profile__who"><h2 id="info-profile-title" tabindex="-1" data-info-entry>${esc(r.name)}</h2><p class="info-role">${esc(c.role)}</p><p class="info-meta"><i class="info-live-dot" aria-hidden="true"></i>${esc(r.location)} · ${esc(c.remote)} · ${esc(c.available)}</p></div>
+          <dl class="info-profile__stats">${c.profileStats.map(([value, label]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
+        </header>
+        <div class="info-profile__fields">${c.profileFields.map(([heading, text], i) => `<section class="info-profile__field" data-profile-station="${i}" style="--station:${i}"><span class="info-profile__rail" aria-hidden="true"><i></i></span><h3>${rune(PROFILE_RUNES[i])}<span aria-hidden="true">0${i + 1}</span>${esc(heading)}<small class="info-profile__rune-name" aria-hidden="true">${esc(c.profileRunes[i])}</small></h3><p>${esc(text)}</p><ul class="info-profile__note info-chips" aria-label="${esc(c.profileSkills)}">${c.profileNotes[i].map(note => `<li>${esc(note)}</li>`).join('')}</ul></section>`).join('')}</div>
         <div class="info-actions info-profile__actions">${route('projekt/abschluss', arrow(c.viewProject), 'profile-project', 'info-button info-button--primary')}${route('lebenslauf', c.openCv, 'profile-cv', 'info-button')}${route('kontakt', c.getInTouch, 'profile-contact', 'info-button')}</div>
       </div>
     </section>

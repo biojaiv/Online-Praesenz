@@ -22,6 +22,9 @@ export const informationContent = {
       ['Netzwerk', 'WinPE', 'Treiber', 'Dokumentation'],
       ['Ansible (Einarbeitung)', 'Docker (Ausbildung)', 'Python'],
     ],
+    profileRunes: ['Ansuz · Intelligenz', 'Jera · Kompetenz', 'Algiz · Schutz', 'Kenaz · Kreativität'],
+    profileStats: [['4/4', 'Referenzclients bereitgestellt'], ['40 h', 'Netto-Projektzeit'], ['4', 'Ebenen Fehleranalyse']],
+    profileDone: 'Gelesen', profileSkills: 'Kenntnisse',
     viewProject: 'Abschlussprojekt ansehen', openCv: 'Lebenslauf öffnen', getInTouch: 'Kontakt aufnehmen',
     projectTitle: 'baramundi-Pilotumgebung', projectLocation: 'Landratsamt Enzkreis · Amt für IT und Digitalisierung',
     projectRows: [
@@ -82,6 +85,9 @@ export const informationContent = {
       ['Network', 'WinPE', 'Drivers', 'Documentation'],
       ['Ansible (learning)', 'Docker (training)', 'Python'],
     ],
+    profileRunes: ['Ansuz · intelligence', 'Jera · competence', 'Algiz · protection', 'Kenaz · creativity'],
+    profileStats: [['4/4', 'reference clients deployed'], ['40 h', 'net project time'], ['4', 'troubleshooting layers']],
+    profileDone: 'Read', profileSkills: 'Skills',
     viewProject: 'View final project', openCv: 'Open CV', getInTouch: 'Get in touch',
     projectTitle: 'baramundi pilot environment', projectLocation: 'Enzkreis District Office · IT and Digitalization Department',
     projectRows: [

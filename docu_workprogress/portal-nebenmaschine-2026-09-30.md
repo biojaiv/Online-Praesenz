@@ -29,6 +29,8 @@ des Sichtfelds vom mittleren Sockel.
    aus `runes.js`/`sacredGeometry.js`, als Relief (Bump) mit langsam atmendem Glimmen in der
    Projektfarbe; dahinter eine dunkle Graphitplatte zwischen den Schienen. Beide erscheinen
    im letzten Viertel der Entfaltung. Der Rahmen nimmt 92 % der Projektionsfläche ein.
+   Der Rahmen wird in die 3D-Fläche eingepasst (unterhalb der Kopfzeile), nicht ins ganze
+   Fenster, damit sein oberer Rand nie abgeschnitten wird.
    Solange ein Portal aktiv ist, wird die Maschine nach dem Orrery mit gelöschtem
    Tiefenpuffer gezeichnet: Ringe und Streben können weder Rahmen noch Inhalt überlagern.
 4. ESC schließt das Portal, faltet die Maschine und fliegt zurück (1,65 s / 1,9 s).

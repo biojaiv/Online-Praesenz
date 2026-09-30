@@ -60,15 +60,20 @@ try {
   assert(await page.evaluate(() => __stage.isRenderingPaused));
   await page.evaluate(() => {delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
   await advancing();
-  // Each factual application note stays at the bottom of its own field and wraps.
+  // Each factual application note stays at the bottom of its own field as wrapping skill chips.
   const notes=page.locator('.info-profile__field .info-profile__note');
   assert.equal(await notes.count(),4);
   for(const language of ['en','de']) {
     await page.locator(`[data-info-focus=profile-lang-${language}]`).click();
-    for(const text of await notes.allTextContents()) {
-      assert.match(text,/^\s*\[/); assert.match(text,/•/); assert.match(text,/\]\s*$/);
+    for(const note of await notes.all()) {
+      assert(await note.locator('li').count()>=3,'Skills are listed as chips');
+      assert(await note.evaluate(el=>el.getBoundingClientRect().right<=el.closest('.info-profile__field').getBoundingClientRect().right+1),'Chips wrap inside their field');
     }
   }
+  // The 30-second clock runs visibly and ends in a completed state.
+  const sheet=page.locator('[data-profile-sheet]');
+  assert(Number(await sheet.evaluate(el=>getComputedStyle(el).getPropertyValue('--profile-progress')))>0,'Reading clock is running');
+  assert.equal(await page.locator('.info-profile__field.is-reached').count()>=1,true);
   await page.setViewportSize({width:375,height:812});
   assert(await page.locator('.info-profile').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
   await page.setViewportSize({width:1440,height:1000});
@@ -80,5 +85,5 @@ try {
     assert(await target.evaluate(el=>el.classList.contains('control-ripple')),await target.textContent());
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: moving distant profile from all route families, return state, independent pauses, reduced motion, hidden tab, bilingual bracket notes, mobile overflow and footer pulse.');
+  console.log('PASS: moving distant profile from all route families, return state, independent pauses, reduced motion, hidden tab, bilingual skill chips, 30-second clock, mobile overflow and footer pulse.');
 } finally { await browser.close(); }

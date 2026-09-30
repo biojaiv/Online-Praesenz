@@ -16,6 +16,36 @@ export function createInformationViews({ root, getResources, getLanguage }) {
   };
   root.addEventListener('toggle', onToggle, true);
 
+  // 30-second reading clock: drives the sigil ring, the station rails and the countdown.
+  const PROFILE_SECONDS = 30;
+  let clock = 0, clockStart = 0;
+  function tickProfile() {
+    const sheet = root.querySelector('[data-profile-sheet]');
+    if (!sheet) return;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const elapsed = reduced ? PROFILE_SECONDS : Math.min(PROFILE_SECONDS, (performance.now() - clockStart) / 1000);
+    sheet.style.setProperty('--profile-progress', (elapsed / PROFILE_SECONDS).toFixed(4));
+    sheet.querySelectorAll('[data-profile-station]').forEach(station => {
+      const index = Number(station.dataset.profileStation), span = PROFILE_SECONDS / 4;
+      const local = Math.max(0, Math.min(1, (elapsed - index * span) / span));
+      station.style.setProperty('--station-progress', local.toFixed(4));
+      station.classList.toggle('is-reached', elapsed >= index * span);
+    });
+    const left = Math.ceil(PROFILE_SECONDS - elapsed);
+    const value = sheet.querySelector('.info-time__value');
+    const complete = elapsed >= PROFILE_SECONDS;
+    if (value) value.textContent = complete ? sheet.dataset.doneLabel : `00:${String(left).padStart(2, '0')}`;
+    sheet.classList.toggle('is-complete', complete);
+    if (complete) stopProfileClock();
+  }
+  function startProfileClock() {
+    stopProfileClock();
+    clockStart = performance.now();
+    tickProfile();
+    if (!root.querySelector('[data-profile-sheet].is-complete')) clock = window.setInterval(tickProfile, 250);
+  }
+  function stopProfileClock() { window.clearInterval(clock); clock = 0; }
+
   function pauseMedia() {
     root.querySelectorAll('video').forEach(video => video.pause());
   }
@@ -46,8 +76,11 @@ export function createInformationViews({ root, getResources, getLanguage }) {
     if (view !== activeView) pauseMedia();
     if (view === 'kurzprofil' && activeView !== 'kurzprofil') backdropView = activeView;
     if (view !== 'kurzprofil') backdropView = null;
+    const entering = view === 'kurzprofil' && activeView !== 'kurzprofil';
     activeView = view;
     applyVisibility();
+    if (entering) startProfileClock();
+    else if (view !== 'kurzprofil') stopProfileClock();
   }
 
   function translate() {
@@ -59,6 +92,7 @@ export function createInformationViews({ root, getResources, getLanguage }) {
     const rootScroll = root.scrollTop;
     pauseMedia();
     root.innerHTML = renderInformationMarkup(getLanguage(), getResources());
+    if (activeView === 'kurzprofil') tickProfile(); // keep the clock position across languages
     openTerms.forEach(key => root.querySelector(`[data-info-term="${key}"]`)?.setAttribute('open', ''));
     applyVisibility();
     scroll.forEach(({ key, top, left }) => {
@@ -262,6 +296,6 @@ export function createInformationViews({ root, getResources, getLanguage }) {
     show, translate, pauseMedia, closeDisclosure, focusEntry, animateExploreExit, cancelExploreExit,
     get activeSection() { return section(activeView); },
     get activeElement() { return section(activeView); },
-    dispose() { cancelExploreExit(); pauseMedia(); root.removeEventListener('toggle', onToggle, true); },
+    dispose() { stopProfileClock(); cancelExploreExit(); pauseMedia(); root.removeEventListener('toggle', onToggle, true); },
   };
 }
