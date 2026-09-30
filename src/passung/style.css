@@ -207,3 +207,7 @@ dialog .eyebrow::before{content:'';width:22px;height:1px;flex:none;background:va
 .info-items article:hover h3{color:var(--blue)}
 .info-items h3{transition:color .2s}
 @media(forced-colors:active){dialog{background-image:none}}
+
+/* Workshop photo: keep the calliper tips and the hands inside the frame; crop the bench instead. */
+.workshop-frame .workshop-photo{object-position:46% 8%}
+@media(max-width:760px){.workshop-frame .workshop-photo{object-position:44% 14%}}
