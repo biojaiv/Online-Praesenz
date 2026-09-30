@@ -30,7 +30,20 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     const inset = radius ? Math.round(radius * (1 - Math.SQRT1_2) + 8) : 0;
     light.style.setProperty('--portal-inset', `${inset}px`);
     if (radius) rim?.setGeometry({ radius, inset });
+    fitPage(radius ? { width: rect.width - inset * 2, height: rect.height - inset * 2 } : null);
     return inset;
+  }
+  // Pages are laid out at a desktop size and scaled into the portal, like a
+  // projection, instead of collapsing into a cramped responsive layout.
+  const PAGE_MIN = { width: 1200, height: 780 };
+  let pageFit = null;
+  function fitPage(box = pageFit) {
+    pageFit = box;
+    if (!iframe) return;
+    if (!box) { Object.assign(iframe.style, { width: '', height: '', transform: '', transformOrigin: '' }); return; }
+    const scale = Math.min(1, box.width / PAGE_MIN.width, box.height / PAGE_MIN.height);
+    Object.assign(iframe.style, { width: `${box.width / scale}px`, height: `${box.height / scale}px`,
+      transform: scale < 1 ? `scale(${scale})` : '', transformOrigin: '0 0' });
   }
   function resize() {
     const view = getProjectionViewport();
@@ -210,6 +223,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       revealContent();
     }, { signal: events.signal });
     screen.replaceChildren(iframe, ...(preview ? [preview] : []));
+    pageFit = null; fitPage();
     timer = window.setTimeout(() => { status.textContent = t('example.error'); }, 12000);
     if (portal) {
       light.style.opacity = '0';

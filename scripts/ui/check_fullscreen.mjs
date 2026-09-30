@@ -30,8 +30,10 @@ try {
     // unfolded frame surrounds the page and leaves the moving scene visible around it.
     await page.evaluate(()=>cancelAnimationFrame(window.__openingFrame));
     assert.equal(await page.locator('.example-projection').getAttribute('data-portal'),id,'Portal mode');
-    assert(view.rect.width>=view.width*.7&&view.rect.width<=view.width*.9,'Content fills the portal aperture');
-    assert(view.rect.height>=view.height*.6,'Content keeps most of the height');
+    assert(view.rect.width>=view.width*.65&&view.rect.width<=view.width*.9,'Content fills the portal aperture');
+    assert(view.rect.height>=view.height*.5,'Content keeps most of the height');
+    // The page lays out at desktop size and is scaled into the portal, never cramped.
+    assert(await page.evaluate(()=>document.querySelector('.example-projection iframe').clientWidth)>=1200,'Page keeps its desktop layout');
     assert(Math.hypot(...view.position.map((v,i)=>v-before.position[i]))>5,'Camera flew to the portal');
     assert.equal(await page.evaluate(()=>__stage.isRenderingPaused),false,'Scene keeps moving around the frame');
    } else {

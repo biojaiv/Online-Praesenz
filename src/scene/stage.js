@@ -60,7 +60,7 @@ const DOCUMENT_MIN_CLEARANCE = 0.24;
 // Der Abzug verhindert, dass ein 60-Hz-Bildschirm auf 20 Hz einrastet.
 const FRAME_BUDGET = 1000 / 30 - 3;
 // Share of the projection viewport taken by an open portal frame.
-const PORTAL_FRAME_FILL = 0.86;
+const PORTAL_FRAME_FILL = 0.92;
 // Radius of the Orrery light around an open portal (world units).
 const PORTAL_SURROUND_LIGHT = 16;
 

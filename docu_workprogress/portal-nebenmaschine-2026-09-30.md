@@ -22,6 +22,13 @@ des Sichtfelds vom mittleren Sockel.
    `Entwuerfe/Vorlage_Objekt.png` (`src/ui/portalRim.js`): Neonkante, die sich beim Öffnen
    einmal herumzeichnet, ein sich drehender Schimmer im Portalband und Funken in der
    Projektfarbe. Die Seitenfläche selbst wird nie übermalt.
+   Die Seite wird in mindestens 1200 × 780 CSS-Pixeln gelayoutet und proportional in die
+   Öffnung skaliert (wie eine Projektion), damit responsive Layouts nicht gestaucht werden.
+   Um die Außenschiene läuft eine gravierte Titanblende (`src/scene/portalEngraving.js`):
+   Medaillons aus der heiligen Geometrie (Blume des Lebens) und Runen des Älteren Futhark
+   aus `runes.js`/`sacredGeometry.js`, als Relief (Bump) mit langsam atmendem Glimmen in der
+   Projektfarbe; dahinter eine dunkle Graphitplatte zwischen den Schienen. Beide erscheinen
+   im letzten Viertel der Entfaltung. Der Rahmen nimmt 92 % der Projektionsfläche ein.
    Solange ein Portal aktiv ist, wird die Maschine nach dem Orrery mit gelöschtem
    Tiefenpuffer gezeichnet: Ringe und Streben können weder Rahmen noch Inhalt überlagern.
 4. ESC schließt das Portal, faltet die Maschine und fliegt zurück (1,65 s / 1,9 s).

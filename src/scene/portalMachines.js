@@ -2,13 +2,18 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader.js';
+import { engravingTextures, bezelGeometry } from './portalEngraving.js';
 
 const MODEL_URL = new URL('../../Elemente/Orrery/Portal_Nebenmaschine_web.glb', import.meta.url).href;
 
 // Model units from scripts/portal/build_portal.py (open frame outer 8 x 5).
 const R_OUT = 0.95, R_IN = 0.75, RAIL = 0.056; // RAIL_OPEN: the open frame's tube radius
 const CX = 4.0 - R_OUT, CY = 2.5 - R_OUT;
-const HALF_OUTER_Y = CY + R_OUT + RAIL;
+// Engraved bezel outside the outer rail and a graphite backing plate behind the rails.
+const BEZEL_IN = R_OUT + RAIL * .8, BEZEL_OUT = R_OUT + .34;
+const BACK_IN = R_IN - RAIL * .7, BACK_OUT = R_OUT + RAIL * .7;
+const TILE = (BEZEL_OUT - BEZEL_IN) * 8; // one engraving tile keeps its 8:1 proportion
+const HALF_OUTER_Y = CY + BEZEL_OUT;
 const HALF_APERTURE_Y = CY + R_IN - RAIL;
 const SCALE = 2.1;
 
@@ -85,6 +90,18 @@ export function createPortalMachines({ reduced = false } = {}) {
         if (!materials.has(source)) materials.set(source, revealMaterial(source, reveal));
         object.material = materials.get(source);
       });
+      // Bezel and backing appear only on the open frame (see pose()).
+      const textures = engravingTextures();
+      const bezelMaterial = revealMaterial(new THREE.MeshStandardMaterial({
+        color: 0xa9b3bf, map: textures.map, bumpMap: textures.bumpMap, bumpScale: 2.2,
+        emissive: accent, emissiveMap: textures.emissiveMap, emissiveIntensity: 0,
+        metalness: .82, roughness: .4, transparent: true, opacity: 0 }), reveal);
+      const backMaterial = revealMaterial(new THREE.MeshStandardMaterial({
+        color: 0x2a3442, bumpMap: textures.bumpMap, bumpScale: 1.2,
+        metalness: .75, roughness: .5, transparent: true, opacity: 0 }), reveal);
+      const bezel = new THREE.Mesh(new THREE.BufferGeometry(), bezelMaterial);
+      const backing = new THREE.Mesh(new THREE.BufferGeometry(), backMaterial);
+      for (const band of [bezel, backing]) { band.frustumCulled = false; band.visible = false; root.add(band); }
       const mixer = new THREE.AnimationMixer(root);
       const action = mixer.clipAction(clip);
       action.play();
@@ -102,6 +119,7 @@ export function createPortalMachines({ reduced = false } = {}) {
         horizontal: ['oben', 'unten'].map(label => root.getObjectByName(node(`PORTAL / Seite ${label} / Doppelschiene`))),
         vertical: ['rechts', 'links'].map((label, index) => ({ sign: index ? -1 : 1,
           mesh: root.getObjectByName(node(`PORTAL / Seite ${label} / Doppelschiene`)) })),
+        bezel, backing, bandStretch: 0, open: 0,
         progress: { value: 0 }, stretch: 1, glow: 0, active: false, tween: null, foreground: false,
       });
     }
@@ -132,12 +150,25 @@ export function createPortalMachines({ reduced = false } = {}) {
     }
     for (const mesh of item.horizontal) if (mesh) mesh.scale.x = 1 + (item.stretch - 1) * weight;
     for (const { mesh, sign } of item.vertical) if (mesh) mesh.position.x = sign * (cx - CX) * weight;
+    // The engraved bezel follows the stretched frame and fades in as it settles.
+    if (item.bandStretch !== item.stretch) {
+      item.bandStretch = item.stretch;
+      item.bezel.geometry.dispose();
+      item.backing.geometry.dispose();
+      item.bezel.geometry = bezelGeometry({ cx, cy: CY, r0: BEZEL_IN, r1: BEZEL_OUT, z: -.02, tileLength: TILE });
+      item.backing.geometry = bezelGeometry({ cx, cy: CY, r0: BACK_IN, r1: BACK_OUT, z: -.075, tileLength: TILE * .6 });
+    }
+    item.open = THREE.MathUtils.smoothstep(item.progress.value, .72, 1);
+    for (const band of [item.bezel, item.backing]) {
+      band.visible = item.open > .001;
+      band.material.opacity = item.open;
+    }
   }
 
   function setStretch(item, aspect) {
     // Outer frame aspect follows the projection viewport, within sane limits.
-    const halfX = THREE.MathUtils.clamp(HALF_OUTER_Y * aspect, 3.2, 5.6);
-    item.stretch = (halfX - R_OUT - RAIL) / CX;
+    const halfX = THREE.MathUtils.clamp(HALF_OUTER_Y * aspect, 3.5, 6);
+    item.stretch = (halfX - BEZEL_OUT) / CX;
   }
 
   const worldQuat = new THREE.Quaternion();
@@ -157,7 +188,7 @@ export function createPortalMachines({ reduced = false } = {}) {
       setStretch(item, aspect);
       item.holder.updateWorldMatrix(true, false);
       item.holder.getWorldQuaternion(worldQuat);
-      const halfX = CX * item.stretch + R_OUT + RAIL;
+      const halfX = CX * item.stretch + BEZEL_OUT;
       return {
         center: item.holder.getWorldPosition(new THREE.Vector3()),
         normal: new THREE.Vector3(0, 0, 1).applyQuaternion(worldQuat),
@@ -216,6 +247,8 @@ export function createPortalMachines({ reduced = false } = {}) {
           material.emissiveIntensity = item.glow * .9;
         }
         if (!item.active && !reduced) item.spinner.rotation.z += dt * .05;
+        // Engraved runes and figures breathe slowly in the project colour.
+        item.bezel.material.emissiveIntensity = item.open * (reduced ? .7 : .55 + .3 * Math.sin(elapsed * 1.1));
       }
     },
     dispose() {
@@ -224,6 +257,7 @@ export function createPortalMachines({ reduced = false } = {}) {
         item.tween?.kill();
         item.mixer.stopAllAction();
         item.materials.forEach(material => material.dispose());
+        item.bezel.material.dispose(); item.backing.material.dispose();
       }
       const geometries = new Set();
       group.traverse(object => { if (object.geometry) geometries.add(object.geometry); });
