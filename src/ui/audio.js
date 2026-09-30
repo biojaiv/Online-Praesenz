@@ -3,7 +3,8 @@
  *
  * Kurze Signale fuer Momente, die etwas bedeuten: Aufbau und Absprung des
  * Intros, Sockel und Menue, das Portal (Aufladen, Entfalten, Herunterfahren),
- * das 30-Sekunden-Profil und Ladefehler. Keine Dauerschleifen.
+ * das 30-Sekunden-Profil und Ladefehler. Keine Dauerschleifen. Jeder Klang
+ * spielt bis zu seinem eigenen Ende; nur `stopSound` blendet ihn vorzeitig aus.
  * Jeder Ruf bleibt folgenlos, wenn der Browser das Abspielen ohne Nutzergeste
  * verweigert — die Seite funktioniert vollstaendig ohne Ton.
  *
@@ -53,8 +54,6 @@ const VOLUME = {
   complete: 0.08,
   warn: 0.16,
 };
-// Longer signals are cut short with a fade so they never outstay the moment.
-const LENGTH = { transmit: 1500, complete: 1600 };
 // Hover signals repeat at most this often (ms).
 const SPACING = { menu: 90, pedestal: 250 };
 
@@ -151,10 +150,6 @@ export function playSound(name, { queue = true } = {}) {
     started.catch(() => {
       if (!unlocked && queue) pending = name;
     });
-  }
-  if (LENGTH[name]) {
-    const ticket = now;
-    window.setTimeout(() => { if (lastPlayed.get(name) === ticket) stopSound(name, 500); }, LENGTH[name]);
   }
 }
 
