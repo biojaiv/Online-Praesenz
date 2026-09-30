@@ -63,8 +63,8 @@
     "digest": "9dcca8a2de591866437545696debceda152d0cbf684381ba78f42b7d0a63db1d",
     "output": "sounds/warn1.flac"
   },
-  "sounds/Menue_Kn\u00f6pfe_rechts_oben.wav": {
+  "sounds/Menue_Knöpfe_rechts_oben.wav": {
     "digest": "6cc2745dc0aa5d33e2bb98fe62641c3230f3424cb7493f4b0ac06876771cb9ce",
-    "output": "sounds/Menue_Kn\u00f6pfe_rechts_oben.flac"
+    "output": "sounds/Menue_Knöpfe_rechts_oben.flac"
   }
 }

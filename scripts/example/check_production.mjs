@@ -24,7 +24,9 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.equal(await page.locator('.chapter-nav a').count(), 7);
       await page.screenshot({ path: `${output}/direct-${width}-${lang}.png` });
-      await page.locator('.chapter-nav [data-jump="5"]').click();
+      // Narrow screens replace the chapter list with a picker.
+      if (width <= 900) await page.locator('.chapter-picker').selectOption('5');
+      else await page.locator('.chapter-nav [data-jump="5"]').click();
       await page.waitForFunction(() => document.querySelector('.chapter-nav [aria-current]')?.dataset.jump === '5');
       assert.equal(await page.locator('.story-project').getAttribute('href'), '/#abschluss');
       results.push({ width, height, lang, passed: true });
