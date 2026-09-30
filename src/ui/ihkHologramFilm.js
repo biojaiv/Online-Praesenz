@@ -36,7 +36,8 @@ export function createIhkHologramFilm(canvas) {
     release();
     layer.hidden = true;
     play.setAttribute('aria-label', t('ihk.film'));
-    video.poster = IHK_POSTERS[getLanguage()];
+    // The poster is only fetched once the film window is actually shown.
+    if (video.hasAttribute('poster')) video.poster = IHK_POSTERS[getLanguage()];
     video.setAttribute('aria-label', t('ihk.film'));
   }
   function release() {
@@ -108,6 +109,7 @@ export function createIhkHologramFilm(canvas) {
       const active = ready && normal.dot(towardsCamera) > 0;
       layer.hidden = !active;
       if (!active) { release(); return; }
+      if (!video.hasAttribute('poster')) video.poster = IHK_POSTERS[getLanguage()];
       if (!attached) {
         attached = true;
         video.src = IHK_FILMS[getLanguage()];

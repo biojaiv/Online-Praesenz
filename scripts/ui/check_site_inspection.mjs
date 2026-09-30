@@ -118,6 +118,8 @@ try {
   assert(await overlay.locator('.site-inspection__close').evaluate(el => el === document.activeElement));
   await page.keyboard.press('Enter');
   await overlay.waitFor({ state: 'hidden' });
+  // Focus returns on the next frame, once the page below is interactive again.
+  await trigger.evaluate(el => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert(await trigger.evaluate(el => el === document.activeElement));
   assert.equal(await page.locator('.head__symbol-stage').evaluate(el => getComputedStyle(el).visibility), 'visible');
   await page.waitForTimeout(200);
@@ -190,6 +192,13 @@ try {
     await mobile.goto(`${base}/#home`);
     await mobile.waitForFunction(() => document.querySelector('#boot.is-done'));
     const mobileInert = await mobile.locator('#frame [inert]').count();
+    if (fallback) {
+      // The technical view belongs to the 3D scene and is not offered without WebGL.
+      assert.equal(await mobile.locator('.site-method button').isVisible(), false, 'Inspection entry must be hidden without WebGL');
+      results.push({ touch:true, reducedMotion:true, fallback, passed:true, hidden:true });
+      await mobile.close();
+      continue;
+    }
     await mobile.locator('.site-method button').tap();
     await mobile.locator('.site-inspection.is-pinned').waitFor({ state:'visible' });
     if (fallback || await mobile.locator('.site-inspection').getAttribute('data-background-anchor') !== 'scene') {

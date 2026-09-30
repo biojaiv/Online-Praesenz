@@ -60,6 +60,8 @@ export function createInformationViews({ root, getResources, getLanguage }) {
       const isActive = node.dataset.infoPage === activeView;
       const isBackdrop = activeView === 'kurzprofil' && node.dataset.infoPage === backdropView;
       node.hidden = !isActive && !isBackdrop;
+      // Posters load with their page, not with the (initially hidden) layer.
+      if (!node.hidden) node.querySelectorAll('video[data-poster]:not([poster])').forEach(video => { video.poster = video.dataset.poster; });
       node.classList.toggle('info-page--behind', isBackdrop);
       node.inert = isBackdrop;
       if (isBackdrop) node.setAttribute('aria-hidden', 'true');

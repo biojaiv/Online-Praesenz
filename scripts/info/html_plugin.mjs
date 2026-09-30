@@ -5,7 +5,8 @@ function readingMarkup(lang) {
   return renderInformationMarkup(lang, profileResources(lang))
     .replace(/id="([^"]+)"/g, (_, id) => `id="reading-${lang}-${id}"`)
     .replace(/aria-labelledby="([^"]+)"/g, (_, id) => `aria-labelledby="reading-${lang}-${id}"`)
-    .replace(/href="#(start|kurzprofil|projekt\/abschluss|kontakt)"/g, (_, route) => `href="#reading-${lang}-${route}"`);
+    .replace(/href="#(start|kurzprofil|projekt\/abschluss|kontakt)"/g, (_, route) => `href="#reading-${lang}-${route}"`)
+    .replace(/data-poster=/g, 'poster='); // the no-script reading copy has no view logic
 }
 export function informationHtmlPlugin() {
   return { name: 'portfolio-information-html', transformIndexHtml: {

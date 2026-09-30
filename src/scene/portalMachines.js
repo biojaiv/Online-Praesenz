@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { DRACOLoader, DRACO_GLTF_CONFIG } from 'three/addons/loaders/DRACOLoader.js';
 import { engravingTextures, bezelGeometry } from './portalEngraving.js';
 
 const MODEL_URL = new URL('../../Elemente/Orrery/Portal_Nebenmaschine_web.glb', import.meta.url).href;
@@ -127,14 +126,16 @@ export function createPortalMachines({ reduced = false } = {}) {
 
   function load() {
     if (loading) return loading;
-    const draco = new DRACOLoader().setDecoderPath(DRACO_GLTF_CONFIG).setWorkerLimit(1);
-    loading = new GLTFLoader().setDRACOLoader(draco).loadAsync(MODEL_URL).then(gltf => {
+    // Meshopt-packed (see scripts/portal/build.mjs); the decoder loads with the model,
+    // not with the start page.
+    loading = import('three/addons/libs/meshopt_decoder.module.js')
+      .then(({ MeshoptDecoder }) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(MODEL_URL)).then(gltf => {
       if (!disposed) build(gltf);
       return !disposed;
     }).catch(error => {
       console.warn('Portalmaschinen konnten nicht geladen werden:', error);
       return false;
-    }).finally(() => draco.dispose());
+    });
     return loading;
   }
 
