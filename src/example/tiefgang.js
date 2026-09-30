@@ -143,8 +143,10 @@ export function startTiefgang() {
     function placeNeedle(level=needleLevel) {
       needleLevel=level;
       const tick=$$('.depth-scale>span')[level]; if(!tick) return;
-      const x=tick.offsetLeft+parseFloat(getComputedStyle(tick,'::before').left||'0')+.5;
-      $('.depth-needle').style.left=`${x.toFixed(1)}px`;
+      // Needle and tick are both 1px wide at the same fractional x (left:50% of the label),
+      // so the browser snaps them onto the same device pixel at any zoom level.
+      const scale=$('.depth-scale').getBoundingClientRect(), box=tick.getBoundingClientRect();
+      $('.depth-needle').style.left=`${box.left-scale.left+box.width/2}px`;
     }
     const needleSize=new ResizeObserver(()=>placeNeedle()); needleSize.observe($('.depth-scale'));
     document.fonts?.ready.then(()=>placeNeedle());
