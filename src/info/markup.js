@@ -25,6 +25,12 @@ const orrerySigil = () => {
     <text class="info-orrery__monogram" y="1" text-anchor="middle" dominant-baseline="middle">VL</text>
   </svg>`;
 };
+const CONTACT_ICONS = {
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  file: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+};
+const contactIcon = name => `<svg class="info-contact__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${CONTACT_ICONS[name]}</svg>`;
 const flower = SACRED_FIGURES.find(figure => figure.name === 'Flower of Life') || SACRED_FIGURES[0];
 const watermark = () => `<svg class="info-profile__watermark" viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true" focusable="false"><path d="${strokePath(flower.strokes)}"/></svg>`;
 
@@ -95,7 +101,26 @@ export function renderInformationMarkup(language, resources) {
 
     <section class="info-page info-contact" id="kontakt" data-info-page="kontakt" aria-labelledby="info-contact-title" lang="${lang}">
       <div class="info-topline">${route('start', esc(r.name), 'contact-start', 'info-wordmark')}${languages('contact')}</div>
-      <div class="info-contact__content"><div class="info-contact__signature" aria-hidden="true"><span>VL</span><small>VLADIMIR<br>LEICHT</small></div><div class="info-contact__copy"><p class="info-eyebrow">${esc(c.contactKicker)}</p><h2 id="info-contact-title" tabindex="-1" data-info-entry>${esc(c.quote)}</h2><p class="info-contact__ambition">${esc(c.ambition)}</p><div class="info-actions">${cv(c.downloadCv, 'contact-cv', 'info-button info-button--primary')}<a class="info-button" href="mailto:${esc(r.email)}" data-info-focus="contact-mail">${esc(c.emailAction)} ↗</a></div><p class="info-meta">${esc(r.location)} · ${esc(c.remote)} · ${esc(c.available)}</p><div class="info-contact__address"><span>${esc(c.addressLabel)}</span><a href="mailto:${esc(r.email)}" data-info-focus="contact-address">${esc(r.email)}</a></div></div></div>
+      <div class="info-contact__sheet">
+        ${watermark()}<div class="info-profile__scan" aria-hidden="true"></div>
+        <div class="info-contact__top"><p class="info-eyebrow">${esc(c.contactKicker)}</p><p class="info-contact__status"><i class="info-live-dot" aria-hidden="true"></i>${esc(c.available)}</p></div>
+        <header class="info-contact__identity">
+          <div class="info-monogram info-contact__sigil">${orrerySigil()}</div>
+          <div><h2 id="info-contact-title" tabindex="-1" data-info-entry>${esc(c.quote)}</h2><p class="info-contact__ambition">${esc(c.ambition)}</p></div>
+        </header>
+        <div class="info-contact__channels">
+          <section class="info-contact__channel"><h3>${contactIcon('mail')}${esc(c.contactChannels[0])}</h3>
+            <a class="info-contact__value" href="mailto:${esc(r.email)}" data-info-focus="contact-address">${esc(r.email)}</a>
+            <div class="info-contact__actions"><a class="info-button" href="mailto:${esc(r.email)}" data-info-focus="contact-mail">${esc(c.emailAction)} ↗</a><button class="info-link info-contact__copy" type="button" data-info-copy="${esc(r.email)}" data-copied="${esc(c.copied)}" data-info-focus="contact-copy">${esc(c.copyMail)}</button></div></section>
+          <section class="info-contact__channel"><h3>${contactIcon('file')}${esc(c.contactChannels[1])}</h3>
+            <p class="info-contact__value">${esc(c.cvNote)}</p>
+            <div class="info-contact__actions">${cv(`${c.downloadCv} ↓`, 'contact-cv', 'info-button info-button--primary')}</div></section>
+          <section class="info-contact__channel"><h3>${contactIcon('pin')}${esc(c.contactChannels[2])}</h3>
+            <p class="info-contact__value">${esc(r.location)}</p>
+            <p class="info-meta">${esc(c.remote)}</p></section>
+        </div>
+        <p class="info-contact__next">${esc(c.overviewFirst)} ${route('kurzprofil', `${c.overviewLink} →`, 'contact-profile')}</p>
+      </div>
       ${footer('contact')}
     </section>`;
 }

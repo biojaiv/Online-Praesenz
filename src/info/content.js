@@ -61,6 +61,8 @@ export const informationContent = {
     quote: 'Technik interessiert mich dort am meisten, wo sie reale Probleme löst.',
     ambition: 'Ich suche Aufgaben in Systemintegration, Infrastruktur und Cloud Engineering, bei denen ich Verantwortung übernehmen und mich fachlich weiterentwickeln kann.',
     downloadCv: 'Lebenslauf herunterladen', emailAction: 'E-Mail schreiben', addressLabel: 'Direkt erreichbar',
+    contactChannels: ['E-Mail', 'Lebenslauf', 'Standort & Einsatz'], cvNote: 'PDF · Deutsch', copyMail: 'Adresse kopieren', copied: 'Kopiert',
+    overviewFirst: 'Erst einen Überblick?', overviewLink: '30-Sekunden-Profil',
     sceneUnavailable: 'Die 3D-Ansicht ist hier nicht verfügbar. Profil, Projekt und Kontakt bleiben vollständig zugänglich.',
   },
   en: {
@@ -124,6 +126,8 @@ export const informationContent = {
     quote: 'Technology interests me most when it solves real problems.',
     ambition: 'I am looking for opportunities in systems integration, infrastructure and Cloud Engineering where I can take responsibility and continue developing my expertise.',
     downloadCv: 'Download CV', emailAction: 'Write an email', addressLabel: 'Get in touch directly',
+    contactChannels: ['Email', 'CV', 'Location & work mode'], cvNote: 'PDF · English', copyMail: 'Copy address', copied: 'Copied',
+    overviewFirst: 'Want an overview first?', overviewLink: '30-second profile',
     sceneUnavailable: 'The 3D view is unavailable here. My profile, project and contact details remain fully accessible.',
   },
 };

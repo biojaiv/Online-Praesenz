@@ -109,7 +109,7 @@ export function createInformationController({ root, getStage, onNavigate, onBack
   function click(event) {
     if (event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (sceneSection(event)) { event.preventDefault(); explore(); return; }
-    const target = event.target.closest('[data-info-route],[data-info-close],[data-info-inspect],[data-info-language]');
+    const target = event.target.closest('[data-info-route],[data-info-close],[data-info-inspect],[data-info-language],[data-info-copy]');
     if (!target || !root.contains(target) || event.button > 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (target.hasAttribute('data-info-route')) {
       event.preventDefault();
@@ -119,6 +119,14 @@ export function createInformationController({ root, getStage, onNavigate, onBack
     else if (target.hasAttribute('data-info-close')) { event.preventDefault(); returnToPrevious(); }
     else if (target.hasAttribute('data-info-language')) { event.preventDefault(); setLanguage(target.dataset.infoLanguage); }
     else if (target.hasAttribute('data-info-inspect')) { event.preventDefault(); onInspect(target); }
+    else if (target.hasAttribute('data-info-copy')) {
+      event.preventDefault();
+      const label = target.textContent;
+      navigator.clipboard?.writeText(target.dataset.infoCopy).then(() => {
+        target.textContent = `✓ ${target.dataset.copied}`;
+        setTimeout(() => { if (target.isConnected) target.textContent = label; }, 1800);
+      }).catch(() => {});
+    }
   }
   function keydown(event) {
     if (!active || document.documentElement.classList.contains('is-site-inspecting')) return;
