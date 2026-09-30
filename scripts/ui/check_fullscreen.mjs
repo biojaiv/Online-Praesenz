@@ -11,6 +11,7 @@ try {
   await page.goto(base+'/#projekte/webseiten');
   await page.waitForFunction(()=>window.__stage && document.querySelector('#boot.is-done') && !document.querySelector('.frame.is-intro'));
   await page.locator('.project-book-ui:not([hidden])').waitFor();
+  if(!mobile)await page.waitForFunction(()=>__stage.portals.has('systems')&&__stage.portals.has('recovery'),null,{timeout:60000});
   await page.waitForTimeout(1400);
   for (const id of ['systems','recovery']) {
    const trigger = page.locator(`.wing-preview[data-project-id="${id}"]`);
@@ -24,12 +25,22 @@ try {
    assert.equal(await page.locator('.warp-tunnel').count(),0);
    assert.equal(await page.locator('.hologram-border').count(),1);
    const view=await page.evaluate(()=>({rect:document.querySelector('.example-projection iframe').getBoundingClientRect().toJSON(),width:innerWidth,height:innerHeight,position:__stage.camera.position.toArray(),rotation:__stage.camera.quaternion.toArray(),yaw:__stage.exampleFlight.yaw}));
-   if(!mobile){const widths=await page.evaluate(()=>{cancelAnimationFrame(window.__openingFrame);return window.__openingWidths;});assert(widths.length>3,'Opening has visible intermediate frames');assert(Math.max(...widths)-Math.min(...widths)>100,'Preview expands continuously to viewport');}
-   assert(view.rect.width>=view.width*.95,'Content uses full viewport width');
-   assert(view.rect.height>=view.height*.88,'Content uses full viewport height');
+   if(!mobile){
+    // Desktop with motion: the camera flies to the project's portal machine; the
+    // unfolded frame surrounds the page and leaves the moving scene visible around it.
+    await page.evaluate(()=>cancelAnimationFrame(window.__openingFrame));
+    assert.equal(await page.locator('.example-projection').getAttribute('data-portal'),id,'Portal mode');
+    assert(view.rect.width>=view.width*.7&&view.rect.width<=view.width*.9,'Content fills the portal aperture');
+    assert(view.rect.height>=view.height*.6,'Content keeps most of the height');
+    assert(Math.hypot(...view.position.map((v,i)=>v-before.position[i]))>5,'Camera flew to the portal');
+    assert.equal(await page.evaluate(()=>__stage.isRenderingPaused),false,'Scene keeps moving around the frame');
+   } else {
+    assert(view.rect.width>=view.width*.95,'Content uses full viewport width');
+    assert(view.rect.height>=view.height*.88,'Content uses full viewport height');
+    assert(Math.hypot(...view.position.map((v,i)=>v-before.position[i]))<.2,'No camera flight');
+    assert(Math.hypot(...view.rotation.map((v,i)=>v-before.rotation[i]))<.02,'Viewing direction stays unchanged');
+   }
    assert.equal(view.yaw,0,'No rotation');
-   assert(Math.hypot(...view.position.map((v,i)=>v-before.position[i]))<.2,'No camera flight');
-   assert(Math.hypot(...view.rotation.map((v,i)=>v-before.rotation[i]))<.02,'Viewing direction stays unchanged');
    const frame=page.frameLocator('.example-projection iframe');
    await frame.locator('h1').waitFor();
    if(id==='systems') {
@@ -55,10 +66,12 @@ try {
    await page.waitForFunction(()=>!document.querySelector('.example-projection').open);
    assert.equal(await page.locator('.example-projection iframe').count(),0);
    assert.equal(await page.evaluate(()=>__stage.exampleFlight.active),false);
+   const after=await page.evaluate(()=>__stage.camera.position.toArray());
+   assert(Math.hypot(...after.map((v,i)=>v-before.position[i]))<.3,'Camera returned to the pedestals');
    assert.equal(await page.evaluate(()=>document.activeElement.dataset.projectId),id,'Focus returns to selected object');
   }
   if(!mobile){await page.locator('.wing-preview[data-project-id="systems"]').focus();await page.keyboard.press('Enter');await page.locator('.example-projection[data-state="opening"]').waitFor();await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('.example-projection').open);assert.equal(await page.locator('.example-projection iframe').count(),0,'Early Escape cancels opening cleanly');}
   assert.deepEqual(errors,[]);
-  await page.close(); console.log(`PASS ${mobile?'mobile / reduced motion':'desktop'}: full viewport, fixed camera, hologram border, bilingual content, ESC, focus and cleanup`);
+  await page.close(); console.log(`PASS ${mobile?'mobile / reduced motion: full viewport, fixed camera':'desktop: portal flight, framed page, running scene'}, bilingual content, ESC, focus and cleanup`);
  }
 } finally { await browser.close(); }

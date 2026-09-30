@@ -26,3 +26,5 @@
 .example-projection[data-portal] .example-projection__scrim{display:none}
 .example-projection[data-portal] .example-projection__light{overflow:hidden;box-shadow:0 0 0 1px rgb(127 216 255 / .35),0 0 28px rgb(127 216 255 / .28)}
 .example-projection[data-portal] .hologram-border{display:none}
+/* The button rule above sets display:flex, which would otherwise override [hidden]. */
+.example-projection__controls button[hidden]{display:none}

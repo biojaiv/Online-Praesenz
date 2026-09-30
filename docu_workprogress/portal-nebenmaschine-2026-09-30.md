@@ -1,7 +1,9 @@
 # Portal-Nebenmaschinen (2026-09-30)
 
-Jedes Projekt im mittleren Sockel hat eine eigene Portalmaschine im dunklen Hintergrund:
-Tiefgang oben links (Bernstein), PASSUNG unten links (Weißblau), Recovery Lab rechts (Cyan).
+Jedes Projekt im mittleren Sockel hat eine eigene Portalmaschine im dunklen Hintergrund,
+jeweils in einer freien Lücke der Projektansicht: Tiefgang zwischen linkem und mittlerem
+Sockel (Bernstein), PASSUNG am linken Rand (Weißblau), Recovery Lab zwischen mittlerem und
+rechtem Sockel (Cyan). Die Positionen wurden aus der Kamera der Projektansicht zurückgerechnet.
 Die vier bestehenden Nebenmaschinen des Orrery bleiben unverändert; sie liegen außerhalb
 des Sichtfelds vom mittleren Sockel.
 
@@ -12,8 +14,9 @@ des Sichtfelds vom mittleren Sockel.
 2. Ein Klick fliegt die Kamera vor die Maschine (2,1 s); die Scheibe entfaltet sich zu einem
    Rahmen (2,3 s). Das Seitenverhältnis folgt dem Bildschirm, der Rahmen nimmt 86 % der
    Projektionsfläche ein.
-3. Die Seite öffnet sich kreisförmig in der Öffnung. Die Szene läuft weiter, damit Ringe und
-   Lichtläufe außerhalb des Rahmens sichtbar bleiben; eine Lichtpassage startet sofort.
+3. Die Seite öffnet sich kreisförmig in der Öffnung. Die Szene läuft weiter: Lichtpassagen
+   folgen ohne Dunkelpause aufeinander (alle 13 s) und ein weiches Licht um das Portal zeigt
+   die drehenden Ringe neben dem Rahmen.
 4. ESC schließt das Portal, faltet die Maschine und fliegt zurück (1,65 s / 1,9 s).
 5. Handys (≤ 600 px) und reduzierte Bewegung behalten die bisherige Vollbildprojektion.
 
@@ -39,9 +42,19 @@ des Sichtfelds vom mittleren Sockel.
   `portalApertureRect`.
 - `src/ui/exampleProjection.js/.css`: Hover-Anbindung und Portal-Modus.
 
+## Prüfung
+
+- Headless-Chromium auf der GPU (Intel Iris Xe, ANGLE/GL-EGL): Hover, Flug, Entfaltung,
+  Seite im Rahmen und Rückflug für alle drei Projekte; 60 rAF/s bei offener Seite.
+- `scripts/ui/check_fullscreen.mjs` prüft auf dem Desktop jetzt den Portal-Modus (Flug,
+  Rahmen, laufende Szene, Rückkehr der Kamera); mobil weiterhin die Vollbildprojektion.
+- Klick vor dem Nachladen der Maschinen fällt sauber auf die Vollbildprojektion zurück.
+
 ## Offen
 
-- Positionen, Helligkeit und Passung sind berechnet, im Browser noch nicht abgenommen.
-- `scripts/ui/check_fullscreen.mjs` erwartet eine stehende Kamera und muss für den
-  Portal-Modus angepasst werden.
+- Mobile Prüfung in `check_fullscreen.mjs` scheitert bereits vor dieser Änderung
+  (Kapitelnavigation in Tiefgang nicht sichtbar).
+- Headless mit Hardware-Videodekodierung (Mesa) verliert beim Recovery-Film den WebGL-Kontext
+  der Hauptszene, auch ohne Portal. Mit `--disable-accelerated-video-decode` tritt es nicht auf;
+  im normalen Browser prüfen.
 - Die GLB lässt sich über weniger Animationsstützstellen verkleinern.

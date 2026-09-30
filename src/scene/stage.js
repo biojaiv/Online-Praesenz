@@ -61,6 +61,8 @@ const DOCUMENT_MIN_CLEARANCE = 0.24;
 const FRAME_BUDGET = 1000 / 30 - 3;
 // Share of the projection viewport taken by an open portal frame.
 const PORTAL_FRAME_FILL = 0.86;
+// Radius of the Orrery light around an open portal (world units).
+const PORTAL_SURROUND_LIGHT = 16;
 
 // ORBIT_V6: Im Ruhezustand laesst sich die Buehne anfassen und drehen. Die
 // Kamera kreist dann um die Mitte der Sockelreihe; die Maschine im
@@ -420,7 +422,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     orbit.pitchVelocity *= damping;
   }
 
-  let examplePreviewUpdate = null, projectPreviewHover = false, portalTicket = 0;
+  let examplePreviewUpdate = null, projectPreviewHover = false, portalTicket = 0, portalLightTimer = 0;
   const examplePreviewPoint = new THREE.Vector3();
   const exampleFlight = createExampleFlight({
     camera, cards, scene,
@@ -1456,12 +1458,21 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150));
       if (ticket !== portalTicket) return null; // closed during the flight
       await Promise.all([flying, portals.animate(id, 1, reduced ? 0 : 2.3)]);
-      // The scene keeps running around the frame; start a light pass right away.
-      background.triggerSparseIllumination?.();
+      // The scene keeps running around the frame: light passes follow each other
+      // without the usual dark pause while the page is open.
+      if (ticket === portalTicket) {
+        background.triggerSparseIllumination?.();
+        // A soft key around the portal reveals the turning rings beside the frame.
+        background.setInspectionPoint?.(portals.frameInfo(id, viewport.width / viewport.height).center, PORTAL_SURROUND_LIGHT);
+        window.clearInterval(portalLightTimer);
+        portalLightTimer = window.setInterval(() => background.triggerSparseIllumination?.(), 13000);
+      }
       return ticket === portalTicket ? this.portalApertureRect(id) : null;
     },
     async closePortal(id) {
       portalTicket += 1;
+      window.clearInterval(portalLightTimer); portalLightTimer = 0;
+      background.setInspectionPoint?.(null);
       if (projectionIdle) this.setProjectionIdle(false);
       const folding = portals.animate(id, 0, reduced ? 0 : 1.65);
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 770));
@@ -1651,6 +1662,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       informationMotion.removeEventListener('change', refreshInformation);
       cancelAnimationFrame(informationRefreshFrame);
       exampleFlight.dispose();
+      window.clearInterval(portalLightTimer);
       portals.dispose();
       unsubscribeMobileLanguage();
       mobileDots.removeEventListener('click', onMobileSelect);

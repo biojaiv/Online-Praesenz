@@ -10,13 +10,17 @@ const R_OUT = 0.95, R_IN = 0.75, RAIL = 0.056; // RAIL_OPEN: the open frame's tu
 const CX = 4.0 - R_OUT, CY = 2.5 - R_OUT;
 const HALF_OUTER_Y = CY + R_OUT + RAIL;
 const HALF_APERTURE_Y = CY + R_IN - RAIL;
-const SCALE = 2.5;
+const SCALE = 2.1;
 
-/** One portal machine per project, placed in the dark background visible from the middle pedestal. */
+/**
+ * One portal machine per project, in the dark gaps of the middle-pedestal view:
+ * Tiefgang between the left and middle pedestal, PASSUNG at the left edge,
+ * Recovery Lab between the middle and right pedestal. Each faces the camera.
+ */
 const SLOTS = Object.freeze({
-  systems: { position: [-27, 10, -42], yaw: .3, accent: 0xffb347 },
-  passung: { position: [-22, -8.5, -37], yaw: .26, accent: 0xcfe6ff },
-  recovery: { position: [27, 7, -42], yaw: -.3, accent: 0x4fd6e8 },
+  systems: { position: [-15.5, -14.6, -40.5], yaw: .26, accent: 0xffb347 },
+  passung: { position: [-38, 4.2, -30.5], yaw: .66, accent: 0xcfe6ff },
+  recovery: { position: [15.5, -14.6, -40.5], yaw: -.26, accent: 0x4fd6e8 },
 });
 const node = name => THREE.PropertyBinding.sanitizeNodeName(name);
 const CORNERS = ['NO', 'NW', 'SW', 'SO'];
@@ -73,7 +77,11 @@ export function createPortalMachines({ reduced = false } = {}) {
       instances.set(id, {
         id, holder, spinner, root, mixer, action, clip, reveal, accent,
         materials: [...materials.values()],
-        corners: CORNERS.map(label => root.getObjectByName(node(`PORTAL / Ecke ${label}`))),
+        // Corner pivots are posed from their rail's morph weight (same curve as their
+        // translation track) so the aspect stretch never compounds between frames.
+        corners: CORNERS.map((label, index) => ({ sign: [[1, 1], [-1, 1], [-1, -1], [1, -1]][index],
+          pivot: root.getObjectByName(node(`PORTAL / Ecke ${label}`)),
+          rail: root.getObjectByName(node(`PORTAL / Ecke ${label} / Doppelschiene`)) })),
         horizontal: ['oben', 'unten'].map(label => root.getObjectByName(node(`PORTAL / Seite ${label} / Doppelschiene`))),
         vertical: ['rechts', 'links'].map((label, index) => ({ sign: index ? -1 : 1,
           mesh: root.getObjectByName(node(`PORTAL / Seite ${label} / Doppelschiene`)) })),
@@ -101,7 +109,10 @@ export function createPortalMachines({ reduced = false } = {}) {
     item.mixer.update(0);
     const weight = item.horizontal[0]?.morphTargetInfluences?.[0] ?? item.progress.value;
     const cx = CX * item.stretch;
-    for (const corner of item.corners) if (corner) corner.position.x *= item.stretch;
+    for (const { pivot, rail, sign } of item.corners) {
+      const w = rail?.morphTargetInfluences?.[0] ?? weight;
+      pivot?.position.set(sign[0] * cx * w, sign[1] * CY * w, 0);
+    }
     for (const mesh of item.horizontal) if (mesh) mesh.scale.x = 1 + (item.stretch - 1) * weight;
     for (const { mesh, sign } of item.vertical) if (mesh) mesh.position.x = sign * (cx - CX) * weight;
   }
