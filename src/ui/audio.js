@@ -4,7 +4,7 @@
  * Kurze Signale fuer Momente, die etwas bedeuten: Aufbau und Absprung des
  * Intros, Sockel und Menue, das Portal (Aufladen, Entfalten, Herunterfahren),
  * das 30-Sekunden-Profil und Ladefehler. Keine Dauerschleifen. Jeder Klang
- * spielt bis zu seinem eigenen Ende; nur `stopSound` blendet ihn vorzeitig aus.
+ * spielt bis zu seinem eigenen Ende; `stopSound` kann ihn vorzeitig ausblenden.
  * Jeder Ruf bleibt folgenlos, wenn der Browser das Abspielen ohne Nutzergeste
  * verweigert — die Seite funktioniert vollstaendig ohne Ton.
  *
@@ -24,8 +24,6 @@ const SOURCES = {
   menu: lossless(new URL('../../sounds/Menue_Knöpfe_rechts_oben.flac', import.meta.url), new URL('../../sounds/Menue_Knöpfe_rechts_oben.wav', import.meta.url)),
   // Pointer comes to rest on a pedestal.
   pedestal: new URL('../../sounds/Sockelauswahlgeräusch.mp3', import.meta.url).href,
-  // A project entry is hovered and its portal machine blinks in the dark.
-  beacon: lossless(new URL('../../sounds/pulsemachine.flac', import.meta.url), new URL('../../sounds/pulsemachine.wav', import.meta.url)),
   // Portal: power up on selection, machinery while unfolding, power down on close.
   charge: lossless(new URL('../../sounds/ppbwht00.flac', import.meta.url), new URL('../../sounds/ppbwht00.wav', import.meta.url)),
   unfold: lossless(new URL('../../sounds/dronemachine3.flac', import.meta.url), new URL('../../sounds/dronemachine3.wav', import.meta.url)),
@@ -46,7 +44,6 @@ const VOLUME = {
   release: 0.18,
   menu: 0.16,
   pedestal: 0.14,
-  beacon: 0.12,
   charge: 0.16,
   unfold: 0.12,
   powerdown: 0.16,

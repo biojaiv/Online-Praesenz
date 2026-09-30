@@ -1,7 +1,7 @@
 import './exampleProjection.css';
 import { createHologramBorder } from './hologramBorder.js';
 import { createPortalRim } from './portalRim.js';
-import { playSound, stopSound } from './audio.js';
+import { playSound } from './audio.js';
 import { getLanguage, setLanguage, onLanguageChange, t } from '../i18n.js';
 import { getProject, getProjectUrl } from '../data/projects.js';
 import { getProjectionViewport } from './projectionViewport.js';
@@ -183,7 +183,6 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       preview.className = 'example-projection__preview'; preview.alt = '';
       preview.src = sourcePreview?.currentSrc || sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
     }
-    stopSound('beacon', 120);
     playSound(portal ? 'charge' : 'focus');
     stage.cards.setTemporaryActive('projekte');
     if (portal) setBrowserSuspended(true);
@@ -286,23 +285,13 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     }
   }
   // Hovering or focusing a project entry lights its portal machine in the background.
-  let beaconFor = null;
   function hoverPortal(event) {
     if (state !== 'closed') return;
     const link = event.target.closest?.('[data-example-open]');
     const leaving = event.type === 'pointerout' || event.type === 'focusout';
     if (leaving) {
-      if (link && !link.contains(event.relatedTarget)) {
-        stage?.portals?.setHover(null);
-        beaconFor = null; stopSound('beacon');
-      }
-    } else if (link) {
-      stage?.portals?.setHover(link.dataset.projectId);
-      // The portal machine pulses in the dark; its signal sounds once per entry.
-      if (beaconFor !== link.dataset.projectId && stage?.portals?.has(link.dataset.projectId)) {
-        beaconFor = link.dataset.projectId; playSound('beacon', { queue: false });
-      }
-    }
+      if (link && !link.contains(event.relatedTarget)) stage?.portals?.setHover(null);
+    } else if (link) stage?.portals?.setHover(link.dataset.projectId);
   }
   ['pointerover', 'pointerout', 'focusin', 'focusout'].forEach(type => document.addEventListener(type, hoverPortal));
   document.addEventListener('click', activate);
