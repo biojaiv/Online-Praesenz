@@ -48,7 +48,8 @@
     "test:info": "node scripts/info/check_browser.mjs",
     "test:info:production": "node scripts/info/check_production.mjs",
     "test:info:profile": "node scripts/info/check_profile_refinements.mjs",
-    "test:info:entry": "node scripts/info/check_entry_transition.mjs"
+    "test:info:entry": "node scripts/info/check_entry_transition.mjs",
+    "build:portal": "node scripts/portal/build.mjs"
   },
   "dependencies": {
     "gsap": "^3.15.0",

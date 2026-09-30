@@ -14,6 +14,7 @@ import { ihkProjectionSource } from './ihkProjectionSource.js';
 import { createIhkHologramFilm } from '../ui/ihkHologramFilm.js';
 import { LIGHT_PALETTE } from './palette.js';
 import { createExampleFlight } from './exampleFlight.js';
+import { createPortalMachines } from './portalMachines.js';
 import { createRenderBudget, deviceQuality } from './renderBudget.js';
 
 const isDocumentKey = (key) => key === 'lebenslauf' || key === 'abschluss';
@@ -58,6 +59,8 @@ const DOCUMENT_MIN_CLEARANCE = 0.24;
 // Filmischer Takt statt maximaler Bildrate: rund 30 Bilder je Sekunde.
 // Der Abzug verhindert, dass ein 60-Hz-Bildschirm auf 20 Hz einrastet.
 const FRAME_BUDGET = 1000 / 30 - 3;
+// Share of the projection viewport taken by an open portal frame.
+const PORTAL_FRAME_FILL = 0.86;
 
 // ORBIT_V6: Im Ruhezustand laesst sich die Buehne anfassen und drehen. Die
 // Kamera kreist dann um die Mitte der Sockelreihe; die Maschine im
@@ -104,6 +107,10 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   const background = createBackground({ camera, renderer });
   background.setPixelRatio(renderer.getPixelRatio());
   scene.add(background.group);
+
+  // Portal machines load after the first usable frame (see settleQuality).
+  const portals = createPortalMachines({ reduced });
+  scene.add(portals.group);
 
   const cards = createCards({ renderer, reduced });
   cards.setShaderQuality(renderBudget.profile.name);
@@ -413,7 +420,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     orbit.pitchVelocity *= damping;
   }
 
-  let examplePreviewUpdate = null, projectPreviewHover = false;
+  let examplePreviewUpdate = null, projectPreviewHover = false, portalTicket = 0;
   const examplePreviewPoint = new THREE.Vector3();
   const exampleFlight = createExampleFlight({
     camera, cards, scene,
@@ -1128,6 +1135,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   }
 
   function settleQuality() {
+    window.setTimeout(() => portals.load(), 1400);
     if (qualityUpgradeTimer || qualitySettled) return;
     qualityUpgradeTimer = window.setTimeout(() => {
       qualityUpgradeTimer = 0;
@@ -1182,6 +1190,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     const dt = timer.getDelta();
 
     background.update(t, dt);
+    portals.update(t, dt);
     cards.update(t, dt);
 
     if (
@@ -1419,6 +1428,66 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     focusCard,
     toHome,
     exampleFlight,
+    portals,
+    /** Camera pose that frames a portal's open frame inside the projection viewport. */
+    portalPlan(id, fullViewport) {
+      // The frame takes most of the viewport; the moving scene stays visible around it.
+      const fill = PORTAL_FRAME_FILL;
+      const viewport = { width: fullViewport.width * fill, height: fullViewport.height * fill,
+        left: fullViewport.left + fullViewport.width * (1 - fill) / 2, top: fullViewport.top + fullViewport.height * (1 - fill) / 2 };
+      const info = portals.frameInfo(id, viewport.width / viewport.height);
+      if (!info) return null;
+      const tan = halfFovTan();
+      const distance = Math.max(
+        info.halfHeight * 2 / (2 * tan) * (view.height / viewport.height),
+        info.halfWidth * 2 / (2 * tan * view.aspect) * (view.width / viewport.width));
+      const perPixel = 2 * distance * tan / view.height;
+      const offsetY = (viewport.top + viewport.height / 2 - view.top - view.height / 2) * perPixel;
+      const offsetX = (viewport.left + viewport.width / 2 - view.left - view.width / 2) * perPixel;
+      const lookPoint = info.center.clone().addScaledVector(info.up, offsetY).addScaledVector(info.right, -offsetX);
+      return { look: lookPoint, position: lookPoint.clone().addScaledVector(info.normal, distance) };
+    },
+    /** Fly in, unfold and resolve with the aperture rectangle in CSS pixels. */
+    async openPortal(id, viewport) {
+      const plan = this.portalPlan(id, viewport);
+      if (!plan) return null;
+      const ticket = ++portalTicket;
+      const flying = exampleFlight.open({ ...plan, duration: reduced ? 0 : 2.1 });
+      await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150));
+      if (ticket !== portalTicket) return null; // closed during the flight
+      await Promise.all([flying, portals.animate(id, 1, reduced ? 0 : 2.3)]);
+      // The scene keeps running around the frame; start a light pass right away.
+      background.triggerSparseIllumination?.();
+      return ticket === portalTicket ? this.portalApertureRect(id) : null;
+    },
+    async closePortal(id) {
+      portalTicket += 1;
+      if (projectionIdle) this.setProjectionIdle(false);
+      const folding = portals.animate(id, 0, reduced ? 0 : 1.65);
+      await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 770));
+      await Promise.all([folding, exampleFlight.close(reduced ? 0 : 1.9)]);
+    },
+    /** Keep an open portal framed after a resize; the running loop draws it. */
+    relayoutPortal(id, viewport) {
+      const plan = this.portalPlan(id, viewport);
+      if (!plan) return null;
+      exampleFlight.retarget(plan);
+      portals.settle(id);
+      return this.portalApertureRect(id);
+    },
+    portalApertureRect(id) {
+      camera.updateMatrixWorld();
+      const corners = portals.apertureCorners(id);
+      if (!corners.length) return null;
+      const worldWidth = corners[0].distanceTo(corners[1]);
+      const points = corners.map(point => point.clone().project(camera));
+      const xs = points.map(point => view.left + (point.x + 1) * view.width / 2);
+      const ys = points.map(point => view.top + (1 - point.y) * view.height / 2);
+      const left = Math.min(...xs), top = Math.min(...ys);
+      const width = Math.max(...xs) - left, height = Math.max(...ys) - top;
+      const radius = portals.apertureRadius * width / worldWidth;
+      return { left, top, width, height, radius };
+    },
     get renderQuality() { return renderBudget.profile.name; },
     get isRenderingPaused() { return projectionIdle || inspectionFrozen || informationPaused || !running || document.hidden; },
     setProjectionIdle(value) {
@@ -1582,6 +1651,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
       informationMotion.removeEventListener('change', refreshInformation);
       cancelAnimationFrame(informationRefreshFrame);
       exampleFlight.dispose();
+      portals.dispose();
       unsubscribeMobileLanguage();
       mobileDots.removeEventListener('click', onMobileSelect);
       mobileDots.remove();

@@ -22,3 +22,7 @@
 .frame.is-example-projected .head,.frame.is-example-projected .head-calibration-marker,.frame.is-example-projected .foot{visibility:hidden;pointer-events:none}
 @media(max-width:600px){.example-trigger{font-size:11px;padding:12px}.example-projection__controls{inset-inline:12px}.example-projection__controls button,.example-projection__controls a{padding:10px 6px;font-size:10px;letter-spacing:.08em}.example-projection__controls:has([data-example-separate]){gap:6px}.example-projection__controls:has([data-example-separate]) button::before{display:none}}
 @media(prefers-reduced-motion:reduce){.example-projection__light{will-change:auto}.example-projection__status{transition:none!important}}
+/* Portal mode: the unfolded machine in the canvas frames the page; no scrim. */
+.example-projection[data-portal] .example-projection__scrim{display:none}
+.example-projection[data-portal] .example-projection__light{overflow:hidden;box-shadow:0 0 0 1px rgb(127 216 255 / .35),0 0 28px rgb(127 216 255 / .28)}
+.example-projection[data-portal] .hologram-border{display:none}

@@ -19,17 +19,26 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
   const scrim = dialog.querySelector('.example-projection__scrim');
   const controls = dialog.querySelector('.example-projection__controls');
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  let portal = null;
+  function placeLight(rect, radius = 0) {
+    Object.assign(light.style, { left: `${rect.left}px`, top: `${rect.top}px`, right: 'auto', bottom: 'auto',
+      width: `${rect.width}px`, height: `${rect.height}px`, borderRadius: radius ? `${radius}px` : '' });
+  }
   function resize() {
     const view = getProjectionViewport();
-    Object.assign(light.style, { left: `${view.left}px`, top: `${view.top}px`, right: 'auto', bottom: 'auto',
-      width: `${view.width + 2}px`, height: `${view.height + 2}px` });
+    if (portal && state !== 'closing') {
+      const rect = stage?.relayoutPortal(portal, view);
+      if (rect) { placeLight(rect, rect.radius); return; }
+    }
+    placeLight({ ...view, width: view.width + 2, height: view.height + 2 });
   }
-  resize(); window.addEventListener('resize', resize);
+  window.addEventListener('resize', resize);
   const status = dialog.querySelector('[role=status]');
   const border = createHologramBorder(light);
   let state = 'closed', originFocus = null, iframe = null, events = null, timer = 0, ticket = 0;
   let project = getProject('systems'), separate = null, preview = null, originRect = null;
   let resolveOpeningContent = null;
+  resize();
   const animations = new Set();
   function animate(element, keyframes, duration, easing = 'cubic-bezier(.22, 1, .36, 1)') {
     const animation = element.animate(keyframes, { duration: motion.matches ? 0 : duration, easing, fill: 'forwards' });
@@ -96,10 +105,13 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     events?.abort(); events = null;
     playSound('release');
     stage?.cards.setProjectHologramHidden(false);
-    setBrowserSuspended(false);
+    const portalId = portal;
+    if (!portalId) setBrowserSuspended(false);
     frame?.classList.remove('is-example-projected');
     await Promise.all([
-      animate(light, [{ transform, opacity: lightOpacity }, { transform: originTransform(), opacity: 0 }], 500),
+      portalId
+        ? animate(light, [{ clipPath: 'circle(75% at 50% 50%)', opacity: lightOpacity }, { clipPath: 'circle(0% at 50% 50%)', opacity: 0 }], 520, 'cubic-bezier(.6, 0, .8, .4)')
+        : animate(light, [{ transform, opacity: lightOpacity }, { transform: originTransform(), opacity: 0 }], 500),
       animate(scrim, [{ opacity: darkness }, { opacity: 0 }], 500),
       animate(controls, [{ opacity: controlOpacity }, { opacity: 0 }], 180),
     ]);
@@ -107,7 +119,12 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     border.stop();
     iframe?.remove(); iframe = null;
     preview?.remove(); preview = null;
-    await stage?.exampleFlight.close();
+    if (portalId) {
+      await stage?.closePortal(portalId);
+      portal = null; delete dialog.dataset.portal;
+      setBrowserSuspended(false);
+      resize();
+    } else await stage?.exampleFlight.close();
     stage?.setProjectionIdle(false);
     dialog.close(); state = 'closed';
     stage?.cards.setTemporaryActive(null);
@@ -126,7 +143,11 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       dialog.querySelector('.example-projection__controls').append(separate);
     }
     const current = ++ticket;
-    const liveOpening = project.id === 'passung';
+    // Desktop with motion: fly to the project's portal machine and open it there.
+    portal = stage.portals?.has(project.id) && !motion.matches && innerWidth > 600 ? project.id : null;
+    if (portal) dialog.dataset.portal = project.id; else delete dialog.dataset.portal;
+    stage.portals?.setHover(null);
+    const liveOpening = !portal && project.id === 'passung';
     const contentReady = liveOpening ? new Promise(resolve => { resolveOpeningContent = resolve; }) : Promise.resolve();
     originFocus = source;
     const sourcePreview = source?.closest?.('[data-project-card]')?.querySelector('img') || source?.closest?.('.project-wing')?.querySelector('.wing-preview') || source;
@@ -134,14 +155,15 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     light.getAnimations().forEach(animation => animation.cancel());
     scrim.getAnimations().forEach(animation => animation.cancel());
     controls.getAnimations().forEach(animation => animation.cancel());
-    if (!liveOpening) {
+    if (!liveOpening && !portal) {
       preview = document.createElement('img');
       preview.className = 'example-projection__preview'; preview.alt = '';
       preview.src = sourcePreview?.currentSrc || sourcePreview?.querySelector?.('img')?.currentSrc || project.preview(getLanguage(), getProjectionViewport().width <= 580);
     }
     playSound('focus');
     stage.cards.setTemporaryActive('projekte');
-    if (!liveOpening) {
+    if (portal) setBrowserSuspended(true);
+    else if (!liveOpening) {
       stage.cards.setProjectHologramHidden(true);
       setBrowserSuspended(true);
     }
@@ -150,7 +172,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     status.hidden = false;
     translate();
     dialog.showModal(); back.focus({ preventScroll: true });
-    if (liveOpening) animate(controls, [{ opacity: 0 }, { opacity: 1 }], 180);
+    if (liveOpening || portal) animate(controls, [{ opacity: 0 }, { opacity: 1 }], 180);
     events = new AbortController();
     window.addEventListener('message', event => {
       if (event.origin !== location.origin || event.source !== iframe?.contentWindow) return;
@@ -180,6 +202,20 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
     }, { signal: events.signal });
     screen.replaceChildren(iframe, ...(preview ? [preview] : []));
     timer = window.setTimeout(() => { status.textContent = t('example.error'); }, 12000);
+    if (portal) {
+      light.style.opacity = '0';
+      const rect = await stage.openPortal(portal, getProjectionViewport());
+      if (current !== ticket) return;
+      if (rect) placeLight(rect, rect.radius);
+      light.style.opacity = '';
+      // No projection idle here: the Orrery keeps moving around the frame.
+      await animate(light, [{ clipPath: 'circle(0% at 50% 50%)', opacity: .4 }, { clipPath: 'circle(75% at 50% 50%)', opacity: 1 }], 900);
+      if (current !== ticket) return;
+      state = 'open'; dialog.dataset.state = state;
+      frame?.classList.add('is-example-projected');
+      revealContent();
+      return;
+    }
     await Promise.all([stage.exampleFlight.open(), contentReady]);
     if (current !== ticket) return;
     if (liveOpening) {
@@ -218,6 +254,16 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       event.preventDefault(); event.stopImmediatePropagation(); close();
     }
   }
+  // Hovering or focusing a project entry lights its portal machine in the background.
+  function hoverPortal(event) {
+    if (state !== 'closed') return;
+    const link = event.target.closest?.('[data-example-open]');
+    const leaving = event.type === 'pointerout' || event.type === 'focusout';
+    if (leaving) {
+      if (link && !link.contains(event.relatedTarget)) stage?.portals?.setHover(null);
+    } else if (link) stage?.portals?.setHover(link.dataset.projectId);
+  }
+  ['pointerover', 'pointerout', 'focusin', 'focusout'].forEach(type => document.addEventListener(type, hoverPortal));
   document.addEventListener('click', activate);
   document.addEventListener('visibilitychange', visibility);
   window.addEventListener('keydown', onEscape, true);
@@ -232,6 +278,7 @@ export function createExampleProjection({ stage, container, onNavigate, setBrows
       resolveOpeningContent?.(); resolveOpeningContent = null;
       animations.forEach(animation => animation.cancel()); animations.clear();
       document.removeEventListener('click', activate);
+      ['pointerover', 'pointerout', 'focusin', 'focusout'].forEach(type => document.removeEventListener(type, hoverPortal));
       document.removeEventListener('visibilitychange', visibility);
       window.removeEventListener('resize', resize);
       stage?.setProjectionIdle(false);
