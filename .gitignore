@@ -11,3 +11,7 @@ dist/
 # Local patch snapshots
 .patch-backups/
 apply-online-praesenz-*.py
+
+# Local tool state
+FETCH_HEAD
+.devin/
