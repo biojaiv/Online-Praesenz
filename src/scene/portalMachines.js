@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { engravingTextures, bezelGeometry } from './portalEngraving.js';
+import { ORRERY_LIGHT_COUNT } from './orreryMaterials.js';
 
 const MODEL_URL = new URL('../../Elemente/Orrery/Portal_Nebenmaschine_web.glb', import.meta.url).href;
 
@@ -17,48 +18,104 @@ const HALF_APERTURE_Y = CY + R_IN - RAIL;
 const SCALE = 2.1;
 
 /**
- * One portal machine per project, each riding its own track of the Orrery.
- * Only the tilted rings that precess about the vertical stay in front of the
- * camera; the tumbling rings and Laufbahnen turn face-on and would carry a portal
- * out of view. On its track a portal sits at the rail point nearest its home and
- * glides slowly along the rail around it, so it moves with the ring's precession
- * and tilt and is found in a slightly different place on every visit.
- * Homes (simulated over full precession cycles, see docu_workprogress): Tiefgang
- * upper right, always in view; PASSUNG left and Recovery Lab far right, in view
- * about three quarters of the time (their rings rise above the top edge).
+ * One portal machine per project, each carried by its own track of the Orrery.
+ * A portal sits fixed on its rail and travels with the whole construct. Like the
+ * Orrery it is dark unless one of the travelling light passes reaches it. Before
+ * it would leave the view it is set back to a dark stretch of the same rail that
+ * stays in view longest; nobody sees the jump, both places are unlit.
+ * The tracks are the ones that always keep an arc in view behind the pedestals
+ * (measured over full cycles, docu_workprogress/portal-laufbahnen-2026-09-30.md).
  * `position`/`yaw` are the fallback while the Orrery is not (yet) available.
  */
 const SLOTS = Object.freeze({
-  systems: { track: '01 HAUPTMASCHINE / Wanderringneigung 0', radius: 25, home: [12.5, -1, -33.7],
-    swing: .34, period: 83, phase: 0, position: [-15.5, -14.6, -40.5], yaw: .26, accent: 0xffb347 },
-  passung: { track: '01 HAUPTMASCHINE / Wanderringneigung 1', radius: 44, home: [-15, -13, -53.3],
-    swing: .2, period: 97, phase: 2.1, position: [-38, 4.2, -30.5], yaw: .66, accent: 0xcfe6ff },
-  recovery: { track: '01 HAUPTMASCHINE / Aussenring 1 / Eigenrotation', radius: 49, home: [16.8, -13, -58],
-    swing: .18, period: 71, phase: 4.2, position: [15.5, -14.6, -40.5], yaw: -.26, accent: 0x4fd6e8 },
+  systems: { track: '01 HAUPTMASCHINE / Wanderringneigung 0', radius: 25,
+    position: [-15.5, -14.6, -40.5], yaw: .26, accent: 0xffb347 },
+  passung: { track: '01 HAUPTMASCHINE / Ring 2', radius: 22.5,
+    position: [-38, 4.2, -30.5], yaw: .66, accent: 0xcfe6ff },
+  recovery: { track: '01 HAUPTMASCHINE / Ring 1', radius: 19.5,
+    position: [15.5, -14.6, -40.5], yaw: -.26, accent: 0x4fd6e8 },
 });
-// Portals turn towards the stage camera's resting position.
+// Portals turn towards the stage camera's resting position until a view camera is known.
 const VIEWER = new THREE.Vector3(0, -1.2, 18);
+const STAGE_CENTRE = new THREE.Vector3(0, -5, 0);
+// The view a portal must stay in: behind the pedestal row, inside the frame with a margin.
+const VIEW = Object.freeze({ x: .9, y: .8, behindStage: 10, far: 160 });
+// Reset targets sit further inside, so a portal has a long way across before the next reset.
+const TARGET = Object.freeze({ x: .8, y: .7 });
+const LOOKAHEAD = 22; // seconds: reset before a portal would leave the view (waits for darkness)
+const RAIL_SAMPLES = 180;
+const LIGHT_MARGIN = 3; // a portal is ~2 units wide; keep it clear of the light's reach
 const node = name => THREE.PropertyBinding.sanitizeNodeName(name);
 const CORNERS = ['NO', 'NW', 'SW', 'SO'];
 
-function revealMaterial(source, uniform) {
+/**
+ * Stage light only while hovered or open (uPortalReveal); otherwise the portal is
+ * lit like the Orrery itself, by its travelling lights, and dark fragments vanish.
+ */
+function revealMaterial(source, uniform, orrery) {
   const material = source.clone();
   material.onBeforeCompile = shader => {
-    shader.uniforms.uPortalReveal = uniform;
-    shader.fragmentShader = 'uniform float uPortalReveal;\n' + shader.fragmentShader.replace(
-      'vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;',
-      // Only reflected light dims in the dark; the accent pulse stays visible.
-      'vec3 outgoingLight = (totalDiffuse + totalSpecular) * uPortalReveal + totalEmissiveRadiance;');
+    Object.assign(shader.uniforms, orrery, { uPortalReveal: uniform });
+    shader.vertexShader = 'varying vec3 vPortalWorld;\n' + shader.vertexShader.replace('#include <project_vertex>', `
+      #include <project_vertex>
+      vPortalWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    shader.fragmentShader = `uniform float uPortalReveal;
+      varying vec3 vPortalWorld;
+      uniform vec4 uOrreryLights[${ORRERY_LIGHT_COUNT}];
+      uniform float uOrreryEnergy[${ORRERY_LIGHT_COUNT}];
+      uniform vec4 uOrreryInspection;
+      uniform float uOrreryVisible, uOrreryDocument;
+    ` + shader.fragmentShader
+      .replace('#include <lights_fragment_end>', `
+      #include <lights_fragment_end>
+      // Same light passes and falloff as the Orrery (orreryMaterials.js).
+      ReflectedLight orreryLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
+      for (int i = 0; i < ${ORRERY_LIGHT_COUNT + 1}; i++) {
+        vec3 lightPosition; float radius, energy;
+        if (i < ${ORRERY_LIGHT_COUNT}) {
+          lightPosition = uOrreryLights[i].xyz; radius = uOrreryLights[i].w;
+          energy = uOrreryEnergy[i] * uOrreryVisible * mix(1.0, 0.28, uOrreryDocument);
+        } else {
+          lightPosition = uOrreryInspection.xyz + vec3(3.0, 7.0, 10.0);
+          radius = uOrreryInspection.w + 14.0;
+          energy = uOrreryInspection.w > 0.0 ? 5.0 : 0.0;
+        }
+        if (energy <= 0.0) continue;
+        float distanceToLight = distance(lightPosition, vPortalWorld);
+        if (distanceToLight >= radius) continue;
+        float falloff = 1.0 - smoothstep(radius * 0.25, radius, distanceToLight);
+        IncidentLight passLight;
+        passLight.direction = normalize((viewMatrix * vec4(lightPosition, 1.0)).xyz - geometryPosition);
+        passLight.color = vec3(1.0, 0.97, 0.92) * energy * falloff * falloff;
+        passLight.visible = true;
+        RE_Direct(passLight, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, orreryLight);
+      }`)
+      .replace('vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;', `
+      vec3 outgoingLight = (totalDiffuse + totalSpecular) * uPortalReveal
+        + orreryLight.directDiffuse + orreryLight.directSpecular + totalEmissiveRadiance;
+      // In the dark the machine is as invisible as the unlit Orrery around it.
+      if (uPortalReveal < 0.02 && max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b)) < 0.003) discard;`);
   };
-  material.customProgramCacheKey = () => 'portal-reveal-v1';
+  material.customProgramCacheKey = () => 'portal-reveal-v2';
   return material;
 }
 
-export function createPortalMachines({ reduced = false, findTrack = () => null } = {}) {
+export function createPortalMachines({
+  reduced = false, findTrack = () => null, getOrreryLights = () => null, getViewCamera = () => null,
+  getApproach = () => null,
+} = {}) {
   const group = new THREE.Group();
+  // Own copies of the Orrery light state, refreshed every frame (the Orrery may load later).
+  const orrery = {
+    uOrreryLights: { value: Array.from({ length: ORRERY_LIGHT_COUNT }, () => new THREE.Vector4()) },
+    uOrreryEnergy: { value: new Float32Array(ORRERY_LIGHT_COUNT) },
+    uOrreryInspection: { value: new THREE.Vector4() },
+    uOrreryVisible: { value: 1 },
+    uOrreryDocument: { value: 0 },
+  };
   group.name = 'portal-machines';
   const instances = new Map();
-  let hovered = null, disposed = false, loading = null, lastElapsed = 0;
+  let hovered = null, disposed = false, loading = null;
   // Drawn just before a foreground portal: clearing depth here puts the active
   // frame in front of every Orrery ring and strut between it and the camera.
   const depthClear = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
@@ -90,7 +147,7 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
       spinner.add(root);
       holder.add(spinner);
       group.add(holder);
-      const reveal = { value: .16 };
+      const reveal = { value: 0 };
       const accent = new THREE.Color(slot.accent);
       const materials = new Map();
       root.traverse(object => {
@@ -98,7 +155,7 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
         object.frustumCulled = false; // morph targets move far beyond the closed bounds
         if (object.name === node('PORTAL / Innenleuchten')) { object.visible = false; return; }
         const source = object.material;
-        if (!materials.has(source)) materials.set(source, revealMaterial(source, reveal));
+        if (!materials.has(source)) materials.set(source, revealMaterial(source, reveal, orrery));
         object.material = materials.get(source);
       });
       // Bezel and backing appear only on the open frame (see pose()).
@@ -106,10 +163,10 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
       const bezelMaterial = revealMaterial(new THREE.MeshStandardMaterial({
         color: 0xa9b3bf, map: textures.map, bumpMap: textures.bumpMap, bumpScale: 2.2,
         emissive: accent, emissiveMap: textures.emissiveMap, emissiveIntensity: 0,
-        metalness: .82, roughness: .4, transparent: true, opacity: 0 }), reveal);
+        metalness: .82, roughness: .4, transparent: true, opacity: 0 }), reveal, orrery);
       const backMaterial = revealMaterial(new THREE.MeshStandardMaterial({
         color: 0x2a3442, bumpMap: textures.bumpMap, bumpScale: 1.2,
-        metalness: .75, roughness: .5, transparent: true, opacity: 0 }), reveal);
+        metalness: .75, roughness: .5, transparent: true, opacity: 0 }), reveal, orrery);
       const bezel = new THREE.Mesh(new THREE.BufferGeometry(), bezelMaterial);
       const backing = new THREE.Mesh(new THREE.BufferGeometry(), backMaterial);
       for (const band of [bezel, backing]) { band.frustumCulled = false; band.visible = false; root.add(band); }
@@ -121,7 +178,8 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
       mixer.update(0);
       instances.set(id, {
         id, holder, spinner, root, mixer, action, clip, reveal, accent, slot,
-        track: null, home: new THREE.Vector3().fromArray(slot.home), held: false,
+        track: null, theta: null, held: false, resets: 0,
+        centre: new THREE.Vector3(), quaternion: new THREE.Quaternion(), previous: null, omega: new THREE.Vector3(),
         materials: [...materials.values()],
         // Corner pivots are posed from their rail's morph weight (same curve as their
         // translation track) so the aspect stretch never compounds between frames.
@@ -134,7 +192,6 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
         bezel, backing, bandStretch: 0, open: 0,
         progress: { value: 0 }, stretch: 1, glow: 0, active: false, tween: null, foreground: false,
       });
-      ride(instances.get(id), lastElapsed);
     }
   }
 
@@ -153,19 +210,121 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
     return loading;
   }
 
-  const railInverse = new THREE.Matrix4(), railLocal = new THREE.Vector3();
-  /** Seat a portal on its track: nearest rail point to its home, swinging along the rail. */
-  function ride(item, elapsed) {
+  const railPoint = new THREE.Vector3(), viewPoint = new THREE.Vector3(), lightPoint = new THREE.Vector3();
+  const spin = new THREE.Quaternion(), axis = new THREE.Vector3(), scratch = new THREE.Vector3();
+  const decomposedScale = new THREE.Vector3();
+  const railAt = (item, theta, target) => target
+    .set(Math.cos(theta) * item.slot.radius, 0, Math.sin(theta) * item.slot.radius).applyMatrix4(item.track.matrixWorld);
+
+  /** Inside the user's view: in frame (with margin) and behind the pedestal row. */
+  function inView(point, camera, limits = VIEW) {
+    viewPoint.copy(point).applyMatrix4(camera.matrixWorldInverse);
+    const depth = -viewPoint.z;
+    const stageDepth = -scratch.copy(STAGE_CENTRE).applyMatrix4(camera.matrixWorldInverse).z;
+    if (depth < stageDepth + VIEW.behindStage || depth > VIEW.far) return false;
+    viewPoint.copy(point).project(camera);
+    return Math.abs(viewPoint.x) < limits.x && Math.abs(viewPoint.y) < limits.y;
+  }
+  /** Reached by an Orrery light pass (or the soft key around an open portal)? */
+  function lit(point) {
+    const lights = orrery.uOrreryLights.value, energy = orrery.uOrreryEnergy.value;
+    for (let i = 0; i < lights.length; i++) {
+      if (energy[i] <= 0) continue;
+      lightPoint.set(lights[i].x, lights[i].y, lights[i].z);
+      if (point.distanceTo(lightPoint) < lights[i].w + LIGHT_MARGIN) return true;
+    }
+    const inspection = orrery.uOrreryInspection.value;
+    if (inspection.w > 0) {
+      lightPoint.set(inspection.x + 3, inspection.y + 7, inspection.z + 10);
+      if (point.distanceTo(lightPoint) < inspection.w + 14 + LIGHT_MARGIN) return true;
+    }
+    return false;
+  }
+  /** Where a rail point will be after `seconds`, from the track's measured rotation. */
+  function predict(item, point, seconds, target) {
+    const rate = item.omega.length();
+    if (rate < 1e-6) return target.copy(point);
+    spin.setFromAxisAngle(axis.copy(item.omega).divideScalar(rate), rate * seconds);
+    return target.copy(point).sub(item.centre).applyQuaternion(spin).add(item.centre);
+  }
+  /** Seconds a rail point stays in view (sampled up to two minutes). */
+  function timeInView(item, point, camera) {
+    let seconds = 0;
+    for (let t = 6; t <= 120; t += 6) {
+      if (!inView(predict(item, point, t, scratch.clone()), camera)) break;
+      seconds = t;
+    }
+    return seconds;
+  }
+  /**
+   * A warp to this point ends beside the pedestal row, not among its holograms:
+   * the framing camera stands `approach.distance` in front of the portal.
+   */
+  function clearApproach(point, camera) {
+    const approach = getApproach();
+    if (!approach) return true;
+    scratch.subVectors(camera.position, point).setLength(approach.distance).add(point);
+    return !approach.box.containsPoint(scratch);
+  }
+  /** Dark rail position that stays in view longest, clear of the other portals. */
+  function chooseTheta(item, camera, cleanOnly = false) {
+    // Prefer well inside the frame with a clean approach; relax only if nothing else is dark and free.
+    return chooseWithin(item, camera, TARGET, true) ?? chooseWithin(item, camera, VIEW, true)
+      ?? (cleanOnly ? null : chooseWithin(item, camera, TARGET, false) ?? chooseWithin(item, camera, VIEW, false));
+  }
+  function chooseWithin(item, camera, limits, clean) {
+    let best = null, bestScore = -1;
+    const candidate = new THREE.Vector3();
+    for (let i = 0; i < RAIL_SAMPLES; i++) {
+      const theta = i / RAIL_SAMPLES * Math.PI * 2;
+      railAt(item, theta, candidate);
+      if (!inView(candidate, camera, limits) || lit(candidate) || (clean && !clearApproach(candidate, camera))) continue;
+      let crowded = false;
+      for (const other of instances.values()) {
+        if (other !== item && other.theta !== null && other.holder.position.distanceTo(candidate) < 9) crowded = true;
+      }
+      if (crowded) continue;
+      const score = timeInView(item, candidate, camera);
+      if (score > bestScore) { bestScore = score; best = theta; }
+    }
+    return best;
+  }
+  /** Measure the track's rotation (axis, rate, centre) from its last two frames. */
+  function measure(item, dt) {
+    item.track.matrixWorld.decompose(item.centre, item.quaternion, decomposedScale);
+    if (item.previous && dt > 0) {
+      spin.copy(item.previous).invert().premultiply(item.quaternion);
+      if (spin.w < 0) spin.set(-spin.x, -spin.y, -spin.z, -spin.w);
+      const angle = 2 * Math.acos(Math.min(1, spin.w));
+      const sine = Math.sqrt(Math.max(0, 1 - spin.w * spin.w));
+      const rate = angle / dt;
+      if (sine > 1e-7) item.omega.lerp(axis.set(spin.x, spin.y, spin.z).divideScalar(sine).multiplyScalar(rate), .2);
+      else item.omega.multiplyScalar(.8);
+    }
+    (item.previous ||= new THREE.Quaternion()).copy(item.quaternion);
+  }
+  /** Carry a portal on its track; set it back in the dark before it leaves the view. */
+  function ride(item, dt) {
     item.track ||= findTrack(item.slot.track);
     if (!item.track) return;
-    const { radius, swing, period, phase } = item.slot;
-    railInverse.copy(item.track.matrixWorld).invert();
-    railLocal.copy(item.home).applyMatrix4(railInverse);
-    const angle = Math.atan2(railLocal.z, railLocal.x)
-      + (reduced ? 0 : swing * Math.sin(elapsed * Math.PI * 2 / period + phase));
-    item.holder.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius).applyMatrix4(item.track.matrixWorld);
+    measure(item, dt);
+    const camera = getViewCamera();
+    const free = !item.held && !item.active && hovered !== item.id;
+    if (item.theta === null) {
+      // First seating: anywhere dark in view, or (no view yet) the start of the rail.
+      item.theta = (camera && chooseTheta(item, camera)) ?? 0;
+    } else if (camera && free) {
+      railAt(item, item.theta, railPoint);
+      const leaving = !inView(railPoint, camera) || !inView(predict(item, railPoint, LOOKAHEAD, scratch.clone()), camera);
+      // Also move on (in the dark) from stretches where a warp would end among the holograms.
+      if ((leaving || !clearApproach(railPoint, camera)) && !lit(railPoint)) {
+        const theta = chooseTheta(item, camera, !leaving);
+        if (theta !== null) { item.theta = theta; item.resets += 1; }
+      }
+    }
+    railAt(item, item.theta, item.holder.position);
     // A framed page keeps its orientation; the camera follows the position only.
-    if (!item.held) item.holder.lookAt(VIEWER);
+    if (!item.held) item.holder.lookAt(camera ? camera.position : VIEWER);
   }
 
   /** Scrub the unfold clip and widen the open frame to the requested aspect. */
@@ -211,6 +370,22 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
     setForeground(id, value) { const item = instances.get(id); if (item) setForeground(item, Boolean(value)); },
     get hovered() { return hovered; },
     setHover(id) { hovered = instances.has(id) ? id : null; },
+    /**
+     * Before a warp: if the flight would end among the holograms, take a dark stretch of
+     * the same rail outside every light pass, in view and with a clear approach.
+     */
+    prepareWarp(id) {
+      const item = instances.get(id), camera = getViewCamera();
+      if (!item?.track || item.theta === null || !camera) return false;
+      railAt(item, item.theta, railPoint);
+      if (clearApproach(railPoint, camera)) return false;
+      const theta = chooseTheta(item, camera, true);
+      if (theta === null) return false;
+      item.theta = theta; item.resets += 1;
+      railAt(item, theta, item.holder.position);
+      item.holder.lookAt(camera.position);
+      return true;
+    },
     /** Freeze a portal's orientation while it frames a page (it keeps riding its track). */
     hold(id, value) { const item = instances.get(id); if (item) item.held = Boolean(value); },
     /** World-space framing data for a camera flight (outer frame size at the given aspect). */
@@ -265,14 +440,22 @@ export function createPortalMachines({ reduced = false, findTrack = () => null }
     update(elapsed, delta) {
       if (disposed) return;
       const dt = Math.min(.1, Math.max(0, delta || 0));
-      lastElapsed = elapsed;
+      const source = getOrreryLights();
+      if (source) {
+        source.uOrreryLights.value.forEach((light, i) => orrery.uOrreryLights.value[i].copy(light));
+        orrery.uOrreryEnergy.value.set(source.uOrreryEnergy.value);
+        orrery.uOrreryInspection.value.copy(source.uOrreryInspection.value);
+        orrery.uOrreryVisible.value = source.uOrreryVisible.value;
+        orrery.uOrreryDocument.value = source.uOrreryDocument.value;
+      }
       for (const item of instances.values()) {
-        ride(item, elapsed);
+        ride(item, dt);
         const hover = hovered === item.id;
         // Dark by default, fully lit and pulsing while its gallery entry is hovered.
         const pulse = reduced ? .7 : (.5 + .5 * Math.sin(elapsed * Math.PI * 2 * 1.3)) ** 2;
-        const glowTarget = item.active ? .3 : hover ? .2 + .8 * pulse : 0;
-        const revealTarget = item.active ? 1.7 : hover ? 1.2 + .8 * pulse : .16;
+        // The warp target lights up as the camera sets off (held), before it unfolds.
+        const glowTarget = item.active ? .3 : hover ? .2 + .8 * pulse : item.held ? .2 : 0;
+        const revealTarget = item.active ? 1.7 : hover ? 1.2 + .8 * pulse : item.held ? 1.4 : 0;
         const response = 1 - Math.pow(hover && !reduced ? .0001 : .02, dt);
         item.glow += (glowTarget - item.glow) * response;
         item.reveal.value += (revealTarget - item.reveal.value) * response;

@@ -61,6 +61,8 @@ export function createBackground({ camera = null, random = Math.random } = {}) {
 
   return {
     group, ambient, ready,
+    /** Light passes of the Orrery (positions, radii, energy), or null before it loads. */
+    get lightUniforms() { return machine?.uniforms ?? null; },
     getInspectionCandidates: camera => machine?.getInspectionCandidates(camera) ?? [],
     setInspectionPoint: (point, radius) => machine?.setInspectionPoint(point, radius),
     setEffectsEnabled(value) {

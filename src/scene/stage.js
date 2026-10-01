@@ -65,7 +65,42 @@ const PORTAL_FRAME_FILL = 0.92;
 const PORTAL_SURROUND_LIGHT = 16;
 // Warp timing: portals ride the Orrery, so the distance differs from visit to
 // visit. The duration follows it gently (fourth root) and stays within bounds.
-const PORTAL_WARP = Object.freeze({ base: 2.1, distance: 47, min: 1.85, max: 2.4 });
+const PORTAL_WARP = Object.freeze({ base: 2.1, distance: 32, min: 1.85, max: 2.4 });
+// Flights to a portal behind the pedestal row arc over it instead of through the holograms.
+const ROW_CLEARANCE = new THREE.Vector3(1.5, 2.5, 1.5);
+const _arcBox = new THREE.Box3(), _arcRay = new THREE.Ray(), _arcHit = new THREE.Vector3();
+const _arcPoint = new THREE.Vector3(), _arcPrevious = new THREE.Vector3();
+function bezierPoint(from, via, to, t, target) {
+  const u = 1 - t;
+  return target.copy(from).multiplyScalar(u * u).addScaledVector(via, 2 * u * t).addScaledVector(to, t * t);
+}
+/** Control point of an arc from `from` to `to` that clears `obstacle`, or null if the straight path is clear. */
+function arcOver(from, to, obstacle) {
+  _arcBox.copy(obstacle).expandByVector(ROW_CLEARANCE);
+  if (_arcBox.containsPoint(to)) return null; // ends among the pedestals: no arc can help
+  _arcRay.set(from, _arcPoint.subVectors(to, from).normalize());
+  const hit = _arcRay.intersectBox(_arcBox, _arcHit);
+  if (!hit || hit.distanceTo(from) > from.distanceTo(to)) return null;
+  const via = new THREE.Vector3();
+  for (let rise = 2; rise <= 80; rise += 1.5) {
+    via.lerpVectors(from, to, .5).setY((from.y + to.y) / 2 + rise);
+    let clear = true;
+    for (let i = 1; i < 40 && clear; i++) clear = !_arcBox.containsPoint(bezierPoint(from, via, to, i / 40, _arcPoint));
+    if (clear) return via;
+  }
+  return null;
+}
+function flightLength(from, to, via) {
+  if (!via) return from.distanceTo(to);
+  let length = 0;
+  _arcPrevious.copy(from);
+  for (let i = 1; i <= 24; i++) {
+    bezierPoint(from, via, to, i / 24, _arcPoint);
+    length += _arcPoint.distanceTo(_arcPrevious);
+    _arcPrevious.copy(_arcPoint);
+  }
+  return length;
+}
 function portalWarpScale(distance) {
   const duration = PORTAL_WARP.base * Math.pow(Math.max(1, distance) / PORTAL_WARP.distance, .25);
   return THREE.MathUtils.clamp(duration, PORTAL_WARP.min, PORTAL_WARP.max) / PORTAL_WARP.base;
@@ -126,7 +161,26 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     background.group.traverse(object => { if (!track && object.userData.sourceName === name) track = object; });
     return track;
   };
-  const portals = createPortalMachines({ reduced, findTrack });
+  const portals = createPortalMachines({
+    reduced, findTrack, getOrreryLights: () => background.lightUniforms,
+    // The user's view; no set-backs while the camera flies to or frames a portal.
+    getViewCamera: () => (exampleFlight?.active ? null : camera),
+    getApproach: () => portalApproach(),
+  });
+  // Pedestal row (with clearance) and framing distance of an open portal, for portal placement.
+  const approach = { box: new THREE.Box3(), distance: 0, dirty: true };
+  function portalApproach() {
+    // portalPlan() sets the frame aspect, so measure only while no portal frames a page.
+    if (approach.dirty && portals.has('systems') && !exampleFlight.active) {
+      const plan = stageApi.portalPlan('systems', { left: 0, top: 0, width: innerWidth, height: innerHeight });
+      if (plan) {
+        approach.distance = plan.position.distanceTo(plan.look);
+        approach.box.setFromObject(cards.group).expandByVector(ROW_CLEARANCE);
+        approach.dirty = false;
+      }
+    }
+    return approach.dirty ? null : approach;
+  }
   scene.add(portals.group);
 
   const cards = createCards({ renderer, reduced });
@@ -440,6 +494,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let examplePreviewUpdate = null, projectPreviewHover = false, portalTicket = 0, portalLightTimer = 0;
   // The portal the camera currently follows (flying, open or closing) and its viewport.
   let portalFollow = null, portalWarp = 1;
+  const _rowBounds = new THREE.Box3();
   const examplePreviewPoint = new THREE.Vector3();
   const exampleFlight = createExampleFlight({
     camera, cards, scene,
@@ -1106,6 +1161,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   let inspectionResized = false;
   let projectionIdle = false;
   function resize() {
+    approach.dirty = true;
     resizeFrame = 0;
     const rect = canvas.getBoundingClientRect();
     view.left = rect.left;
@@ -1197,12 +1253,17 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
   // A portal keeps riding its track while it frames a page: the camera moves
   // with it, so the frame stays still and the Orrery travels past behind it.
   const followedLight = new THREE.Vector3();
+  function showRow(value) { if (cards.group.visible !== value) cards.group.visible = value; }
   function followPortal() {
-    if (!portalFollow) return;
-    if (!exampleFlight.active) { portals.hold(portalFollow.id, false); portalFollow = null; return; }
+    if (!portalFollow) { showRow(true); return; }
+    if (!exampleFlight.active) { portals.hold(portalFollow.id, false); portalFollow = null; showRow(true); return; }
     const plan = stageApi.portalPlan(portalFollow.id, portalFollow.viewport);
     if (!plan) return;
     exampleFlight.retarget(plan);
+    // Rarely no stretch of the rail allows a clear approach: rather than standing among
+    // the holograms, the camera leaves the pedestal row out while it is inside it.
+    if (approach.dirty) _rowBounds.setFromObject(cards.group).expandByVector(ROW_CLEARANCE);
+    showRow(!(approach.dirty ? _rowBounds : approach.box).containsPoint(camera.position));
     if (portalFollow.lit) {
       const centre = portals.frameInfo(portalFollow.id, portalFollow.aspect).center;
       if (centre.distanceToSquared(followedLight) > 1) {
@@ -1494,13 +1555,15 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     /** Fly in, unfold and resolve with the aperture rectangle in CSS pixels. */
     async openPortal(id, viewport, { onUnfold } = {}) {
       if (portalFollow && portalFollow.id !== id) portals.hold(portalFollow.id, false);
+      if (!exampleFlight.active) portals.prepareWarp(id);
       portals.hold(id, true);
       const plan = this.portalPlan(id, viewport);
       if (!plan) { portals.hold(id, false); return null; }
       const ticket = ++portalTicket;
-      portalWarp = portalWarpScale(camera.position.distanceTo(plan.position));
+      const via = arcOver(camera.position, plan.position, _rowBounds.setFromObject(cards.group));
+      portalWarp = portalWarpScale(flightLength(camera.position, plan.position, via));
       portalFollow = { id, viewport: { ...viewport }, aspect: viewport.width / viewport.height, lit: false };
-      const flying = exampleFlight.open({ ...plan, duration: reduced ? 0 : PORTAL_WARP.base * portalWarp });
+      const flying = exampleFlight.open({ ...plan, via, duration: reduced ? 0 : PORTAL_WARP.base * portalWarp });
       await new Promise(resolve => window.setTimeout(resolve, reduced ? 0 : 1150 * portalWarp));
       if (ticket !== portalTicket) return null; // closed during the flight
       portals.setForeground(id, true);

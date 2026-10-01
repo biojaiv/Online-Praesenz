@@ -203,6 +203,8 @@ export function createOrreryLighting(source, { reduced = false, camera = null, r
   }
   return {
     group,
+    // Shared with the portal machines, which are lit by the same passes.
+    uniforms,
     update(elapsed, delta) {
       if (disposed) return;
       lastElapsed = elapsed;

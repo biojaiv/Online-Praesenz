@@ -10,12 +10,19 @@ export function createExampleFlight({ camera, capture, restore }) {
   let snapshot = null, flight = null, tween = null;
   const progress = { value: 0 };
   const lookPoint = new THREE.Vector3();
+  const bend = new THREE.Vector3();
   function apply() {
     if (!flight) return;
     const p = progress.value;
     camera.position.lerpVectors(flight.fromPosition, flight.toPosition, p);
-    // A slight rise keeps the path from grazing the pedestals.
-    camera.position.addScaledVector(flight.lift, Math.sin(p * Math.PI));
+    if (flight.via) {
+      // Quadratic Bézier through the control point: an arc over the pedestal row.
+      bend.copy(flight.via).multiplyScalar(2).sub(flight.fromPosition).sub(flight.toPosition);
+      camera.position.addScaledVector(bend, 2 * p * (1 - p) * .5);
+    } else {
+      // A slight rise keeps the path from grazing the pedestals.
+      camera.position.addScaledVector(flight.lift, Math.sin(p * Math.PI));
+    }
     lookPoint.lerpVectors(flight.fromLook, flight.toLook, p);
     camera.lookAt(lookPoint);
   }
@@ -41,6 +48,7 @@ export function createExampleFlight({ camera, capture, restore }) {
         fromPosition: camera.position.clone(), toPosition: plan.position.clone(),
         fromLook, toLook: plan.look.clone(),
         lift: new THREE.Vector3(0, camera.position.distanceTo(plan.position) * .06, 0),
+        via: plan.via?.clone() ?? null,
       };
       progress.value = 0;
       return run(1, plan.duration ?? 1.8).then(() => true);
