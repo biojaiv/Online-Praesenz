@@ -53,7 +53,22 @@ Lebenslauf-Nahansicht, wo nur ein kleiner Ausschnitt des Hintergrunds sichtbar i
 1–3 % der Zeit draußen. Das passiert, wenn gerade eine Lichtpassage auf ihnen liegt, denn ein Sprung im Licht
 wäre sichtbar.
 
-## Bekannte Folge
+## Sichtbar statt verdeckt (01.10.2026)
 
-In der Projektansicht liegen die Portale häufig hinter den Hologrammen: im Bild, aber verdeckt. Das
-Aufleuchten beim Hover ist deshalb nicht immer zu sehen.
+Im Projektblick bleiben nur etwa 19 % des Bildes hinter der Sockelreihe frei: die Ränder, schmale Spalten
+und das Band unterhalb der Hologramme. Liegt ein Portal im Dunkeln hinter einem Sockel oder Hologramm,
+rückt es auf einen unverdeckten, unbeleuchteten Abschnitt seiner Bahn. Die Verdecker sind Bildschirmrechtecke
+der sichtbaren Sockel- und Hologramm-Meshes; unsichtbare Klickkörper zählen nicht mit. Bei der Zielwahl haben
+unverdeckte Stellen Vorrang, danach verdeckte, danach solche ohne sauberen Anflug. Eine erfolglose Suche wird
+nach 1 s Szenenzeit wiederholt.
+
+Gemessen über 10 Minuten (Projektansicht / Startansicht), verdeckt:
+
+| | Tiefgang | PASSUNG | Recovery |
+| --- | --- | --- | --- |
+| vorher | 88 % | 92 % | 82 % |
+| Projektansicht | 17 % | 61 % | 49 % |
+| Startansicht | 4–6 % | 46–48 % | 17–23 % |
+
+Die Portale springen dadurch öfter, alle 7–12 s, immer nur im Dunkeln. Das Aufleuchten beim Hover ist jetzt
+meist zu sehen.

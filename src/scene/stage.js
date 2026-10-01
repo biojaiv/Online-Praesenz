@@ -166,6 +166,8 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     // The user's view; no set-backs while the camera flies to or frames a portal.
     getViewCamera: () => (exampleFlight?.active ? null : camera),
     getApproach: () => portalApproach(),
+    // Pedestals and holograms: portals prefer gaps where a light pass or hover shows them.
+    getOccluders: () => cards?.group ?? null,
   });
   // Pedestal row (with clearance) and framing distance of an open portal, for portal placement.
   const approach = { box: new THREE.Box3(), distance: 0, dirty: true };

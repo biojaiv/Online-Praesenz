@@ -39,9 +39,12 @@ const SLOTS = Object.freeze({
 const VIEWER = new THREE.Vector3(0, -1.2, 18);
 const STAGE_CENTRE = new THREE.Vector3(0, -5, 0);
 // The view a portal must stay in: behind the pedestal row, inside the frame with a margin.
-const VIEW = Object.freeze({ x: .9, y: .8, behindStage: 10, far: 160 });
+const VIEW = Object.freeze({ x: .93, y: .82, behindStage: 10, far: 160 });
 // Reset targets sit further inside, so a portal has a long way across before the next reset.
 const TARGET = Object.freeze({ x: .8, y: .7 });
+// Unhidden spots are rare in the pedestal view (edges, gaps, the band below the
+// holograms), so for those the edge of the frame is allowed too.
+const OPEN = VIEW;
 const LOOKAHEAD = 22; // seconds: reset before a portal would leave the view (waits for darkness)
 const RAIL_SAMPLES = 180;
 const LIGHT_MARGIN = 3; // a portal is ~2 units wide; keep it clear of the light's reach
@@ -102,7 +105,7 @@ function revealMaterial(source, uniform, orrery) {
 
 export function createPortalMachines({
   reduced = false, findTrack = () => null, getOrreryLights = () => null, getViewCamera = () => null,
-  getApproach = () => null,
+  getApproach = () => null, getOccluders = () => null,
 } = {}) {
   const group = new THREE.Group();
   // Own copies of the Orrery light state, refreshed every frame (the Orrery may load later).
@@ -115,7 +118,7 @@ export function createPortalMachines({
   };
   group.name = 'portal-machines';
   const instances = new Map();
-  let hovered = null, disposed = false, loading = null;
+  let hovered = null, disposed = false, loading = null, sceneTime = 0;
   // Drawn just before a foreground portal: clearing depth here puts the active
   // frame in front of every Orrery ring and strut between it and the camera.
   const depthClear = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }));
@@ -178,7 +181,7 @@ export function createPortalMachines({
       mixer.update(0);
       instances.set(id, {
         id, holder, spinner, root, mixer, action, clip, reveal, accent, slot,
-        track: null, theta: null, held: false, resets: 0,
+        track: null, theta: null, held: false, resets: 0, retryAt: 0,
         centre: new THREE.Vector3(), quaternion: new THREE.Quaternion(), previous: null, omega: new THREE.Vector3(),
         materials: [...materials.values()],
         // Corner pivots are posed from their rail's morph weight (same curve as their
@@ -247,15 +250,6 @@ export function createPortalMachines({
     spin.setFromAxisAngle(axis.copy(item.omega).divideScalar(rate), rate * seconds);
     return target.copy(point).sub(item.centre).applyQuaternion(spin).add(item.centre);
   }
-  /** Seconds a rail point stays in view (sampled up to two minutes). */
-  function timeInView(item, point, camera) {
-    let seconds = 0;
-    for (let t = 6; t <= 120; t += 6) {
-      if (!inView(predict(item, point, t, scratch.clone()), camera)) break;
-      seconds = t;
-    }
-    return seconds;
-  }
   /**
    * A warp to this point ends beside the pedestal row, not among its holograms:
    * the framing camera stands `approach.distance` in front of the portal.
@@ -266,25 +260,94 @@ export function createPortalMachines({
     scratch.subVectors(camera.position, point).setLength(approach.distance).add(point);
     return !approach.box.containsPoint(scratch);
   }
-  /** Dark rail position that stays in view longest, clear of the other portals. */
-  function chooseTheta(item, camera, cleanOnly = false) {
-    // Prefer well inside the frame with a clean approach; relax only if nothing else is dark and free.
-    return chooseWithin(item, camera, TARGET, true) ?? chooseWithin(item, camera, VIEW, true)
-      ?? (cleanOnly ? null : chooseWithin(item, camera, TARGET, false) ?? chooseWithin(item, camera, VIEW, false));
+  /**
+   * Screen rectangles (NDC) and nearest depth of the pedestals and holograms, so a
+   * portal can wait in a gap where a light pass or hover actually shows it.
+   * Rebuilt at most twice a second; the stage camera moves slowly.
+   */
+  const occlusion = { rects: [], at: -Infinity, camera: null };
+  const boxCorner = new THREE.Vector3(), meshBox = new THREE.Box3();
+  const shown = object => { for (let node = object; node; node = node.parent) if (!node.visible) return false; return true; };
+  function occluders(camera) {
+    const now = performance.now();
+    if (occlusion.camera === camera && now - occlusion.at < 500) return occlusion.rects;
+    occlusion.rects = []; occlusion.at = now; occlusion.camera = camera;
+    const root = getOccluders();
+    if (!root) return occlusion.rects;
+    root.updateWorldMatrix(true, true);
+    root.traverse(object => {
+      if (!object.isMesh || !shown(object)) return;
+      // Invisible hit bodies and depth-only helpers hide nothing.
+      const material = Array.isArray(object.material) ? object.material[0] : object.material;
+      if (!material || material.visible === false || material.colorWrite === false) return;
+      const geometry = object.geometry;
+      if (!geometry.boundingBox) geometry.computeBoundingBox();
+      meshBox.copy(geometry.boundingBox).applyMatrix4(object.matrixWorld);
+      if (meshBox.isEmpty() || meshBox.getSize(boxCorner).length() < 1.2) return;
+      const rect = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, depth: Infinity };
+      for (let i = 0; i < 8; i++) {
+        boxCorner.set(i & 1 ? meshBox.max.x : meshBox.min.x, i & 2 ? meshBox.max.y : meshBox.min.y, i & 4 ? meshBox.max.z : meshBox.min.z);
+        const depth = -scratch.copy(boxCorner).applyMatrix4(camera.matrixWorldInverse).z;
+        if (depth <= camera.near) return; // straddles the camera: no usable rectangle
+        rect.depth = Math.min(rect.depth, depth);
+        boxCorner.project(camera);
+        rect.x0 = Math.min(rect.x0, boxCorner.x); rect.x1 = Math.max(rect.x1, boxCorner.x);
+        rect.y0 = Math.min(rect.y0, boxCorner.y); rect.y1 = Math.max(rect.y1, boxCorner.y);
+      }
+      occlusion.rects.push(rect);
+    });
+    return occlusion.rects;
   }
-  function chooseWithin(item, camera, limits, clean) {
+  /** Hidden behind a pedestal or hologram (with a margin for the machine's size)? */
+  function occluded(point, camera) {
+    const depth = -viewPoint.copy(point).applyMatrix4(camera.matrixWorldInverse).z;
+    viewPoint.copy(point).project(camera);
+    const margin = 1.1 / Math.max(1, depth); // half the closed machine's radius on screen
+    for (const rect of occluders(camera)) {
+      if (rect.depth < depth && viewPoint.x > rect.x0 - margin && viewPoint.x < rect.x1 + margin
+        && viewPoint.y > rect.y0 - margin && viewPoint.y < rect.y1 + margin) return true;
+    }
+    return false;
+  }
+  /** Seconds a rail point stays in view and, if asked, unhidden (sampled up to two minutes). */
+  function timeVisible(item, point, camera, open) {
+    let seconds = 0;
+    const ahead = new THREE.Vector3();
+    for (let t = 3; t <= 120; t += 3) {
+      predict(item, point, t, ahead);
+      if (!inView(ahead, camera) || (open && occluded(ahead, camera))) break;
+      seconds = t;
+    }
+    return seconds;
+  }
+  /**
+   * Dark rail position, clear of the other portals, that stays visible longest. Tiers
+   * relax step by step: unhidden with a clean approach, then hidden, then any approach.
+   */
+  function chooseTheta(item, camera, { cleanOnly = false, openOnly = false } = {}) {
+    const tiers = [[TARGET, true, true], [OPEN, true, true]];
+    if (!openOnly) tiers.push([TARGET, true, false], [VIEW, true, false]);
+    if (!openOnly && !cleanOnly) tiers.push([TARGET, false, false], [VIEW, false, false]);
+    for (const [limits, clean, open] of tiers) {
+      const theta = chooseWithin(item, camera, limits, clean, open);
+      if (theta !== null) return theta;
+    }
+    return null;
+  }
+  function chooseWithin(item, camera, limits, clean, open) {
     let best = null, bestScore = -1;
     const candidate = new THREE.Vector3();
     for (let i = 0; i < RAIL_SAMPLES; i++) {
       const theta = i / RAIL_SAMPLES * Math.PI * 2;
       railAt(item, theta, candidate);
-      if (!inView(candidate, camera, limits) || lit(candidate) || (clean && !clearApproach(candidate, camera))) continue;
+      if (!inView(candidate, camera, limits) || lit(candidate)) continue;
+      if ((clean && !clearApproach(candidate, camera)) || (open && occluded(candidate, camera))) continue;
       let crowded = false;
       for (const other of instances.values()) {
         if (other !== item && other.theta !== null && other.holder.position.distanceTo(candidate) < 9) crowded = true;
       }
       if (crowded) continue;
-      const score = timeInView(item, candidate, camera);
+      const score = timeVisible(item, candidate, camera, open);
       if (score > bestScore) { bestScore = score; best = theta; }
     }
     return best;
@@ -313,13 +376,17 @@ export function createPortalMachines({
     if (item.theta === null) {
       // First seating: anywhere dark in view, or (no view yet) the start of the rail.
       item.theta = (camera && chooseTheta(item, camera)) ?? 0;
-    } else if (camera && free) {
-      railAt(item, item.theta, railPoint);
+    } else if (camera && free && sceneTime >= item.retryAt && !lit(railAt(item, item.theta, railPoint))) {
+      // Only in the dark: before it leaves the view, or to leave a stretch where a warp
+      // would end among the holograms or where pedestals and holograms hide it.
       const leaving = !inView(railPoint, camera) || !inView(predict(item, railPoint, LOOKAHEAD, scratch.clone()), camera);
-      // Also move on (in the dark) from stretches where a warp would end among the holograms.
-      if ((leaving || !clearApproach(railPoint, camera)) && !lit(railPoint)) {
-        const theta = chooseTheta(item, camera, !leaving);
+      const unclean = !leaving && !clearApproach(railPoint, camera);
+      const hidden = !leaving && !unclean && occluded(railPoint, camera);
+      if (leaving || unclean || hidden) {
+        const theta = chooseTheta(item, camera, { cleanOnly: unclean, openOnly: hidden });
         if (theta !== null) { item.theta = theta; item.resets += 1; }
+        // A failed search (no suitable dark stretch right now) is retried a second later.
+        else item.retryAt = sceneTime + 1;
       }
     }
     railAt(item, item.theta, item.holder.position);
@@ -379,7 +446,7 @@ export function createPortalMachines({
       if (!item?.track || item.theta === null || !camera) return false;
       railAt(item, item.theta, railPoint);
       if (clearApproach(railPoint, camera)) return false;
-      const theta = chooseTheta(item, camera, true);
+      const theta = chooseTheta(item, camera, { cleanOnly: true });
       if (theta === null) return false;
       item.theta = theta; item.resets += 1;
       railAt(item, theta, item.holder.position);
@@ -440,6 +507,7 @@ export function createPortalMachines({
     update(elapsed, delta) {
       if (disposed) return;
       const dt = Math.min(.1, Math.max(0, delta || 0));
+      sceneTime = elapsed;
       const source = getOrreryLights();
       if (source) {
         source.uOrreryLights.value.forEach((light, i) => orrery.uOrreryLights.value[i].copy(light));
