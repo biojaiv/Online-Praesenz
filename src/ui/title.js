@@ -19,18 +19,21 @@ export function igniteTitle(el, { delay = 0.9 } = {}) {
   el.textContent = '';
 
   const letters = [];
-  for (const ch of text) {
-    const span = document.createElement('span');
-    span.className = 'glyph';
-    span.setAttribute('aria-hidden', 'true');
-    if (ch === ' ') {
-      span.classList.add('glyph--space');
-      span.innerHTML = '&nbsp;';
-    } else {
+  // Keep each word together when the animated title wraps on a phone.
+  for (const [index, word] of text.split(/\s+/).entries()) {
+    if (index) el.append(' ');
+    const wordSpan = document.createElement('span');
+    wordSpan.className = 'title-word';
+    wordSpan.setAttribute('aria-hidden', 'true');
+    for (const ch of word) {
+      const span = document.createElement('span');
+      span.className = 'glyph';
+      span.setAttribute('aria-hidden', 'true');
       span.textContent = ch;
       letters.push(span);
+      wordSpan.appendChild(span);
     }
-    el.appendChild(span);
+    el.appendChild(wordSpan);
   }
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

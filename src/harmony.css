@@ -61,6 +61,9 @@
 /* The corner brackets already frame the space symmetrically. */
 /* The original head calibration line is visible again. */
 .frame { min-width: 0; max-width: 100%; }
+@media (max-height: 620px) {
+  .frame { height: 100%; min-height: 0; }
+}
 .head, .head__brand, .nav { min-width: 0; }
 .cv-kicker, .cv-kicker--amber { color: var(--amber-dim); }
 .example-trigger { color: var(--ink-dim); border-color: var(--line); background: var(--deep); }

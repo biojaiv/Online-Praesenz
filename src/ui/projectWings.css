@@ -27,7 +27,9 @@
 @media(max-width:650px){
  .projects-browser.project-book-ui{display:block;padding:0;overflow:hidden;pointer-events:auto}.projects-browser.project-book-ui[hidden]{display:none}
  .project-book-ui .project-book-sheets{display:block;inset:12px;overflow:auto;overscroll-behavior:contain;pointer-events:auto;padding:0}
- .project-book-ui .project-wing{position:relative;transform:none!important;zoom:var(--sheet-zoom,1);width:min(calc(100% / var(--sheet-zoom,1)),430px);height:auto;min-height:0;padding:22px;margin:0 auto 22px}
+ /* Percentage widths already account for CSS zoom. Dividing again makes
+    zoomed-out sheets overflow and zoomed-in sheets unnecessarily narrow. */
+ .project-book-ui .project-wing{position:relative;transform:none!important;zoom:var(--sheet-zoom,1);width:100%;max-width:430px;height:auto;min-height:0;padding:22px;margin:0 auto 22px;overflow-wrap:anywhere}
  .project-book-ui .wing-heading{font-size:30px;margin-top:20px}.project-book-ui .wing-subtitle{font-size:14px}
  .project-book-ui .wing-preview{position:relative;left:auto;top:auto;width:100%;height:auto;aspect-ratio:1.5;margin:20px 0}
  .project-book-ui .project-wing header,.project-book-ui .wing-tech,.project-book-ui .wing-preview>span{font-size:13px}.project-book-ui .wing-tech{margin-top:20px}
@@ -61,6 +63,11 @@
  .project-book-ui .gallery-copy h3{font-size:24px}.project-book-ui .gallery-copy p{font-size:16px}.project-book-ui .gallery-card b{right:8px;top:7px;font-size:19px}
  .project-book-ui .project-wing .gallery-hint{position:static;font-size:16px;margin-top:25px}
 }
+/* Stack image and copy when zoom or a narrow viewport leaves too little room. */
+.project-book-ui:not(.is-spatial) .gallery-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr))}
+.project-book-ui:not(.is-spatial) .gallery-thumb{width:100%;max-width:100%;height:auto}
+.project-book-ui:not(.is-spatial) .gallery-copy{min-width:0;overflow-wrap:anywhere}
+.project-book-ui:not(.is-spatial) .wing-focus{max-width:100%;overflow-wrap:anywhere}
 @media(prefers-reduced-motion:reduce){.wing-gallery .gallery-card{transition:none}}
 /* Scan line from the 30-second profile, running down each wing (decorative, click-through). */
 .project-wing{overflow:hidden}

@@ -56,6 +56,8 @@ html, body {
   font-family: var(--font-body);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -247,6 +249,7 @@ body {
 }
 
 .head__role .glyph--space { width: 0.28em; }
+.head__role .title-word { display: inline-block; }
 
 /* ---------- Navigation ---------- */
 
