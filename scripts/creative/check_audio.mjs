@@ -80,11 +80,39 @@ try{
  assert(envelope.silent<1e-7&&envelope.released<1e-7,'Opt-in attack and release remain silent at their boundaries, even with reverb');
  assert(envelope.attack<envelope.sustain*.2&&envelope.sustain>.01,'Sound eases in rather than appearing at full volume');
  assert(envelope.step<.01,'The rendered attack and release contain no abrupt waveform jumps');
+ // Strikes: render one mallet without the drone, in the dry room and in the cathedral.
+ const strikes=await page.evaluate(async()=>{
+  const {createSoundGraph,finNote}=await import('/src/creative/resonanzAudio.js');
+  async function render(space,index,shape=55){
+   const rate=44100,context=new OfflineAudioContext(2,rate*5,rate),graph=createSoundGraph(context,{drone:false}),state={chapter:2,shape,lift:0,space};
+   graph.update(state,true);graph.strike(finNote(state,index),{velocity:1,when:.1});
+   const buffer=await context.startRendering(),left=buffer.getChannelData(0),right=buffer.getChannelData(1),window=rate*.05;
+   let peak=0,step=0;const windows=[];
+   for(let i=0;i<left.length;i++){peak=Math.max(peak,Math.abs(left[i]),Math.abs(right[i]));if(i)step=Math.max(step,Math.abs(left[i]-left[i-1]));}
+   for(let start=0;start+window<=left.length;start+=window){let e=0;for(let i=start;i<start+window;i++)e+=left[i]*left[i];windows.push(Math.sqrt(e/window));}
+   const loudest=Math.max(...windows),last=windows.findLastIndex(v=>v>loudest*.01);
+   // Energy above 3 kHz in the first half second, where the mallet is brightest.
+   const n=16384,real=new Float64Array(n),imaginary=new Float64Array(n),offset=Math.round(rate*.1);
+   for(let i=0;i<n;i++)real[i]=left[offset+i]*(.5-.5*Math.cos(2*Math.PI*i/(n-1)));
+   for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){const v=real[i];real[i]=real[j];real[j]=v;}}
+   for(let len=2;len<=n;len<<=1){const angle=-2*Math.PI/len,wr=Math.cos(angle),wi=Math.sin(angle);for(let i=0;i<n;i+=len){let ar=1,ai=0;for(let j=0;j<len/2;j++){const a=i+j,b=a+len/2,br=real[b]*ar-imaginary[b]*ai,bi=real[b]*ai+imaginary[b]*ar;real[b]=real[a]-br;imaginary[b]=imaginary[a]-bi;real[a]+=br;imaginary[a]+=bi;const next=ar*wr-ai*wi;ai=ar*wi+ai*wr;ar=next;}}}
+   let total=0,high=0;for(let i=8;i<n/2;i++){const e=real[i]**2+imaginary[i]**2;total+=e;if(i*rate/n>3000)high+=e;}
+   return {space,index,shape,peak,step,before:windows[1],tail:(last+1)*.05-.1,highBand:high/total};
+  }
+  return [await render(0,40),await render(85,40),await render(35,81,100),await render(35,0,0)];
+ });
+ console.table(strikes.map(m=>Object.fromEntries(Object.entries(m).map(([k,v])=>[k,Number(v.toFixed(4))]))));
+ const [dryStrike,hallStrike]=strikes;
+ assert(strikes.every(m=>m.peak>.02&&m.peak<.22),'A single strike is audible and bounded');
+ assert(strikes.every(m=>m.before<1e-6),'Nothing sounds before the scheduled strike');
+ assert(strikes.every(m=>m.step<.02),'The 5 ms mallet attack has no click');
+ assert(strikes.every(m=>m.highBand<.002),'Strikes keep less than 0.2% of their energy above 3 kHz');
+ assert(hallStrike.tail>dryStrike.tail*2.2,'The cathedral rings far longer than the dry room');
  await page.locator('#sound').click();
  await page.evaluate(()=>window.postMessage({type:'example:pause'},location.origin));
  await page.waitForFunction(()=>document.querySelector('#sound').getAttribute('aria-pressed')==='false');
  await page.waitForTimeout(180);
  await page.evaluate(()=>window.postMessage({type:'example:visible'},location.origin));
  assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false');
- console.log('PASS live sideways-wheel mapping, soft attack/release, spectrum and peak checks');
+ console.log('PASS live sideways-wheel mapping, soft attack/release, spectrum, peak and strike checks');
 }finally{await browser.close();}

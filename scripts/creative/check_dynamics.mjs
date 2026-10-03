@@ -6,7 +6,7 @@ try {
  const page=await browser.newPage({viewport:{width:1414,height:820},deviceScaleFactor:1});
  const errors=[];page.on('pageerror',error=>errors.push(error.message));
  const ready=()=>page.waitForFunction(()=>document.documentElement.dataset.creativeReady==='true');
- await page.goto(base+'/beispiele/resonanz/?lang=de');await ready();
+ await page.goto(base+'/beispiele/resonanz/?lang=de');await ready();await page.locator('.sound-gate__skip').click();
  const positions=()=>page.evaluate(()=>{
   const mesh=__creativeScene.scene.getObjectByName('82 shared Blender lamellae');
   return Array.from({length:mesh.count},(_,i)=>Array.from(mesh.instanceMatrix.array.slice(i*16+12,i*16+15)));
