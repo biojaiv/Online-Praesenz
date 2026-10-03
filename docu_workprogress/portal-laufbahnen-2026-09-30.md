@@ -8,6 +8,7 @@ Bahn des Orrery mit. Sie liegen im Dunkeln wie das Orrery selbst und verlassen n
 | Tiefgang | `Wanderringneigung 0` (präzediert um die Senkrechte) | 25 |
 | PASSUNG | `Ring 2` (kippt um seine X-Achse) | 22,5 |
 | Recovery Lab | `Ring 1` (kippt um seine X-Achse) | 19,5 |
+| RESONANZ (ab 04.10.2026) | `Laufbahn 0` (Leiterbahn, 97 % im Bild) | 26,4 |
 
 ## Bahnwahl
 

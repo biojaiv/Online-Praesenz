@@ -49,7 +49,7 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.evaluate(() => { document.querySelector('.project-book-ui').style.setProperty('--sheet-zoom', 1); window.__stage?.setProjectionIdle(false); });
-    for (const id of ['systems', 'passung', 'recovery']) {
+    for (const id of ['systems', 'passung', 'resonanz', 'recovery']) {
       const link = page.locator(`.project-book-ui .wing-preview[data-project-id="${id}"]`);
       const target = new URL(await link.getAttribute('href'), base);
       await link.scrollIntoViewIfNeeded();

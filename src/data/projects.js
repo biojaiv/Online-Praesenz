@@ -2,6 +2,8 @@
 export const PROJECTS = Object.freeze([
  { id:'systems', category:'webseiten', title:'example.previewTitle', note:'example.previewNote', preview:(language,mobile=false)=>`/example/preview-${mobile?'mobile':'desktop'}-${language}.webp`, entry:()=>'/beispiel/', parameter:'embedded', separate:false },
  { id:'passung', category:'webseiten', title:'passung.title', note:'passung.note', preview:(language,mobile=false)=>`/passung/preview-${mobile?'mobile':'desktop'}-${language}.webp`, entry:()=>'/beispiele/passung/', parameter:'embedded', separate:false },
+ // Sound is opt-in inside the page; `sound` marks the card so visitors know before opening.
+ { id:'resonanz', category:'webseiten', title:'resonanz.title', note:'resonanz.note', preview:(language,mobile=false)=>`/resonanz/preview-${mobile?'mobile':'desktop'}-${language}.webp`, entry:()=>'/beispiele/resonanz/', parameter:'embedded', separate:false, sound:true },
  { id:'recovery', category:'systemintegration', title:'recovery.title', note:'recovery.note', preview:language=>`/recovery/preview-${language}.webp`, entry:()=>'/systemintegration/', parameter:'embedded', separate:false },
 ]);
 export const getProject = id => PROJECTS.find(project=>project.id===id)||PROJECTS[0];

@@ -11,7 +11,7 @@ try {
   await page.goto(base+'/#projekte/webseiten');
   await page.waitForFunction(()=>window.__stage && document.querySelector('#boot.is-done') && !document.querySelector('.frame.is-intro'));
   await page.locator('.project-book-ui:not([hidden])').waitFor();
-  if(!mobile)await page.waitForFunction(()=>__stage.portals.has('systems')&&__stage.portals.has('recovery'),null,{timeout:60000});
+  if(!mobile)await page.waitForFunction(()=>__stage.portals.has('systems')&&__stage.portals.has('recovery')&&__stage.portals.has('resonanz'),null,{timeout:60000});
   await page.waitForTimeout(1400);
   for (const id of ['systems','recovery']) {
    const trigger = page.locator(`.wing-preview[data-project-id="${id}"]`);

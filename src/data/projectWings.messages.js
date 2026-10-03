@@ -1,9 +1,10 @@
 export const projectWingsMessages = {
  de: {
   'projects.closeup':'Nahansicht', 'projects.focusWing':'{title} in Nahansicht ansehen',
-  'gallery.subtitle':'Zwei Ideen. Zwei Erlebnisse.', 'gallery.hint':'Vorschau anklicken und entdecken',
-  'gallery.systems':'Ein Arbeitsplatz entsteht', 'gallery.passung':'Vom Entwurf zum Werkstück',
+  'gallery.subtitle':'Drei Ideen. Drei Erlebnisse.', 'gallery.hint':'Vorschau anklicken und entdecken',
+  'gallery.systems':'Ein Arbeitsplatz entsteht', 'gallery.passung':'Vom Entwurf zum Werkstück', 'gallery.resonanz':'Klang wird Form',
   'passung.title':'PASSUNG', 'passung.note':'Präzisionstechnik interaktiv erleben',
+  'resonanz.title':'RESONANZ', 'resonanz.note':'Ein spielbares Klangexperiment', 'gallery.sound':'MIT TON', 'gallery.soundAria':'mit Ton – bitte Ton einschalten',
   'projects.integration':'Systemintegration','projects.active':'AKTIV','projects.works':'Arbeiten','projects.work':'Arbeit',
   'projects.design':'Gestaltung · Aufbau · Barrierefreiheit','projects.infrastructure':'Netz · Server · Wiederanlauf',
   'projects.tischlerei':'Tischlerei · Branchen-Demo','projects.praxis':'Praxis · Branchen-Demo','projects.kanzlei':'Kanzlei · Branchen-Demo','projects.demo':'Fiktives Beispiel · kein realer Betrieb',
@@ -17,9 +18,10 @@ export const projectWingsMessages = {
  },
  en: {
   'projects.closeup':'Close-up', 'projects.focusWing':'View {title} up close',
-  'gallery.subtitle':'Two ideas. Two experiences.', 'gallery.hint':'Choose a preview and explore',
-  'gallery.systems':'A workplace comes to life', 'gallery.passung':'From drawing to finished part',
+  'gallery.subtitle':'Three ideas. Three experiences.', 'gallery.hint':'Choose a preview and explore',
+  'gallery.systems':'A workplace comes to life', 'gallery.passung':'From drawing to finished part', 'gallery.resonanz':'Sound takes shape',
   'passung.title':'PASSUNG', 'passung.note':'Explore precision engineering',
+  'resonanz.title':'RESONANZ', 'resonanz.note':'A playable sound experiment', 'gallery.sound':'WITH SOUND', 'gallery.soundAria':'with sound – please turn the sound on',
   'projects.integration':'Systems integration','projects.active':'ACTIVE','projects.works':'works','projects.work':'work',
   'projects.design':'Design · Structure · Accessibility','projects.infrastructure':'Networks · Servers · Recovery',
   'projects.tischlerei':'Joinery · Industry demo','projects.praxis':'Medical practice · Industry demo','projects.kanzlei':'Law office · Industry demo','projects.demo':'Fictional example · not a real business',

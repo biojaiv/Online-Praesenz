@@ -11,9 +11,9 @@ export const pages = {
     de: { title: 'Tiefgang — Systemintegration erleben · Vladimir Leicht', description: 'Begleite Janas Laptop vom Auspacken zum Arbeitsplatz: Netzwerk, DHCP, PXE, Active Directory, Softwareverteilung und Sicherung. Eine interaktive Demonstration.' },
   },
   '/beispiele/resonanz/': {
-    image: '/creative/resonanz-desktop-en.webp', type: 'WebPage',
-    en: { title: 'RESONANZ — Sound takes shape · Vladimir Leicht', description: 'Shape a silver sound sculpture. Explore harmonics, space and rhythm in a playable, bilingual Web Audio experiment.' },
-    de: { title: 'RESONANZ — Klang wird Form · Vladimir Leicht', description: 'Forme eine silberne Klangskulptur. Entdecke Obertöne, Raum und Rhythmus in einem spielbaren, zweisprachigen Web-Audio-Experiment.' },
+    image: '/resonanz/preview-desktop-en.webp', type: 'WebPage',
+    en: { title: 'RESONANZ — Sound takes shape · Vladimir Leicht', description: 'Strike, sweep and shape a silver sound sculpture of 82 tuned fins. Harmonics, rooms and rhythm in a playable, bilingual Web Audio experiment.' },
+    de: { title: 'RESONANZ — Klang wird Form · Vladimir Leicht', description: 'Schlage eine silberne Klangskulptur aus 82 gestimmten Lamellen an, streiche über sie und forme sie. Obertöne, Räume und Rhythmus in einem spielbaren, zweisprachigen Web-Audio-Experiment.' },
   },
   '/beispiele/palimpsest/': {
     image: '/creative/palimpsest-desktop-en.webp', type: 'WebPage',

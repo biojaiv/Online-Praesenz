@@ -27,6 +27,9 @@ Tastatur und mit reduzierter Bewegung erreichbar.
     (DHCP, PXE, AD, UEM), mit Vektorzeichnung und Lesetiefen.
   - [PASSUNG](https://vladimir-leicht.com/beispiele/passung/) ist eine Präzisionsfertigung mit
     Blender-Modell und Montageablauf.
+  - [RESONANZ](https://vladimir-leicht.com/beispiele/resonanz/) ist ein spielbares Klanginstrument: 82
+    gestimmte Lamellen lassen sich anschlagen und überstreichen, sechs Kapitel und drei Räume verändern Klang
+    und Form. Der Ton bleibt freiwillig; beim Öffnen bittet ein Hinweis darum, ihn einzuschalten.
   - [Recovery Lab](https://vladimir-leicht.com/systemintegration/) ist ein Labor mit Debian-VMs, Film und
     Wiederanlauf.
 - **Lebenslauf:** Das Hologramm im 3D-Raum, eine Lesefassung sowie ein helles, ATS-taugliches PDF und ein
@@ -99,6 +102,7 @@ SITE_URL=http://127.0.0.1:5173 npm run test:inspection
 | `src/ui/` | Navigation, Projektflügel, Portal-Projektion, Klänge, Technikansicht, Lesefassung |
 | `src/example/`, `beispiel/` | Tiefgang |
 | `src/passung/`, `beispiele/passung/` | PASSUNG |
+| `src/creative/resonanz*.js`, `beispiele/resonanz/` | RESONANZ |
 | `src/recovery/`, `systemintegration/` | Recovery Lab |
 | `Elemente/` | Blender-Quellen und Web-Exporte |
 | `public/` | Dokumente (CV, IHK), Filme, Vorschaubilder |
@@ -131,6 +135,8 @@ orrery. Everything stays accessible without WebGL, by keyboard and with reduced 
   orrery and unfolds into a frame.
   [Tiefgang](https://vladimir-leicht.com/beispiel/) shows how a workplace is provisioned.
   [PASSUNG](https://vladimir-leicht.com/beispiele/passung/) presents precision manufacturing.
+  [RESONANZ](https://vladimir-leicht.com/beispiele/resonanz/) is a playable sound instrument of 82 tuned fins;
+  sound stays opt-in and the page asks for it when it opens.
   [Recovery Lab](https://vladimir-leicht.com/systemintegration/) documents a Debian VM lab.
 - **CV:** a hologram in the 3D room, a reading view, and a light, ATS-friendly PDF plus DOCX, all
   generated from one source.

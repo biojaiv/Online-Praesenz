@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         ...Object.fromEntries(routes.map((route,i) => [`knallblau-${i}`, fileURLToPath(new URL(`.${route.path}index.html`, import.meta.url))])),
         passung: fileURLToPath(new URL('./beispiele/passung/index.html', import.meta.url)),
+        resonanz: fileURLToPath(new URL('./beispiele/resonanz/index.html', import.meta.url)),
         recovery: fileURLToPath(new URL('./systemintegration/index.html', import.meta.url)),
         portfolio: fileURLToPath(new URL('./index.html', import.meta.url)),
         example: fileURLToPath(new URL('./beispiel/index.html', import.meta.url)),

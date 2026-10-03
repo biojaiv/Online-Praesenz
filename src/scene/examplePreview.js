@@ -36,6 +36,15 @@ export function createExamplePreview({ reduced = false } = {}) {
    for(const word of words){const next=line?line+' '+word:word;if(ctx.measureText(next).width>704&&line){ctx.fillText(line,48,y);y+=49;line=word;}else line=next;}
    if(line)ctx.fillText(line,48,y);
   }
+  // A small outlined speaker badge: this page is meant to be heard.
+  function soundBadge(x,y){
+   const label=t('gallery.sound');ctx.font='500 24px "Barlow Condensed",sans-serif';
+   const width=ctx.measureText(label).width+66;
+   ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x,y,width,40,20);ctx.stroke();
+   ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(x+16,y+15);ctx.lineTo(x+22,y+15);ctx.lineTo(x+30,y+9);ctx.lineTo(x+30,y+31);ctx.lineTo(x+22,y+25);ctx.lineTo(x+16,y+25);ctx.closePath();ctx.fill();
+   ctx.lineWidth=2;for(const r of [6,11]){ctx.beginPath();ctx.arc(x+31,y+20,r,-.75,.75);ctx.stroke();}
+   ctx.textAlign='left';ctx.fillText(label,x+50,y+28);
+  }
   function draw(){
    if(disposed)return;
    ctx.fillStyle=LIGHT_PALETTE.deep;ctx.fillRect(0,0,800,1428);
@@ -57,6 +66,7 @@ export function createExamplePreview({ reduced = false } = {}) {
      ctx.fillText(project.id==='systems'?'TIEFGANG':t(project.title),430,y+105,272);
      ctx.fillStyle='#afc2d1';ctx.font='29px "Barlow Condensed",sans-serif';ctx.fillText(t('gallery.'+project.id),430,y+157,280);
      ctx.fillStyle=accent;ctx.font='36px Barlow,sans-serif';ctx.fillText('↗',706,y+104);
+     if(project.sound)soundBadge(430,y+188);
     });
     ctx.textAlign='center';ctx.fillStyle=accent;ctx.font='30px "Barlow Condensed",sans-serif';ctx.fillText(t('gallery.hint'),400,1305,704);
     texture.needsUpdate=true;return;

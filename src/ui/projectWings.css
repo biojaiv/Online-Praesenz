@@ -48,6 +48,9 @@
 .gallery-copy h3{margin:0 0 12px;font:600 41px/1.1 'Barlow Condensed',sans-serif}
 .gallery-copy p{font:29px/1.35 'Barlow Condensed',sans-serif;color:#afc2d1}
 .gallery-card b{position:absolute;right:18px;top:68px;color:#efb46c;font:36px Barlow,sans-serif}
+.gallery-sound{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:5px 14px 5px 10px;border:2px solid #efb46c;border-radius:20px;color:#efb46c;font:500 24px/1 'Barlow Condensed',sans-serif;letter-spacing:.04em}
+.gallery-sound svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.is-flat .gallery-sound,.project-book-ui:not(.is-spatial) .gallery-sound{margin-top:8px;padding:3px 10px 3px 7px;font-size:14px;gap:5px;border-width:1px}.is-flat .gallery-sound svg,.project-book-ui:not(.is-spatial) .gallery-sound svg{width:16px;height:16px}
 .project-wing .gallery-hint{position:absolute;top:1275px;left:48px;right:48px;text-align:center;color:#efb46c;font:30px 'Barlow Condensed',sans-serif}
 .is-spatial .project-wing>.wing-gallery{opacity:1}
 .is-spatial .wing-gallery .gallery-card{background:transparent;border-color:transparent}

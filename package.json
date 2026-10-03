@@ -42,6 +42,7 @@
     "build:passung": "node scripts/creative/build_passung.mjs",
     "test:passung": "node scripts/creative/check_passung.mjs",
     "build:passung-previews": "node scripts/creative/build_passung_previews.mjs",
+    "build:resonanz-previews": "node scripts/creative/build_resonanz_previews.mjs",
     "build:creative-models": "node scripts/creative/build_models.mjs",
     "test:info": "node scripts/info/check_browser.mjs",
     "test:info:production": "node scripts/info/check_production.mjs",

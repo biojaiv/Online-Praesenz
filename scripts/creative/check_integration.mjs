@@ -12,7 +12,8 @@ try{
  await page.route('**/*Hintergrund_web*.glb*',route=>route.abort());
  await page.goto(base+'/#projekte/webseiten');await page.waitForFunction(()=>document.querySelector('#boot.is-done')&&!document.querySelector('.frame.is-intro'),{timeout:60000});
  await page.locator('.project-book-ui:not([hidden])').waitFor();await page.waitForTimeout(1300);
- assert.deepEqual(await page.locator('[data-project-card]').evaluateAll(cards=>cards.map(card=>card.dataset.projectId)),['systems','passung']);
+ assert.deepEqual(await page.locator('[data-project-card]').evaluateAll(cards=>cards.map(card=>card.dataset.projectId)),['systems','passung','resonanz']);
+ assert.match(await page.locator('[data-project-card][data-project-id="resonanz"]').getAttribute('aria-label'),/mit Ton/,'The RESONANZ card says it is meant to be heard');
  assert(!requests.some(url=>/creative\/resonanz-(mobile|desktop)-.*\.webp/.test(url)),'Archived sound preview is not requested by the gallery');
  assert(!requests.some(url=>/creative\/(resonanz|palimpsest|cityModel|resonanzAudio)\.js|passung\/(main|machine)\.js|assets\/(resonanz|palimpsest|passung)-.*\.js/.test(url)),'Examples are not loaded with the gallery');
  assert(!requests.some(url=>/(PALIMPSEST|RESONANZ|PASSUNG).*_web.*\.glb/.test(url)),'Blender example geometry is deferred until opening');
@@ -25,13 +26,18 @@ try{
  }
  await page.screenshot({path:`/tmp/creative-review/portfolio-gallery-${mobile?'mobile':'desktop'}.png`});
  if(await page.evaluate(()=>Boolean(window.__stage)))await page.evaluate(()=>__stage.setProjectionIdle(false));
- for(const id of ['passung']){
+ for(const id of ['passung','resonanz']){
   const trigger=page.locator(`[data-project-card][data-project-id="${id}"]`),preview=await trigger.locator('img').evaluate(image=>image.currentSrc);if(mobile)await trigger.evaluate(el=>el.scrollIntoView({block:'nearest',behavior:'instant'}));const oldScroll=await page.locator('.project-book-sheets').evaluate(el=>el.scrollTop);await trigger.focus();await page.keyboard.press('Enter');
   await page.locator('.example-projection[data-state="open"]').waitFor();await page.waitForFunction(()=>document.querySelector('.example-projection iframe')?.dataset.revealed==='true');
   const iframe=page.locator('.example-projection iframe');assert.match(await iframe.getAttribute('src'),new RegExp(`/beispiele/${id}/`));
-  assert.equal(await page.locator('.example-projection__preview').getAttribute('src'),preview,'Expansion uses the clicked card image');
+  // PASSUNG opens live at its final layout (no still image); the others grow from the clicked card image.
+  if(id!=='passung')assert.equal(await page.locator('.example-projection__preview').getAttribute('src'),preview,'Expansion uses the clicked card image');
   const child=page.frameLocator('.example-projection iframe');await child.locator('html[data-creative-ready="true"]').waitFor();
-  assert.equal(await child.locator('canvas').getAttribute('data-model-ready'),'true','The fullscreen example uses its Blender model');
+  assert.equal(await child.locator('canvas[data-engine]').getAttribute('data-model-ready'),'true','The fullscreen example uses its Blender model');
+  if(id==='resonanz'){
+   await child.locator('.sound-gate:not([hidden])').waitFor();assert.equal(await child.locator('#sound').getAttribute('aria-pressed'),'false','Sound stays off until chosen');
+   await child.locator('.sound-gate__on').click();await child.locator('#sound[aria-pressed="true"]').waitFor();assert(!await child.locator('.sound-gate').isVisible());
+  }
   if(id==='passung'){
    await child.locator('.part-hotspot').click();await page.keyboard.press('Escape');assert(await page.locator('.example-projection').isVisible(),'First ESC closes the component details, not the whole example');
    await child.locator('.chapter-buttons [data-jump="3"]').click();await child.locator('html[data-chapter="3"]').waitFor();

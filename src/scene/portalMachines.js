@@ -34,6 +34,9 @@ const SLOTS = Object.freeze({
     position: [-38, 4.2, -30.5], yaw: .66, accent: 0xcfe6ff },
   recovery: { track: '01 HAUPTMASCHINE / Ring 1', radius: 19.5,
     position: [15.5, -14.6, -40.5], yaw: -.26, accent: 0x4fd6e8 },
+  // The ladder rail with the longest view share (97 %); citron is RESONANZ's own accent.
+  resonanz: { track: '01 HAUPTMASCHINE / Laufbahn 0', radius: 26.4,
+    position: [38, 4.2, -30.5], yaw: -.66, accent: 0xdfff65 },
 });
 // Portals turn towards the stage camera's resting position until a view camera is known.
 const VIEWER = new THREE.Vector3(0, -1.2, 18);
