@@ -16,3 +16,9 @@
 
 /creative/*
   Cache-Control: public, max-age=0, must-revalidate
+
+# Raumstudie D168: review copy shared by direct link only, kept out of search engines.
+/raumstudie/*
+  X-Robots-Tag: noindex, nofollow
+/raumstudie/d168/assets/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,0 +1,30 @@
+D168 architecture study – revision 3
+
+Poly Haven assets (CC0), https://polyhaven.com/license
+Textures: oak_veneer_01, oak_veneer_03, poly_wool_herringbone, rough_linen,
+leather_white, white_plaster_02, marble_01, grass_ground, roof_slates_03,
+wood_floor_deck, white_planks_clean.
+Sky: kloofendal_48d_partly_cloudy_puresky (environment.hdr, sky.webp).
+Models: tree_small_02, shrub_02, grass_medium_01, potted_plant_04,
+ceramic_vase_01, ceramic_vase_03.
+https://polyhaven.com/a/<asset-name> for each name above.
+
+Derived maps: scans were recoloured in linear light, roughness ranges bounded,
+the slate scan cropped to whole courses, the ceiling planks rotated by 90°.
+The sky was rotated so its sun matches the baked sun; the sun was removed for
+baking and replaced by a lamp of equal irradiance. Tree foliage was thinned per
+leaf card; models were reduced for the web. Porcelain floor and hedge foliage
+textures are generated procedurally. All parameters, sources and SHA-256 sums:
+Modelle/Frammelsberger_D168/Texturen/manifest-v3.json, v3_sky.json,
+manifest-v2.json and garden-manifest.json (local project files).
+
+Font: Inter and Inter Display, © The Inter Project Authors, SIL Open Font
+License 1.1 – see Inter-OFL-1.1.txt. Shipped as Latin subsets (WOFF2).
+
+The local Meshopt decoder is MIT licensed; see ../vendor/meshoptimizer-LICENSE.txt.
+Babylon.js license and upstream notices are supplied in this directory.
+The upstream NOTICE also lists optional Babylon components; not all of those
+components are used or downloaded by this demo.
+
+Architecture/furnishings are an independent conceptual reconstruction.
+Manufacturer photographs are not included in the website assets.

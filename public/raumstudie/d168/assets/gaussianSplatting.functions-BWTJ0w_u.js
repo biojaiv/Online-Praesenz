@@ -1,0 +1,1 @@
+function e(e){return e===`GaussianSplattingMesh`||e===`GaussianSplattingStream`}function t(t){return t._isGaussianSplatting||e(t.getClassName())}export{t};

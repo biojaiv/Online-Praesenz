@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#6c5a50" />
+    <meta name="description" content="Eine unabhängige Raumstudie des Musterhauses D168 in Bad Vilbel. Außenbereich, Wohnzimmer, Essbereich und Küche als frei begehbare Architektur." />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="preload" href="./d168/poster.webp" as="image" type="image/webp" />
+    <!-- Start the large downloads while the script bundle is still loading. -->
+    <link rel="preload" href="./d168/d168.glb.part1" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="./d168/d168.glb.part2" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="./d168/d168.glb.part3" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="./d168/environment.hdr" as="fetch" crossorigin="anonymous" />
+    <link rel="preload" href="./d168/scene.json" as="fetch" crossorigin="anonymous" />
+    <title>Musterhaus Bad Vilbel D168 — Raumstudie</title>
+    <script type="module" crossorigin src="./assets/index-C-9bl_Na.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/engineStore-Bn2tApal.js">
+    <link rel="modulepreload" crossorigin href="./assets/internalTexture-B3djGrls.js">
+    <link rel="modulepreload" crossorigin href="./assets/logger-CuBYPcDK.js">
+    <link rel="modulepreload" crossorigin href="./assets/shaderStore-D-XQlhUT.js">
+    <link rel="modulepreload" crossorigin href="./assets/precisionDate-DDsew1Vy.js">
+    <link rel="modulepreload" crossorigin href="./assets/performanceConfigurator-UtxC_Odd.js">
+    <link rel="modulepreload" crossorigin href="./assets/thinEngine.pure-BdeTw5Ps.js">
+    <link rel="modulepreload" crossorigin href="./assets/typeStore-Cu_sj2zM.js">
+    <link rel="modulepreload" crossorigin href="./assets/halfFloat-Ce77JD5z.js">
+    <link rel="modulepreload" crossorigin href="./assets/tools.pure-CguXk07V.js">
+    <link rel="modulepreload" crossorigin href="./assets/buffer.pure-BP-UjzqF.js">
+    <link rel="modulepreload" crossorigin href="./assets/math.scalar.functions-Bcxiuh2E.js">
+    <link rel="modulepreload" crossorigin href="./assets/math.vector.pure-C-n9L2U4.js">
+    <link rel="modulepreload" crossorigin href="./assets/math.color.pure-5gIjkZ5M.js">
+    <link rel="modulepreload" crossorigin href="./assets/math.plane-CsqVTTcM.js">
+    <link rel="modulepreload" crossorigin href="./assets/decorators-D3kDnvNy.js">
+    <link rel="modulepreload" crossorigin href="./assets/decorators.serialization-CWysU3eE.js">
+    <link rel="modulepreload" crossorigin href="./assets/smartArray-BRfcgNbX.js">
+    <link rel="modulepreload" crossorigin href="./assets/lightConstants-DQIAg4VZ.js">
+    <link rel="modulepreload" crossorigin href="./assets/sceneComponent-B9vOiDVC.js">
+    <link rel="modulepreload" crossorigin href="./assets/scene.pure-vkXgtaPo.js">
+    <link rel="modulepreload" crossorigin href="./assets/animation.pure-kP2EuZ93.js">
+    <link rel="modulepreload" crossorigin href="./assets/baseTexture.pure-BjsHeDJG.js">
+    <link rel="modulepreload" crossorigin href="./assets/texture.pure-CWRPc2m4.js">
+    <link rel="modulepreload" crossorigin href="./assets/constants-_wyaM_ID.js">
+    <link rel="modulepreload" crossorigin href="./assets/objectModelMapping-DFnqu1Rw.js">
+    <link rel="modulepreload" crossorigin href="./assets/drawWrapper-Q8zdcNqe.js">
+    <link rel="modulepreload" crossorigin href="./assets/effectRenderer.pure-DZ1mMjar.js">
+    <link rel="modulepreload" crossorigin href="./assets/cubemapToSphericalPolynomial-DbO6hItI.js">
+    <link rel="modulepreload" crossorigin href="./assets/material.pure-c100FqKv.js">
+    <link rel="modulepreload" crossorigin href="./assets/renderTargetTexture.pure-DvS2m-ie.js">
+    <link rel="modulepreload" crossorigin href="./assets/proceduralTexture.pure-DNwF6Xfh.js">
+    <link rel="modulepreload" crossorigin href="./assets/postProcess.pure-hLGF9Md6.js">
+    <link rel="modulepreload" crossorigin href="./assets/imageProcessing-DKXX8139.js">
+    <link rel="modulepreload" crossorigin href="./assets/hdr-CvI5IJpP.js">
+    <link rel="modulepreload" crossorigin href="./assets/baseTexture.polynomial.pure-BXzGHjDw.js">
+    <link rel="modulepreload" crossorigin href="./assets/pbrMaterial.pure-DGBXqGcj.js">
+    <link rel="modulepreload" crossorigin href="./assets/gaussianSplatting.functions-BWTJ0w_u.js">
+    <link rel="modulepreload" crossorigin href="./assets/animatable.pure-D9mSKhB0.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-CwyXrBW9.css">
+  </head>
+  <body>
+    <div class="app">
+      <header class="masthead">
+        <a class="wordmark" href="./" aria-label="Raumstudie – zur Startansicht">
+          <span class="wordmark-text"><strong>Raumstudie</strong><span>Haus frei begehen</span></span>
+          <span class="wordmark-accent" aria-hidden="true"></span>
+        </a>
+        <ul class="masthead-info" aria-label="Projekt">
+          <li><span>Musterhaus</span><strong>Bad Vilbel D168</strong></li>
+          <li><span>Frei begehbar</span><strong>4 Bereiche</strong></li>
+          <li><span>Bedienung</span><button type="button" data-dialog="controls-help">Hilfe &amp; Steuerung</button></li>
+        </ul>
+        <button class="concept-button" type="button" data-dialog="project-info">Unabhängige Konzeptdemo <span aria-hidden="true">↗</span></button>
+      </header>
+
+      <main class="viewer" id="viewer" aria-label="Begehbare Raumstudie D168" aria-busy="true">
+        <canvas id="scene" tabindex="0" aria-label="Dreidimensionales Haus. Mit WASD bewegen, mit der Maus umsehen. Bedienung über die Schaltfläche Hilfe."></canvas>
+
+        <div class="transition-veil" id="transition-veil" aria-hidden="true"></div>
+
+        <div class="scene-caption">
+          <p class="crumbs"><span>Raumstudie</span><span aria-hidden="true">›</span><span>Designhaus</span><span aria-hidden="true">›</span><span>D168</span></p>
+          <h1>Musterhaus Bad Vilbel D168</h1>
+          <p class="subtitle">Frei begehbare Raumstudie</p>
+        </div>
+
+        <aside class="tool-rail" aria-label="Ansichtseinstellungen">
+          <span class="rail-label" aria-hidden="true">Haus erkunden</span>
+          <div class="rail-buttons">
+            <button class="rail-button" id="fullscreen" type="button" aria-label="Vollbild öffnen" title="Vollbild öffnen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" /></svg></button>
+            <button class="rail-button" type="button" data-dialog="controls-help" aria-label="Hilfe zur Begehung" title="Hilfe zur Begehung"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.8.4-1.2 1-1.2 1.9v.6M12 17.2v.3" /></svg></button>
+            <button class="rail-button" type="button" data-dialog="project-info" aria-label="Über diese Raumstudie" title="Über diese Raumstudie"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10l8-6 8 6v10h-5v-6H9v6H4Z" /></svg></button>
+          </div>
+        </aside>
+
+        <div class="loading-state" id="loading-state" role="status" aria-live="polite">
+          <div class="loading-content"><span class="eyebrow">Musterhaus Bad Vilbel D168</span><p class="loading-title">Das Haus wird aufgebaut.</p><p id="loading-text">Das Haus wird vorbereitet …</p><progress id="loading-progress" max="100" value="0" aria-label="Ladefortschritt"></progress><span class="loading-note">Einen Moment für die Details.</span></div>
+        </div>
+
+        <div class="error-state" id="error-state" role="alert" hidden><div class="error-content"><span class="eyebrow">Ansicht nicht verfügbar</span><h2>Das Haus konnte<br />nicht geladen werden.</h2><p id="error-text">Bitte lade die Ansicht erneut. Ein aktueller Desktop-Browser mit aktivierter Grafikbeschleunigung wird benötigt.</p><button class="primary-button" id="retry" type="button">Erneut laden <span aria-hidden="true">→</span></button></div></div>
+
+        <div class="scene-navigation" id="scene-navigation" aria-label="Das Haus entdecken">
+          <nav class="room-navigation" aria-label="Bereich auswählen">
+            <button class="room-button" type="button" data-room="exterior" aria-pressed="true" disabled><span class="room-number" aria-hidden="true">01</span>Außenbereich</button>
+            <button class="room-button" type="button" data-room="living" aria-pressed="false" disabled><span class="room-number" aria-hidden="true">02</span>Wohnen</button>
+            <button class="room-button" type="button" data-room="dining" aria-pressed="false" disabled><span class="room-number" aria-hidden="true">03</span>Essen</button>
+            <button class="room-button" type="button" data-room="kitchen" aria-pressed="false" disabled><span class="room-number" aria-hidden="true">04</span>Küche</button>
+          </nav>
+          <button class="primary-button explore-button" id="explore" type="button" disabled><span id="explore-label">Begehung starten</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg></button>
+        </div>
+
+        <figure class="plan-panel" id="plan-panel" hidden>
+          <figcaption><span class="plan-title">Grundriss EG</span><span class="plan-hint">Klick: dorthin gehen</span></figcaption>
+          <svg id="plan" role="img" aria-label="Schematischer Grundriss mit aktuellem Standort"></svg>
+        </figure>
+
+        <div class="viewer-footer">
+          <p class="view-status" id="view-status" role="status" aria-live="polite">Ansicht wird vorbereitet</p>
+          <label class="quality-control" for="quality"><span>Qualität</span><select id="quality" disabled><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="ultra">Maximum</option></select></label>
+        </div>
+        <!-- Controls legend: in the footer while browsing, lifted as a card during the walk. -->
+        <ul class="control-legend" aria-label="Steuerung">
+          <li class="legend-item"><span class="legend-glyph keys-wasd" aria-hidden="true"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span class="legend-label"><span class="visually-hidden">W, A, S, D: </span>Gehen</span></li>
+          <li class="legend-item"><span class="legend-glyph" aria-hidden="true"><kbd>Shift</kbd></span><span class="legend-label"><span class="visually-hidden">Shift: </span>Schneller</span></li>
+          <li class="legend-item"><svg class="legend-glyph legend-mouse" viewBox="0 0 16 22" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="19" rx="6.5" /><path class="wheel" d="M8 5.5v3.5" /></svg><span class="legend-label"><span class="when-browse">Maus ziehen: umsehen</span><span class="when-explore">Maus: umsehen</span></span></li>
+          <li class="legend-item" data-mode="browse"><svg class="legend-glyph legend-plan" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 2.5h15v15h-15zM2.5 9h6v8.5M12 2.5V8h5.5" /><circle cx="13.5" cy="13" r="1.8" /></svg><span class="legend-label">Grundriss: Ziel anklicken</span></li>
+          <li class="legend-item" data-mode="explore"><span class="legend-glyph" aria-hidden="true"><kbd>Esc</kbd></span><span class="legend-label legend-keep"><span class="visually-hidden">Escape: </span>Navigation</span></li>
+        </ul>
+        <p class="action-message" id="action-message" role="status" aria-live="polite" hidden></p>
+      </main>
+    </div>
+
+    <dialog id="controls-help" class="info-dialog" aria-labelledby="help-title">
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Hilfe schließen" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg></button>
+      <p class="eyebrow">Frei entdecken</p><h2 id="help-title">So bewegst du dich durchs Haus</h2><p>Starte die Begehung und erkunde das Haus in deinem Tempo.</p>
+      <dl class="controls-list"><div><dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>Vor, zurück und seitwärts gehen</dd></div><div><dt><kbd>Shift</kbd></dt><dd>Schneller gehen</dd></div><div><dt>Maus</dt><dd>Im Raum umsehen</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Maus freigeben und Navigation öffnen</dd></div><div><dt>Grundriss</dt><dd>Klick auf eine freie Stelle bringt dich direkt dorthin</dd></div></dl>
+      <p class="dialog-note">Über die Bereiche unten gelangst du direkt nach draußen, ins Wohnzimmer, an den Esstisch oder in die Küche. Ohne gebundene Maus kannst du mit gedrückter Maustaste den Blick drehen.</p><p class="dialog-note">Für Laptop und Desktop. „Maximum“ bietet die höchste Bildqualität; bei stockender Bewegung wähle „Automatisch“ oder „Hoch“.</p>
+      <button class="primary-button dialog-action" type="button" data-close-dialog>Verstanden <span aria-hidden="true">→</span></button>
+    </dialog>
+
+    <dialog id="project-info" class="info-dialog" aria-labelledby="project-title">
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Projektinformation schließen" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg></button>
+      <p class="eyebrow">Über diese Raumstudie</p><h2 id="project-title">Ein Haus. Frei begehbar.</h2><p>Diese unabhängige Konzeptdemo erkundet Außenbereich, Wohnzimmer, Essbereich und Küche des Musterhauses D168 in Bad Vilbel.</p><p class="dialog-note">Die Architektur ist anhand öffentlich zugänglicher Pläne und Fotos angenähert. Nicht belegte Details wurden gestalterisch ergänzt. Das Modell ist keine Bauplanung.</p><p class="dialog-note">Frammelsberger wird zur Einordnung des Vorbilds genannt. Diese Studie ist keine offizielle Präsentation des Herstellers und wurde nicht von ihm beauftragt.</p><p class="dialog-credit">Konzept und Umsetzung: <a href="https://vladimir-leicht.com/" target="_blank" rel="noopener">Vladimir Leicht</a></p>
+      <button class="primary-button dialog-action" type="button" data-close-dialog>Zurück zum Haus <span aria-hidden="true">→</span></button>
+    </dialog>
+  </body>
+</html>
