@@ -65,6 +65,18 @@ const RESUME_IDLE_SCALE = 1;
 // Longest wait for the two document projections before all pillar contents
 // appear anyway; a slow or failed document must not keep the middle empty.
 const CONTENT_WAIT = 4000;
+// Start sequence, in seconds after ignite(): the unlit pedestals blink their
+// lights on, the jets start, then the holograms build from the top down.
+const ENTRANCE = Object.freeze({ jets: 1.0, build: 1.35, buildDuration: 1.4 });
+// Seconds over which the unlit pedestal bodies fade in. Kept short: a fading
+// body is transparent and briefly loses the glow of its own rings.
+const PRESENCE_FADE = 0.6;
+// Light level of the start-up blink as [seconds after ignite(), level].
+const IGNITION_BLINK = Object.freeze([
+  [0, .9], [.07, 0], [.22, .6], [.28, 0], [.48, 1], [.56, .1], [.66, .85], [.73, .3], [.86, 1],
+]);
+// Without a call to ignite(), the pedestals light up on their own after this.
+const IGNITION_LIMIT = 10000;
 // Die Weltgeometrie der Projektion bleibt bewusst etwas kleiner als der
 // Sockeldurchmesser. Da die Fokus-Kamera aus den Dokumentgrenzen berechnet
 // wird, bleibt die Nahansicht unveraendert gross. Im Startbild passen dagegen
@@ -152,6 +164,13 @@ function makeAccentRing(accent) {
       blending: THREE.AdditiveBlending,
     }),
   );
+}
+
+/** Light level of the start-up blink at the given seconds after ignite(). */
+function blinkLevel(seconds) {
+  let level = 0;
+  for (const [at, value] of IGNITION_BLINK) if (seconds >= at) level = value;
+  return level;
 }
 
 /**
@@ -342,6 +361,9 @@ function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0, 
       held = Boolean(value);
       applyTarget(false);
     },
+    setBuild(value) {
+      uniforms.uBuild.value = value;
+    },
     setCompact(value) {
       effect.setCompact(value);
     },
@@ -451,7 +473,7 @@ function makeCardLabel(def, maxAnisotropy = 1) {
     },
     /** Keep the same labels on every visible pedestal, including neighbours. */
     setOpened() { openTarget = 1; },
-    update(elapsed, delta, hover, active) {
+    update(elapsed, delta, hover, active, light = 1) {
       if (hover > .05) hoverStart ??= elapsed;
       else hoverStart = null;
       const pulse = reducedMotion() ? .7 : (1 - Math.cos(Math.max(0, elapsed - (hoverStart ?? elapsed)) * Math.PI / 2.4)) * .5;
@@ -460,8 +482,10 @@ function makeCardLabel(def, maxAnisotropy = 1) {
       mesh.userData.orange = amount;
       const target = revealTarget * openTarget;
       reveal += (target - reveal) * (1 - Math.pow(0.01, Math.min(delta, 0.1)));
-      material.opacity = (0.96 + hover * 0.04) * reveal;
-      group.visible = material.opacity > 0.01;
+      const shown = (0.96 + hover * 0.04) * reveal;
+      material.opacity = shown * light;
+      // An unlit label stays in the draw list, so the first blink needs no shader compile.
+      group.visible = shown > 0.01;
     },
     dispose() {
       stopLanguage();
@@ -838,17 +862,56 @@ export function createCards({ renderer, reduced = false } = {}) {
   let modelRevealReleased = false;
   let resolveReady;
   const ready = new Promise((resolve) => { resolveReady = resolve; });
+  // Until ignite() the pedestals stand unlit. A skipped sequence (reduced
+  // motion, an opened section, a still information view) is -Infinity.
+  let ignitedAt = reduced ? -Infinity : null;
+  const ignitionTimer = window.setTimeout(() => ignite(), IGNITION_LIMIT);
+  let lightLevel = reduced ? 1 : 0;
+  // The pedestal bodies fade in, still unlit, once their models are in place.
+  let modelsSettled = false;
+  let presence = reduced ? 1 : 0;
+  let appliedPresence = 1;
+  let jetsOn = reduced;
+  // Last reveal requested for the jets, applied once they are on.
+  let jetReveal = 1;
   // The three pillars show their content together. The middle preview could
   // appear at once, but the two documents first need their rasters processed.
   const pendingDocuments = new Set(CARD_DEFS.filter((def) => isDocumentKey(def.key)).map((def) => def.key));
+  let contentReady = false;
   let contentShown = false;
+  let buildStart = 0;
+  let appliedBuild = 0;
   // Last reveal requested for the middle preview, applied once content is shown.
   let previewReveal = 1;
-  const contentTimer = window.setTimeout(() => showContent(), CONTENT_WAIT);
+  const contentTimer = window.setTimeout(() => { contentReady = true; showContentWhenDue(); }, CONTENT_WAIT);
+  function ignite() {
+    window.clearTimeout(ignitionTimer);
+    if (ignitedAt === null) ignitedAt = performance.now();
+  }
+  function skipEntrance() {
+    window.clearTimeout(ignitionTimer);
+    ignitedAt = -Infinity;
+  }
+  function entranceSeconds() {
+    return ignitedAt === null ? -1 : (performance.now() - ignitedAt) / 1000;
+  }
+  function setBuild(value) {
+    appliedBuild = value;
+    for (const card of cards) {
+      card.resumeProjection?.setBuild(value);
+      card.resumeFrame?.setBuild(value);
+      card.examplePreview?.setBuild(value);
+    }
+  }
+  function showContentWhenDue() {
+    if (contentReady && entranceSeconds() >= ENTRANCE.build) showContent();
+  }
   function showContent() {
     if (contentShown) return;
     contentShown = true;
     window.clearTimeout(contentTimer);
+    buildStart = performance.now();
+    setBuild(ignitedAt === -Infinity ? 1 : 0);
     for (const card of cards) {
       card.resumeProjection?.setHeld(false);
       card.resumeFrame?.setHeld(false);
@@ -857,7 +920,16 @@ export function createCards({ renderer, reduced = false } = {}) {
   }
   function settleDocument(key) {
     pendingDocuments.delete(key);
-    if (!pendingDocuments.size) showContent();
+    if (pendingDocuments.size) return;
+    contentReady = true;
+    showContentWhenDue();
+  }
+  /** Body fade of a pedestal: its unlit appearance times a late model's cross-fade. */
+  function applyBodyFade(card) {
+    setObjectFade(card.base, card.modelReveal * presence);
+    if (card.pendingFallback) setObjectFade(card.pendingFallback, (1 - card.modelReveal) * presence);
+    const upper = card.ceiling?.children[0];
+    if (upper && upper !== card.base) setObjectFade(upper, presence);
   }
 
   for (const def of CARD_DEFS) {
@@ -875,6 +947,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     // Jeder Sockel traegt denselben Partikelstrahl. Er tritt ausschliesslich
     // aus dem weissen Ring der Oberflaeche aus.
     const ringJet = makeRingJet({ renderer, reduced, quality: shaderQuality, originY: BASE_TOP + 0.04 });
+    if (!jetsOn) ringJet?.setReveal(0, true);
     // The middle pedestal carries the interactive website preview.
     const examplePreview = def.key === 'projekte' ? createExamplePreview({ reduced }) : null;
     examplePreview?.setReveal(0, true);
@@ -993,8 +1066,9 @@ export function createCards({ renderer, reduced = false } = {}) {
 
   const baseModels = loadSharedBases(
     cards,
-    () => modelRevealReleased,
-    (status) => resolveReady(status),
+    // Before ignition the bodies fade in through their presence instead.
+    () => modelRevealReleased && ignitedAt !== null,
+    (status) => { modelsSettled = true; resolveReady(status); },
     ringPulse,
   );
 
@@ -1007,6 +1081,15 @@ export function createCards({ renderer, reduced = false } = {}) {
     releaseModelReveal() {
       modelRevealReleased = true;
     },
+
+    /** Starts the start sequence: blinking lights, then jets, then holograms. */
+    ignite,
+
+    /** Shows the finished start sequence at once, e.g. under a still frame. */
+    skipEntrance,
+
+    /** Current pedestal light level, 0 while unlit and 1 once fully on. */
+    get lightLevel() { return lightLevel; },
 
     finishModelReveal() {
       // A static information background must not strand late models mid-fade.
@@ -1170,8 +1253,9 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     setHologramReveal(value, immediate = false) {
       previewReveal = value;
+      jetReveal = value;
       for (const card of cards) {
-        card.ringJet?.setReveal(value, immediate);
+        card.ringJet?.setReveal(jetsOn ? value : 0, immediate);
         card.examplePreview?.setReveal(contentShown ? value : 0, immediate);
         card.label?.setReveal(value, immediate);
       }
@@ -1257,7 +1341,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     setOpened(key, _isolate = false) {
       // Pillars only wait for each other in the overview; an opened section
       // shows its content as soon as that content is ready.
-      if (key) showContent();
+      if (key) { skipEntrance(); showContent(); }
       openedKey = key;
       cards.find(c => c.key === 'projekte')?.examplePreview?.setOpen(key === 'projekte');
       if (isDocumentKey(key)) resumeCard = cards.find((card) => card.key === key);
@@ -1298,16 +1382,34 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     update(elapsed, delta) {
       lastElapsed = elapsed;
-      ringPulse.value = reduced ? 1.6 : 1.6 + 0.85 * Math.sin(elapsed * Math.PI * 2 / 6.3);
+      const seconds = entranceSeconds();
+      const skipped = ignitedAt === -Infinity;
+      lightLevel = seconds < 0 ? 0 : blinkLevel(seconds);
+      if (!jetsOn && seconds >= ENTRANCE.jets) {
+        jetsOn = true;
+        for (const card of cards) card.ringJet?.setReveal(jetReveal, skipped);
+      }
+      if (!contentShown) showContentWhenDue();
+      if (contentShown && appliedBuild < 1) {
+        const progress = skipped ? 1 : Math.min(1, (performance.now() - buildStart) / 1000 / ENTRANCE.buildDuration);
+        setBuild(progress * progress * (3 - 2 * progress));
+      }
+      if (skipped) presence = 1;
+      else if (modelsSettled || seconds >= 0) presence = Math.min(1, presence + Math.min(delta, 0.1) / PRESENCE_FADE);
+      const presenceChanged = presence !== appliedPresence;
+      appliedPresence = presence;
+      ringPulse.value = lightLevel * (reduced ? 1.6 : 1.6 + 0.85 * Math.sin(elapsed * Math.PI * 2 / 6.3));
       const k = 1 - Math.pow(0.0012, Math.min(delta, 0.1));
       for (const card of cards) {
+        // While unlit, freshly installed models must take the current presence too.
+        if ((presenceChanged || presence < 1) && !card.pendingFallback) applyBodyFade(card);
         if (card.pendingFallback) {
           const response = 1 - Math.pow(0.012, Math.min(delta, 0.1));
           card.modelReveal += (1 - card.modelReveal) * response;
-          setObjectFade(card.base, card.modelReveal);
-          setObjectFade(card.pendingFallback, 1 - card.modelReveal);
+          applyBodyFade(card);
           if (card.modelReveal >= 0.995) {
-            setObjectFade(card.base, 1);
+            card.modelReveal = 1;
+            setObjectFade(card.base, presence);
             card.holder.remove(card.pendingFallback);
             disposeObject(card.pendingFallback);
             card.pendingFallback = null;
@@ -1318,7 +1420,7 @@ export function createCards({ renderer, reduced = false } = {}) {
         const menuFlash = reduced || cueAge < 0 || cueAge >= .8 ? 0
           : Math.pow(Math.max(0, Math.sin(cueAge * Math.PI * 5)), 4) * (1 - cueAge / .8);
         card.holder.userData.menuFlash = menuFlash;
-        card.rimLight.intensity = card.rimLight.userData.baseIntensity * (1 + menuFlash * .28);
+        card.rimLight.intensity = card.rimLight.userData.baseIntensity * (1 + menuFlash * .28) * lightLevel;
         if (!reduced) {
           card.base.rotation.y = elapsed * .055;
           const topBase = card.ceiling?.children[0];
@@ -1340,7 +1442,7 @@ export function createCards({ renderer, reduced = false } = {}) {
           delta,
           card.hover,
         );
-        card.label?.update(elapsed, delta, card.hover, card.active);
+        card.label?.update(elapsed, delta, card.hover, card.active, lightLevel);
         if (projectHologramHidden && card.key === 'projekte') {
           if (card.examplePreview) card.examplePreview.group.visible = false;
           if (card.label) card.label.group.visible = false;
@@ -1434,6 +1536,7 @@ export function createCards({ renderer, reduced = false } = {}) {
 
     dispose() {
       window.clearTimeout(contentTimer);
+      window.clearTimeout(ignitionTimer);
       baseModels.dispose();
       for (const card of cards) {
         card.disposed = true;

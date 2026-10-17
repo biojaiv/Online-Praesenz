@@ -10,6 +10,8 @@ export function createExamplePreview({ reduced = false } = {}) {
  const group=new THREE.Group();group.name='project-book';
  const height=HOLOGRAM_HEIGHT,width=height*800/1428,meshes=[],wings=[];
  let open=false,amount=0,reveal=1,target=1,disposed=false;
+ // Build front of the start sequence, measured from the top edge; 1 is complete.
+ const build={value:1};
  for(const [i,category] of ['webseiten','systemintegration'].entries()){
   const canvas=document.createElement('canvas');canvas.width=800;canvas.height=1428;
   const ctx=canvas.getContext('2d'),texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
@@ -19,12 +21,17 @@ export function createExamplePreview({ reduced = false } = {}) {
   const previewMask=previewRects.map(([x,y,w,h])=>`(vMapUv.x > ${(x/800).toFixed(8)} && vMapUv.x < ${((x+w)/800).toFixed(8)} && vMapUv.y > ${(1-(y+h)/1428).toFixed(8)} && vMapUv.y < ${(1-y/1428).toFixed(8)})`).join(' || ');
   material.customProgramCacheKey=()=>`project-preview-tone-${category}-${previewMask}`;
   material.onBeforeCompile=shader=>{
-   shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>', `
+   shader.uniforms.uBuild=build;
+   shader.fragmentShader='uniform float uBuild;\n'+shader.fragmentShader.replace('#include <map_fragment>', `
     #include <map_fragment>
     if (${previewMask}) {
      float luminance = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722));
      diffuseColor.rgb = vec3(${PREVIEW_TONE.join(',')}) * luminance;
     }
+    // The wings build from their top edge downwards behind a bright line.
+    float buildDepth = uBuild * 1.08 - (1.0 - vMapUv.y);
+    if (buildDepth < 0.0) discard;
+    diffuseColor.rgb += vec3(.5, .85, 1.) * (1.0 - smoothstep(0.0, .04, buildDepth)) * .45;
    `);
   };
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),material);
@@ -103,6 +110,7 @@ export function createExamplePreview({ reduced = false } = {}) {
    return out.set(new THREE.Vector3(-width-.1,-height/2,-width),new THREE.Vector3(width+.1,height/2,.2)).applyMatrix4(group.matrixWorld);
   },
   setReveal(value,immediate=false){target=value;if(immediate){reveal=value;pose();}},
+  setBuild(value){build.value=value;},
   update(_time,delta){const k=1-Math.exp(-Math.min(delta,.1)*5);amount+=((open?1:0)-amount)*k;reveal+=(target-reveal)*k;pose();},
   dispose(){disposed=true;unsubscribe();wings.forEach(w=>{w.pictures.forEach(image=>{image.onload=null;});w.texture.dispose();w.material.dispose();w.mesh.geometry.dispose();});}
  };

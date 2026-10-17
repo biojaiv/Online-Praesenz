@@ -1,7 +1,9 @@
-uniform float uOpacity, uTime, uMotion, uQuality, uEnhanced, uHover;
+uniform float uOpacity, uTime, uMotion, uQuality, uEnhanced, uHover, uBuild;
 uniform vec3 uAccent;
-varying float vSpark, vPulse, vFresnel, vPointSize;
+varying float vSpark, vPulse, vFresnel, vPointSize, vBuildDepth;
 void main() {
+  // The contour follows the sheet's build from the top edge downwards.
+  if (vBuildDepth > uBuild * 1.08) discard;
   float radius = length(gl_PointCoord - 0.5);
   float aa = clamp(fwidth(radius), 0.02, 0.18);
   float core = (1.0 - smoothstep(0.04, 0.5, radius))

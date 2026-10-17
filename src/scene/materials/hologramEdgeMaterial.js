@@ -10,6 +10,8 @@ export function createHologramEdgeMaterial({ renderer, reduced = false, quality 
   const uniforms = {
     uOpacity: { value: 0 }, uHalfWidth: { value: 1 }, uHalfHeight: { value: 1 },
     uPixelRatio: { value: 1 }, uHover: { value: 0 },
+    // Build front of the start sequence, measured from the top edge; 1 is complete.
+    uBuild: { value: 1 },
     // Preserve the original contour's linear RGB, rather than converting it twice.
     uAccent: { value: new THREE.Color(.47, .75, 1) },
   };

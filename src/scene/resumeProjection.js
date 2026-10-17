@@ -76,6 +76,8 @@ export function createResumeProjection({
     uScan: { value: -0.2 },
     uScanStrength: { value: reduced ? 0 : 1 },
     uTime: { value: 0 },
+    // Build front of the start sequence, measured from the top edge; 1 is complete.
+    uBuild: { value: 1 },
   };
   const SCAN_CYCLE = 40, SCAN_SWEEP = 3.6;
   // Documents start at different points of the cycle so they never sweep in unison.
@@ -95,13 +97,18 @@ export function createResumeProjection({
     `,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap;
-      uniform float uWindow, uOffset, uOpacity, uGlow, uBias, uScan, uScanStrength, uTime;
+      uniform float uWindow, uOffset, uOpacity, uGlow, uBias, uScan, uScanStrength, uTime, uBuild;
       float hash(float n) { return fract(sin(n) * 43758.5453); }
       uniform vec2 uFade;
       uniform vec3 uSurface;
       varying vec2 vUv;
 
       void main() {
+        // The sheet builds from its top edge downwards behind a bright line.
+        float buildFront = uBuild * 1.08;
+        float buildDepth = buildFront - (1.0 - vUv.y);
+        if (buildDepth < 0.0) discard;
+        float buildLine = 1.0 - smoothstep(0.0, 0.04, buildDepth);
         float v = 1.0 - uOffset - (1.0 - vUv.y) * uWindow;
         // Light hologram distortion: rows ripple where the scan line passes, a faint
         // shimmer stays, and very rarely a thin band slips sideways for a moment.
@@ -125,6 +132,7 @@ export function createResumeProjection({
         vec3 colour = mix(uSurface, ink, texel.a * fade);
         // Soft trailing glow above a crisp leading edge, moving from top to bottom.
         colour += vec3(0.50, 0.85, 1.0) * scan * 0.07 * uScanStrength;
+        colour += vec3(0.50, 0.85, 1.0) * buildLine * 0.45;
         gl_FragColor = vec4(colour, uOpacity);
       }
     `,
@@ -316,6 +324,10 @@ export function createResumeProjection({
     setHeld(value) {
       held = Boolean(value);
       applyOpacityTarget();
+    },
+
+    setBuild(value) {
+      uniforms.uBuild.value = value;
     },
 
     update(delta) {

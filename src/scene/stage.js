@@ -1491,7 +1491,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     // slowly moving scene. Reduced motion and other pause owners still win.
     const freeze = next === 'projekt/abschluss' || next === 'kontakt'
       || (['start', 'kurzprofil'].includes(next) && informationMotion.matches);
-    if (freeze) cards.finishModelReveal();
+    if (freeze) { cards.finishModelReveal(); cards.skipEntrance(); }
     cancelAnimationFrame(raf); raf = 0;
     timer.setTimescale(projectionIdle || inspectionFrozen ? 0 : informationView === 'kurzprofil' ? .45 : 1); timer.reset();
     lastFrameAt = 0;
@@ -1515,6 +1515,7 @@ export function createStage(canvas, { onDocumentScroll, onDocumentRect } = {}) {
     scene, camera, renderer, composer, cards, background,
     ready: cards.ready,
     releaseModelReveal: () => cards.releaseModelReveal(),
+    ignitePedestals: () => cards.ignite(),
     settleQuality,
 
     /** cb(event, key) mit event = 'hover' | 'select' */

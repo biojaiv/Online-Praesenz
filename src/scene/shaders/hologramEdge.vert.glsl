@@ -1,7 +1,7 @@
 attribute float aOffset, aSpeed, aSize, aSeed;
 uniform float uTime, uHalfWidth, uHalfHeight, uPixelRatio;
 uniform float uMotion, uQuality, uEnhanced, uActivation;
-varying float vSpark, vPulse, vFresnel, vPointSize;
+varying float vSpark, vPulse, vFresnel, vPointSize, vBuildDepth;
 void main() {
   float t = holoTravel(uTime, aSpeed * 0.018, aOffset);
   float w = uHalfWidth;
@@ -13,6 +13,7 @@ void main() {
   else if (dist < 4.0 * w + 2.0 * h) p = vec3(w - dist + 2.0 * w + 2.0 * h, h, 0.0);
   else p = vec3(-w, h - dist + 4.0 * w + 2.0 * h, 0.0);
 
+  vBuildDepth = (h - p.y) / max(2.0 * h, 0.0001);
   vPulse = uEnhanced * uMotion * holoActivation(t, uActivation);
   // Subtle displacement belongs only to the short activation. Text/hit targets
   // use their original geometry and are never deformed by this program.

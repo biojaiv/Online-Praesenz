@@ -404,7 +404,8 @@ export function createPedestalEnergyField({ cards, renderer, reduced = false } =
         const target = Math.min(1.35, (state.target + pulseBoost) * readerFactor);
         state.intensity += (target - state.intensity) * response;
         state.reservoir.uniforms.uTime.value = reduced ? 0 : elapsed;
-        state.reservoir.uniforms.uIntensity.value = state.intensity;
+        // The reservoir is part of the pedestal light and blinks on with it.
+        state.reservoir.uniforms.uIntensity.value = state.intensity * (cards.lightLevel ?? 1);
         state.inscription.material.opacity = Math.max(
           0.12,
           state.intensity * (0.44 + pulseBoost * 0.28),

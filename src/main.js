@@ -216,6 +216,8 @@ function updateFooter() {
 // Der Sockel bekommt bis zu vier Sekunden Vorsprung hinter dem Boot-Layer.
 const MODEL_GATE = 4000;
 const BOOT_HARD_LIMIT = 6000; // STARTUP_FAILSAFE_V5_1_1
+// Longest wait for the foreground copy to finish its entrance.
+const FOREGROUND_LIMIT = 4500;
 
 let bootLimitTimer = 0;
 let enhancements = null;
@@ -475,6 +477,17 @@ stage?.on((event, key) => {
   router.go(target);
 });
 
+/** Resolves once the information page in front has finished its entrance. */
+function foregroundBuilt() {
+  const layer = isInformationRoute(currentRoute) ? document.getElementById('information-layer') : null;
+  const entrance = (layer?.getAnimations?.({ subtree: true }) ?? [])
+    .filter(animation => 'animationName' in animation && animation.effect?.getTiming().iterations !== Infinity);
+  return Promise.race([
+    Promise.all(entrance.map(animation => animation.finished.catch(() => {}))),
+    new Promise((resolve) => { window.setTimeout(resolve, FOREGROUND_LIMIT); }),
+  ]);
+}
+
 /**
  * Danach beginnt die Experience zuverlässig; ein noch laufender Download wird
  * nicht abgebrochen und das fertige Modell blendet später weich ein.
@@ -501,6 +514,8 @@ async function beginExperience() {
   stage?.releaseModelReveal();
   document.documentElement.dataset.scene = stage ? 'ready' : 'unavailable';
   stage?.refreshInformation();
+  // The pedestals stand unlit until the copy in front has built up.
+  foregroundBuilt().then(() => stage?.ignitePedestals());
 
   // Zwei Bilder Vorlauf: der erste gerenderte Frame soll stehen, bevor das
   // Boot-Layer aufblendet.
@@ -534,6 +549,7 @@ beginExperience().catch((error) => {
   // in front of an otherwise usable WebGL scene.
   console.error('Initialisierung wurde mit Fallback abgeschlossen:', error);
   boot?.classList.add('is-done');
+  stage?.ignitePedestals();
   document.documentElement.classList.remove('pre-intro');
   introRunning = false;
   try { stage?.intro?.finish?.(); } catch {}
