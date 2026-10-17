@@ -414,8 +414,8 @@ html.info-enhanced[data-info-view="start"][data-entry-phase="camera"] #frame .he
 }
 
 /* Contact on the level of the 30-second briefing: a framed sheet with the orrery sigil,
-   Flower of Life watermark and the same scan line; three clear contact channels. */
-html.info-enhanced .info-contact{display:flex;flex-direction:column}
+   Flower of Life watermark and the same scan line; three clear contact channels.
+   Its display comes from the view rules above, so it stays hidden behind other views. */
 .info-contact__sheet{position:relative;isolation:isolate;overflow:hidden;flex:none;width:min(1000px,100%);margin:auto;padding:30px 34px 28px;border:1px solid rgb(175 201 222 / .32);
   background:radial-gradient(ellipse 60% 55% at 88% 12%,rgb(79 182 232 / .08),transparent 70%),radial-gradient(ellipse 50% 45% at 8% 100%,rgb(234 177 108 / .07),transparent 70%),linear-gradient(180deg,rgb(15 26 38 / .97),rgb(9 17 27 / .985));
   box-shadow:0 28px 90px rgb(0 0 0 / .4)}
