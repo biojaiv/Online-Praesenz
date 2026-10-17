@@ -5,6 +5,8 @@ html:not(.info-enhanced) #frame { display:none; }
 html:not(.info-enhanced) .info-layer { max-width:1200px; margin:auto; }
 html:not(.info-enhanced) .info-page { border-bottom:1px solid #33414f; }
 html:not(.info-enhanced) [data-info-inspect],html:not(.info-enhanced) [data-info-close],html:not(.info-enhanced) [data-info-language],html:not(.info-enhanced) [data-info-route="home"] { display:none; }
+/* A paint between the English layer and the German swap must not show English. */
+html[data-info-language="de"] .info-page:lang(en) { visibility:hidden; }
 .info-reading-nav { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; padding:20px; font:16px Barlow,sans-serif; }
 .info-reading-nav a { color:#eab16c; }
 html.info-enhanced[data-info-view] #boot { visibility:hidden; pointer-events:none; }

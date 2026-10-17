@@ -169,7 +169,8 @@ export function createInformationController({ root, getStage, onNavigate, onBack
     // Restoring open details after translation must not add navigation steps.
     root.querySelectorAll('details[open]').forEach(detail => translatedDisclosures.add(detail));
   });
-  views.translate();
+  // index.html already holds the visitor's language; rebuilding it would replay the entrance.
+  if (root.querySelector('[data-info-page]')?.lang !== getLanguage()) views.translate();
   document.documentElement.classList.add('info-enhanced');
   return {
     enter,
