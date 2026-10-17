@@ -62,6 +62,9 @@ const RESUME_IDLE_OPACITY = 1;
 // Das Dokument behaelt beim Anklicken exakt dieselbe physische Groesse.
 // Nur die Kamera faehrt heran; dadurch gibt es kein Schrumpfen oder Strecken.
 const RESUME_IDLE_SCALE = 1;
+// Longest wait for the two document projections before all pillar contents
+// appear anyway; a slow or failed document must not keep the middle empty.
+const CONTENT_WAIT = 4000;
 // Die Weltgeometrie der Projektion bleibt bewusst etwas kleiner als der
 // Sockeldurchmesser. Da die Fokus-Kamera aus den Dokumentgrenzen berechnet
 // wird, bleibt die Nahansicht unveraendert gross. Im Startbild passen dagegen
@@ -255,7 +258,7 @@ function makeRingJet({ renderer, reduced, quality, originY = BASE_TOP, radius = 
  * geschlossene geometrische Umrandung, kein Sockelbegleitlicht — nur
  * der Strahl, der am Rand entlangwandert.
  */
-function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0 } = {}) {
+function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0, held: initiallyHeld = false } = {}) {
   const count = 410;
   const offsets = new Float32Array(count);
   const speeds = new Float32Array(count);
@@ -295,9 +298,10 @@ function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0 }
   let originY = 0;
   let open = false;
   let hidden = false;
+  let held = initiallyHeld;
 
   function applyTarget(immediate) {
-    opacityTarget = hidden ? 0 : idle;
+    opacityTarget = hidden || held ? 0 : idle;
     if (immediate || reduced) uniforms.uOpacity.value = opacityTarget;
     if (opacityTarget > 0) group.visible = true;
     else if (immediate || reduced) group.visible = false;
@@ -322,7 +326,7 @@ function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0 }
         originY + DOC_LIFT + height * 0.5,
         DOC_FRONT,
       );
-      if (idle > 0 && !hidden) group.visible = true;
+      if (idle > 0 && !hidden && !held) group.visible = true;
     },
     setOpen(value, immediate = false) {
       if (value && !open) effect.activate();
@@ -332,6 +336,10 @@ function makeResumeFrame({ renderer, reduced = false, quality, idleOpacity = 0 }
     /** Solange die Lesefassung steht, tritt der Rahmen ganz ab. */
     setHidden(value) {
       hidden = Boolean(value);
+      applyTarget(false);
+    },
+    setHeld(value) {
+      held = Boolean(value);
       applyTarget(false);
     },
     setCompact(value) {
@@ -830,6 +838,27 @@ export function createCards({ renderer, reduced = false } = {}) {
   let modelRevealReleased = false;
   let resolveReady;
   const ready = new Promise((resolve) => { resolveReady = resolve; });
+  // The three pillars show their content together. The middle preview could
+  // appear at once, but the two documents first need their rasters processed.
+  const pendingDocuments = new Set(CARD_DEFS.filter((def) => isDocumentKey(def.key)).map((def) => def.key));
+  let contentShown = false;
+  // Last reveal requested for the middle preview, applied once content is shown.
+  let previewReveal = 1;
+  const contentTimer = window.setTimeout(() => showContent(), CONTENT_WAIT);
+  function showContent() {
+    if (contentShown) return;
+    contentShown = true;
+    window.clearTimeout(contentTimer);
+    for (const card of cards) {
+      card.resumeProjection?.setHeld(false);
+      card.resumeFrame?.setHeld(false);
+      card.examplePreview?.setReveal(previewReveal, reduced);
+    }
+  }
+  function settleDocument(key) {
+    pendingDocuments.delete(key);
+    if (!pendingDocuments.size) showContent();
+  }
 
   for (const def of CARD_DEFS) {
     const isResume = isDocumentKey(def.key);
@@ -848,17 +877,20 @@ export function createCards({ renderer, reduced = false } = {}) {
     const ringJet = makeRingJet({ renderer, reduced, quality: shaderQuality, originY: BASE_TOP + 0.04 });
     // The middle pedestal carries the interactive website preview.
     const examplePreview = def.key === 'projekte' ? createExamplePreview({ reduced }) : null;
+    examplePreview?.setReveal(0, true);
     const label = makeCardLabel(def, maxAnisotropy);
     label.setOrigin(BASE_TOP);
-    const resumeFrame = isResume ? makeResumeFrame({ renderer, reduced, quality: shaderQuality, idleOpacity: 0.60 }) : null;
+    const resumeFrame = isResume ? makeResumeFrame({ renderer, reduced, quality: shaderQuality, idleOpacity: 0.60, held: true }) : null;
     const resumeProjection = isResume
       ? createResumeProjection({
           renderer,
           reduced,
           idleOpacity: RESUME_IDLE_OPACITY,
           documentKey: def.key,
+          held: true,
           ...(def.key === 'abschluss' ? { sourceForLanguage: ihkProjectionSource } : {}),
           onReady() {
+            settleDocument(def.key);
             if (!card) return;
             updateResumeWindow(card, false);
             if (card.pendingDocumentSection) applyDocumentSection(card, true);
@@ -866,6 +898,7 @@ export function createCards({ renderer, reduced = false } = {}) {
           },
           onError(error) {
             console.warn(`Die Projektion ${def.key} konnte nicht aufgebaut werden:`, error);
+            settleDocument(def.key);
           },
         })
       : null;
@@ -1136,9 +1169,10 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     setHologramReveal(value, immediate = false) {
+      previewReveal = value;
       for (const card of cards) {
         card.ringJet?.setReveal(value, immediate);
-        card.examplePreview?.setReveal(value, immediate);
+        card.examplePreview?.setReveal(contentShown ? value : 0, immediate);
         card.label?.setReveal(value, immediate);
       }
     },
@@ -1199,7 +1233,8 @@ export function createCards({ renderer, reduced = false } = {}) {
       }
     },
     showProjectPreview(show) {
-      cards.find(c => c.key === 'projekte')?.examplePreview?.setReveal(show ? 1 : 0, true);
+      previewReveal = show ? 1 : 0;
+      cards.find(c => c.key === 'projekte')?.examplePreview?.setReveal(contentShown ? previewReveal : 0, true);
     },
     worldBounds(key, out = new THREE.Box3()) {
       const card = cards.find((item) => item.key === key);
@@ -1220,6 +1255,9 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     setOpened(key, _isolate = false) {
+      // Pillars only wait for each other in the overview; an opened section
+      // shows its content as soon as that content is ready.
+      if (key) showContent();
       openedKey = key;
       cards.find(c => c.key === 'projekte')?.examplePreview?.setOpen(key === 'projekte');
       if (isDocumentKey(key)) resumeCard = cards.find((card) => card.key === key);
@@ -1395,6 +1433,7 @@ export function createCards({ renderer, reduced = false } = {}) {
     },
 
     dispose() {
+      window.clearTimeout(contentTimer);
       baseModels.dispose();
       for (const card of cards) {
         card.disposed = true;

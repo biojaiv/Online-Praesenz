@@ -59,6 +59,8 @@ export function createResumeProjection({
   onError,
   sourceForLanguage = cvSource,
   documentKey = 'lebenslauf',
+  // A held projection loads but stays unseen until setHeld(false).
+  held: initiallyHeld = false,
 } = {}) {
   const uniforms = {
     uMap: { value: null },
@@ -153,6 +155,7 @@ export function createResumeProjection({
   let opacityTarget = idle;
   let fadeBase = 0.02;
   let hidden = false;
+  let held = initiallyHeld;
 
   function applyScroll(value) {
     const range = Math.max(0, 1 - uniforms.uWindow.value);
@@ -160,7 +163,7 @@ export function createResumeProjection({
   }
 
   function applyOpacityTarget() {
-    opacityTarget = hidden ? 0 : (open ? 1 : idle);
+    opacityTarget = hidden || held ? 0 : (open ? 1 : idle);
     if (ready && opacityTarget > 0) mesh.visible = true;
 
     if (reduced) {
@@ -307,6 +310,11 @@ export function createResumeProjection({
     setHidden(value) {
       hidden = Boolean(value);
       fadeBase = hidden ? 0.25 : 0.12;
+      applyOpacityTarget();
+    },
+
+    setHeld(value) {
+      held = Boolean(value);
       applyOpacityTarget();
     },
 
