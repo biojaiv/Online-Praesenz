@@ -28,6 +28,11 @@ try {
       for (const width of [320, 360, 390, 412, 600, 650]) {
         await page.setViewportSize({ width, height: 844 });
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        // Crossing the 600 px breakpoint starts the hidden submenus' 0.5 s transitions;
+        // the check is about the resting layout, not their first frame.
+        await page.evaluate(() => Promise.all(document.querySelector('.head').getAnimations({ subtree: true })
+          .filter(animation => animation instanceof CSSTransition)
+          .map(animation => animation.finished.catch(() => {}))));
         await page.evaluate(() => window.__stage?.setProjectionIdle(true));
         for (const zoom of [.7, 1, 1.7]) {
           const issues = await page.evaluate(zoom => {
