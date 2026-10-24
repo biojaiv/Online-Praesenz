@@ -64,6 +64,51 @@
   background: linear-gradient(90deg, transparent, var(--amber));
 }
 
+/* The first step, centred between two amber rules; a light passes over it once. */
+.zoom-guide__lead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 2px 0 22px;
+  font: 600 19px/1.2 var(--font-display);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  animation: zoom-guide-step 0.55s var(--ease-ritual) 0.12s both;
+}
+.zoom-guide__lead-text {
+  flex: 0 1 auto;
+  text-align: center;
+  color: transparent;
+  background: linear-gradient(100deg, var(--fiber-white) 42%, #fff 50%, var(--fiber-white) 58%) 100% 0 / 260% 100% no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 10px rgb(var(--fiber-blue-rgb) / 0.5));
+  animation: zoom-guide-shine 1.6s var(--ease-ritual) 0.5s both;
+}
+.zoom-guide__rule {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 16px;
+  max-width: 72px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber));
+  box-shadow: 0 0 6px rgb(var(--amber-rgb) / 0.35);
+}
+.zoom-guide__rule::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -3px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--amber);
+  background: rgb(var(--amber-rgb) / 0.3);
+  box-shadow: 0 0 8px rgb(var(--amber-rgb) / 0.6);
+  transform: translateY(-50%) rotate(45deg);
+}
+.zoom-guide__rule:last-child { transform: scaleX(-1); }
+
 .zoom-guide__steps {
   display: grid;
   gap: 18px;
@@ -203,6 +248,9 @@
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
+@keyframes zoom-guide-shine {
+  to { background-position: 0 0; }
+}
 @keyframes zoom-guide-wheel {
   0%, 44%, 100% { opacity: 0.18; }
   50%, 94% { opacity: 1; }
@@ -218,6 +266,9 @@
   .zoom-guide-chip { grid-column: 1; grid-row: 3; justify-self: end; letter-spacing: var(--tracking-caps); }
   .zoom-guide { padding: var(--s-4); }
   .zoom-guide__panel { width: calc(100% - 2 * var(--s-4)); padding: 20px 18px 18px; }
+  .zoom-guide__kicker { margin-bottom: 14px; }
+  .zoom-guide__lead { gap: 10px; margin-bottom: 16px; font-size: 17px; letter-spacing: var(--tracking-caps); }
+  .zoom-guide__steps { gap: 14px; }
   .zoom-guide__step { grid-template-columns: 72px 1fr; gap: 14px; }
   .zoom-guide__term { font-size: 16px; }
   .zoom-guide__action { font-size: 14px; }
@@ -229,6 +280,7 @@
 @media (max-height: 520px) {
   .zoom-guide__panel { width: min(520px, calc(100% - 2 * var(--s-5))); padding: 14px 20px; }
   .zoom-guide__kicker { margin-bottom: 10px; }
+  .zoom-guide__lead { margin-bottom: 8px; }
   .zoom-guide__steps { gap: 10px; }
   .zoom-guide__step { grid-template-columns: 72px 1fr; gap: 14px; }
   .zoom-guide__text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
@@ -239,7 +291,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .zoom-guide__panel,
+  .zoom-guide__lead,
   .zoom-guide__step { animation: zoom-guide-fade 0.2s linear both; }
+  .zoom-guide__lead-text { animation: none; background-position: 0 0; }
   .zoom-guide-mouse__mark { animation: none; opacity: 0.76; }
   .zoom-guide__timer { display: none; }
   @keyframes zoom-guide-fade { from { opacity: 0; } }

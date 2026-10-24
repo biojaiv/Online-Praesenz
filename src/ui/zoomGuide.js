@@ -5,7 +5,7 @@ import { playSound } from './audio.js';
 // The overview must stand still this long before the explanation appears.
 const SETTLE_TIME = 650;
 // Reading time before the explanation warps into the footer on its own.
-const READ_TIME = 3000;
+const READ_TIME = 4500;
 const WARP_TIME = 950;
 // Same easing as the identity warp into the header.
 const WARP_EASING = 'cubic-bezier(.45, 0, .2, 1)';
@@ -104,6 +104,11 @@ export function createZoomGuide({ stage, host, tools, boot }) {
     overlay.innerHTML = `
       <div class="zoom-guide__panel">
         <p class="zoom-guide__kicker" data-zoom-text="zoomGuide.kicker"></p>
+        <p class="zoom-guide__lead">
+          <span class="zoom-guide__rule" aria-hidden="true"></span>
+          <span class="zoom-guide__lead-text" data-zoom-text="${touch ? 'zoomGuide.touchLead' : 'zoomGuide.lead'}"></span>
+          <span class="zoom-guide__rule" aria-hidden="true"></span>
+        </p>
         <ol class="zoom-guide__steps">${steps.map((step, i) => `
           <li class="zoom-guide__step" style="--i:${i}">
             <span class="zoom-guide__icon">${step.icon}</span>
@@ -222,6 +227,7 @@ export function createZoomGuide({ stage, host, tools, boot }) {
     frame.className = 'zoom-guide-flight__part zoom-guide-flight__frame';
     launch(frame, start, target);
     fly(panel.querySelector('.zoom-guide__kicker'), labelTarget, { fadeBy: .5 });
+    fly(panel.querySelector('.zoom-guide__lead'), labelTarget, { fadeBy: .5 });
     panel.querySelectorAll('.zoom-guide__step').forEach((step, i) => {
       fly(step.querySelector('.zoom-guide__icon'), iconTarget, { delay: 50 + i * 70, fadeBy: .95 });
       fly(step.querySelector('.zoom-guide__text'), labelTarget, { delay: 50 + i * 70, fadeBy: .6 });
