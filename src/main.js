@@ -19,6 +19,7 @@ import { createReader } from './ui/reader.js';
 import { createIhkProject } from './ui/ihkProject.js';
 import { createExampleProjection } from './ui/exampleProjection.js';
 import { createDownloadButton } from './ui/download.js';
+import { createZoomGuide } from './ui/zoomGuide.js';
 import { getExplored, onExploredChange } from './state/explored.js';
 import { primeSounds, playSound } from './ui/audio.js';
 
@@ -368,6 +369,10 @@ const exampleProjection = createExampleProjection({
 });
 
 projectsBrowser = createProjectsBrowser({ container: stageEl, stage, onNavigate: target => router.go(target) });
+// Once the overview stands, explain document zoom and dock the hint in the footer.
+const zoomGuide = stage && stageEl
+  ? createZoomGuide({ stage, host: stageEl, tools: document.getElementById('foot-tools'), boot })
+  : null;
 
 const router = createRouter({
   resolveRoute: target => !stage && target.split('/')[0] === 'abschluss' ? 'projekt/abschluss' : target,
@@ -380,6 +385,7 @@ const router = createRouter({
     }
     const transition = information.enter(target, meta);
     currentRoute = target;
+    zoomGuide?.setRoute(target);
     if (transition.handled) { updateFooter(); return; }
     if (transition.resumed && target === portfolioRoute) { updateFooter(); startAmbientUi(); return; }
     const root = target.split('/')[0];
@@ -587,6 +593,7 @@ if (import.meta.hot) {
     exampleProjection.dispose();
     profileAccess.dispose();
     projectsBrowser.dispose();
+    zoomGuide?.dispose();
     stopControlDistortion();
     download?.dispose();
     stage?.dispose();
